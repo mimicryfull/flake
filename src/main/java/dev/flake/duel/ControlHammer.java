@@ -11,7 +11,6 @@ import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.Registry;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -50,6 +49,8 @@ public final class ControlHammer {
 	public static final Identifier MODEL = Identifier.fromNamespaceAndPath("flake", "control_hammer");
 
 	private static final Map<UUID, Integer> STUNNED_UNTIL = new HashMap<>();
+	/** Position held for the whole stun: the ability is horizontal and must not drift on any axis. */
+	private static final Map<UUID, Vec3> STUN_ANCHOR = new HashMap<>();
 	private static final Map<UUID, Integer> READY_AT = new HashMap<>();
 	/** Actual cooldown length of the last swing (Melting Amethyst shortens it), for the HUD ring. */
 	private static final Map<UUID, Integer> COOLDOWN_TOTAL = new HashMap<>();
@@ -100,6 +101,7 @@ public final class ControlHammer {
 
 	public static void reset(ServerPlayer player) {
 		STUNNED_UNTIL.remove(player.getUUID());
+		STUN_ANCHOR.remove(player.getUUID());
 		READY_AT.remove(player.getUUID());
 		COOLDOWN_TOTAL.remove(player.getUUID());
 		player.removeEffect(MobEffects.SLOWNESS);
@@ -129,10 +131,13 @@ public final class ControlHammer {
 		// Stun ends class buffs first; otherwise their vanilla effects would outlive the buff state.
 		if (target instanceof ServerPlayer stunned) dev.flake.ability.ClassSkills.cancelBuffs(stunned);
 		STUNNED_UNTIL.put(target.getUUID(), now + STUN_TICKS);
+		// The hammer is a purely horizontal control tool: keep the target exactly where it was hit.
+		STUN_ANCHOR.put(target.getUUID(), target.position());
 		target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, STUN_TICKS, 6, false, false, false));
 		target.stopUsingItem();
-		target.setDeltaMovement(0, Math.min(0, target.getDeltaMovement().y), 0);
+		target.setDeltaMovement(Vec3.ZERO);
 		target.syncVelocity = true;
+		ShockwaveVisuals.hammerStun(player, target);
 		effects(target);
 		return true;
 	}
@@ -188,8 +193,6 @@ public final class ControlHammer {
 	private static void effects(LivingEntity target) {
 		if (!(target.level() instanceof ServerLevel level)) return;
 		double y = target.getY() + target.getBbHeight() * 0.6;
-		level.sendParticles(ParticleTypes.ELECTRIC_SPARK, target.getX(), y, target.getZ(), 14, 0.35, 0.4, 0.35, 0.25);
-		level.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + target.getBbHeight() + 0.1, target.getZ(), 6, 0.25, 0.1, 0.25, 0.1);
 		level.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.MACE_SMASH_GROUND, SoundSource.PLAYERS, 0.8f, 1.4f);
 	}
 
@@ -208,17 +211,33 @@ public final class ControlHammer {
 		UseItemCallback.EVENT.register((player, level, hand) -> blocked(player) ? InteractionResult.FAIL : InteractionResult.PASS);
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			int now = server.getTickCount();
-			STUNNED_UNTIL.entrySet().removeIf(e -> e.getValue() <= now);
+			STUNNED_UNTIL.entrySet().removeIf(e -> {
+				if (e.getValue() > now) return false;
+				STUN_ANCHOR.remove(e.getKey());
+				return true;
+			});
 			READY_AT.entrySet().removeIf(e -> e.getValue() <= now);
-			for (var id : STUNNED_UNTIL.keySet()) {
-				var player = server.getPlayerList().getPlayer(id);
-				if (player == null) continue;
-				var v = player.getDeltaMovement();
-				if (v.x != 0 || v.z != 0) { player.setDeltaMovement(0, v.y, 0); player.syncVelocity = true; }
+			for (var entry : STUN_ANCHOR.entrySet()) {
+				var entity = server.overworld().getEntityInAnyDimension(entry.getKey());
+				if (entity == null) continue;
+				var anchor = entry.getValue();
+				// Client movement is client-authoritative: correct any drift at the server tick boundary.
+				if (entity.position().distanceToSqr(anchor) > 0.0001) {
+					if (entity instanceof ServerPlayer player) {
+						player.connection.teleport(anchor.x, anchor.y, anchor.z, player.getYRot(), player.getXRot());
+					} else {
+						entity.setPos(anchor.x, anchor.y, anchor.z);
+					}
+				}
+				if (entity.getDeltaMovement().lengthSqr() > 0.0001) {
+					entity.setDeltaMovement(Vec3.ZERO);
+					entity.syncVelocity = true;
+				}
 			}
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			STUNNED_UNTIL.remove(handler.player.getUUID());
+			STUN_ANCHOR.remove(handler.player.getUUID());
 			READY_AT.remove(handler.player.getUUID());
 			COOLDOWN_TOTAL.remove(handler.player.getUUID());
 		});

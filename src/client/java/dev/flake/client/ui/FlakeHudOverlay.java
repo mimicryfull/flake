@@ -34,6 +34,12 @@ public final class FlakeHudOverlay {
 		if (screen != null && !(screen instanceof ChatScreen)) return;
 		var hud = FlakeUiClient.hud();
 		if (hud == null) return;
+		// Flake HUD (top bar, build panel, statuses, ability cards, item HUD) belongs to the lobby only.
+		if (!hud.inLobby()) {
+			topBarSlide = 0f;
+			lastCountdownWhole = -1;
+			return;
+		}
 
 		long now = System.nanoTime();
 		float dt = lastFrameNano == 0 ? 0.016f : Math.min(0.1f, Math.max(0.001f, (now - lastFrameNano) / 1_000_000_000.0f));
@@ -197,7 +203,7 @@ public final class FlakeHudOverlay {
 		buildPulse = Math.max(0f, buildPulse - dt * 2.2f);
 
 		String classLine = UiTheme.className(hud.fighterClass()) + " · " + stats.armorPoints() + " " + dev.flake.shared.FlakeI18n.tr("flake.hud.armor_abbr");
-		String gearLine = UiTheme.weaponName(hud.weapon()) + " · " + hud.cost() + "/" + hud.budget();
+		String gearLine = UiTheme.weaponName(hud.weapon());
 
 		var font = client.font;
 		boolean compact = g.guiWidth() < 420;

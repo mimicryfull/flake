@@ -20,8 +20,6 @@ public record HudStatePayload(
 		String passiveItem,
 		String activeItem1,
 		String activeItem2,
-		int cost,
-		int budget,
 		boolean validBuild,
 		int cooldownRemainingTicks,
 		int cooldownTotalTicks,
@@ -77,14 +75,14 @@ public record HudStatePayload(
 	}
 
 	public static HudStatePayload legacy(String fighterClass, String helmet, String chestplate, String leggings, String boots,
-			String weapon, String passiveItem, String activeItem1, String activeItem2, int cost, int budget, boolean validBuild,
+			String weapon, String passiveItem, String activeItem1, String activeItem2, boolean validBuild,
 			int cooldownRemainingTicks, int cooldownTotalTicks, int chargeElapsedTicks, int chargeTotalTicks,
 			int quakeCooldownRemainingTicks, int quakeCooldownTotalTicks, int quakeActiveTicks, int quakeTotalTicks,
 			boolean abilityBlocked, boolean effectsEnabled, String phase, int round, int timerTicks, int timerTotalTicks,
 			int firstWins, int secondWins, int winsNeeded, Fighter first, Fighter second, String lobbyTitle, int lobbyCount,
 			boolean inLobby, boolean ready, List<Status> statuses) {
 		return new HudStatePayload(fighterClass, helmet, chestplate, leggings, boots, weapon, passiveItem, activeItem1, activeItem2,
-				cost, budget, validBuild, cooldownRemainingTicks, cooldownTotalTicks, chargeElapsedTicks, chargeTotalTicks,
+				validBuild, cooldownRemainingTicks, cooldownTotalTicks, chargeElapsedTicks, chargeTotalTicks,
 				quakeCooldownRemainingTicks, quakeCooldownTotalTicks, quakeActiveTicks, quakeTotalTicks, abilityBlocked,
 				effectsEnabled, phase, round, timerTicks, timerTotalTicks, firstWins, secondWins, winsNeeded, first, second,
 				lobbyTitle, lobbyCount, inLobby, ready, 0L, Role.NONE, LoadState.MISSING, "", 0, List.of(), statuses);
@@ -147,8 +145,6 @@ public record HudStatePayload(
 		buf.writeUtf(passiveItem, 32);
 		buf.writeUtf(activeItem1, 32);
 		buf.writeUtf(activeItem2, 32);
-		buf.writeVarInt(cost);
-		buf.writeVarInt(budget);
 		buf.writeBoolean(validBuild);
 		buf.writeVarInt(cooldownRemainingTicks);
 		buf.writeVarInt(cooldownTotalTicks);
@@ -204,8 +200,6 @@ public record HudStatePayload(
 		String passiveItem = buf.readUtf(32);
 		String activeItem1 = buf.readUtf(32);
 		String activeItem2 = buf.readUtf(32);
-		int cost = buf.readVarInt();
-		int budget = buf.readVarInt();
 		boolean validBuild = buf.readBoolean();
 		int cooldownRemainingTicks = buf.readVarInt();
 		int cooldownTotalTicks = buf.readVarInt();
@@ -248,7 +242,7 @@ public record HudStatePayload(
 		}
 		return new HudStatePayload(
 				fighterClass, helmet, chestplate, leggings, boots, weapon,
-				passiveItem, activeItem1, activeItem2, cost, budget, validBuild,
+				passiveItem, activeItem1, activeItem2, validBuild,
 				cooldownRemainingTicks, cooldownTotalTicks, chargeElapsedTicks, chargeTotalTicks,
 				quakeCooldownRemainingTicks, quakeCooldownTotalTicks, quakeActiveTicks, quakeTotalTicks,
 				abilityBlocked, effectsEnabled, phase, round, timerTicks, timerTotalTicks,

@@ -115,7 +115,7 @@ public final class UiItemRow extends AbstractWidget {
 
 		int textX = ix + iconBox + 6;
 		var font = Minecraft.getInstance().font;
-		String shownBadge = equipped ? "ЕКІПІРОВАНО" : (!validCandidate ? "БЮДЖЕТ!" : ("CLASS".equals(silhouetteKind) ? "ОБРАТИ" : badge));
+		String shownBadge = equipped ? "ЕКІПІРОВАНО" : ("CLASS".equals(silhouetteKind) ? "ОБРАТИ" : badge);
 		int badgeW = font.width(shownBadge) + 8;
 		int badgeX = x + w - badgeW - 5;
 		int badgeY = y + 4;

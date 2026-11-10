@@ -7,6 +7,7 @@ import dev.flake.duel.CrystalClawAnimation;
 import dev.flake.duel.DarkBoltAnimation;
 import dev.flake.duel.ElectricQuake;
 import dev.flake.duel.EnergyMotes;
+import dev.flake.duel.HammerAnimation;
 import dev.flake.duel.ImpactAnimation;
 import dev.flake.duel.MaskAnimation;
 import dev.flake.duel.Shockwave;
@@ -172,6 +173,7 @@ public final class ShockwaveRenderState {
 				continue;
 			}
 			float duration = wave.quake ? GroundLightning.DURATION
+					: wave.hammer ? HammerAnimation.DURATION
 					: wave.charging ? Shockwave.CHARGE_TICKS / 20f + 1 : ShockwaveAnimation.VFX_DURATION_SECONDS;
 			if (age >= duration) { waves.remove(index); continue; }
 			double x = wave.origin.x, y = wave.origin.y, z = wave.origin.z;
@@ -186,16 +188,18 @@ public final class ShockwaveRenderState {
 			int position = 36 + index * 4;
 			values[position] = ox; values[position + 1] = oy; values[position + 2] = oz;
 			values[position + 3] = wave.quake ? ElectricQuake.wavefrontDistance(age)
+					: wave.hammer ? HammerAnimation.radius(age)
 					: wave.charging ? ShockwaveAnimation.chargeRadius(age) : ShockwaveAnimation.radius(age, (float) Shockwave.RADIUS);
 			int style = 36 + ShockwaveAnimation.MAX_WAVES * 4 + index * 4;
 			values[style] = wave.quake ? 1
+					: wave.hammer ? HammerAnimation.opacity(age)
 					: wave.charging ? 0.35f + ShockwaveAnimation.chargeProgress(age) * 0.65f
 					: Math.max(ShockwaveAnimation.opacity(age), age < EnergyMotes.DURATION ? 0.001f : 0f);
 			values[style + 1] = age;
 			values[style + 2] = wave.quake ? 2 : wave.charging ? 1 : 0;
 			values[style + 3] = wave.quake ? wave.yaw : ShockwaveAnimation.chargeProgress(age);
 			if (wave.quake) writeLightning(wave.lightning, index, age, quality, ox, oy, oz);
-			if (!wave.charging && !wave.quake) {
+			if (!wave.charging && !wave.quake && !wave.hammer) {
 				double travel = EnergyMotes.travel(age);
 				double tailTravel = travel - EnergyMotes.travel(Math.max(0, age - 0.035f));
 				for (int p = 0; p < (int) values[35]; p++) {
@@ -492,7 +496,7 @@ public final class ShockwaveRenderState {
 		private final Vec3 origin;
 		private final int sourceId;
 		private final GhoulRenderState.Actor ghoul;
-		private final boolean charging, quake, bolt, crit, ram, shieldRam;
+		private final boolean charging, quake, bolt, crit, ram, shieldRam, hammer;
 		/** 0 = not a buff wave, 1 = Matadora dark focus, 2 = Crystal Claw frost, 3 = Bastion Bulwark. */
 		private final int buffKind;
 		private float offAt = Float.NaN;
@@ -542,6 +546,7 @@ public final class ShockwaveRenderState {
 			crit = payload.phase() == ShockwavePayload.Phase.CRIT;
 			ram = payload.phase() == ShockwavePayload.Phase.SHIELD_RAM || payload.phase() == ShockwavePayload.Phase.SHIELD_RAM_SHIELD;
 			shieldRam = payload.phase() == ShockwavePayload.Phase.SHIELD_RAM_SHIELD;
+			hammer = payload.phase() == ShockwavePayload.Phase.HAMMER_STUN;
 			buffKind = payload.phase() == ShockwavePayload.Phase.MASK_ON ? 1
 					: payload.phase() == ShockwavePayload.Phase.CRYSTAL_ON ? 2
 					: payload.phase() == ShockwavePayload.Phase.BULWARK_ON ? 3 : 0;

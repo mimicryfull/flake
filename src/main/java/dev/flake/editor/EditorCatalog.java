@@ -20,12 +20,12 @@ public final class EditorCatalog {
 		public Loadout.ArmorSlot armorSlot() { return Loadout.ArmorSlot.valueOf(name()); }
 	}
 
-	public record Choice(String id, String title, String category, String description, int cost,
+	public record Choice(String id, String title, String category, String description,
 			List<String> tags, Loadout candidate, boolean selected) {
-		public boolean matches(String query, String filter, int maxCost) {
+		public boolean matches(String query, String filter) {
 			String haystack = (title + " " + category + " " + description + " " + id + " " + id.replace('_', ' ') + " " + String.join(" ", tags)).toLowerCase(Locale.ROOT);
 			boolean allFilter = filter == null || filter.isEmpty() || FlakeI18n.isTranslationOf("flake.filter.all", filter);
-			return cost <= maxCost && (allFilter || tags.contains(filter) || category.equalsIgnoreCase(filter))
+			return (allFilter || tags.contains(filter) || category.equalsIgnoreCase(filter))
 					&& haystack.contains(query.strip().toLowerCase(Locale.ROOT));
 		}
 		public String eligibility() {
@@ -41,8 +41,7 @@ public final class EditorCatalog {
 		ARMOR("flake.stat.armor.title", "flake.stat.armor.unit"),
 		TOUGHNESS("flake.stat.toughness.title", "flake.stat.toughness.unit"),
 		MELEE_DAMAGE("flake.stat.melee_damage.title", "flake.stat.melee_damage.unit"),
-		SPEED("flake.stat.speed.title", "flake.stat.speed.unit"),
-		COST("flake.stat.cost.title", "flake.stat.cost.unit");
+		SPEED("flake.stat.speed.title", "flake.stat.speed.unit");
 
 		private final String titleKey, unitKey;
 		Stat(String titleKey, String unitKey) { this.titleKey = titleKey; this.unitKey = unitKey; }
@@ -52,10 +51,10 @@ public final class EditorCatalog {
 
 	public record StatDelta(Stat stat, float current, float candidate) {
 		public float delta() { return candidate - current; }
-		public boolean improvement() { return stat == Stat.COST ? delta() < 0 : delta() > 0; }
+		public boolean improvement() { return delta() > 0; }
 	}
 
-	/** Only changed, directly supported stats; always include total budget. No reduction/projectile estimates. */
+	/** Only changed, directly supported stats. No reduction/projectile estimates. */
 	public static List<StatDelta> comparison(Loadout current, Loadout candidate) {
 		var before = current.stats(); var after = candidate.stats();
 		var result = new ArrayList<StatDelta>();
@@ -66,11 +65,10 @@ public final class EditorCatalog {
 		if (!current.weapon().ranged() && !candidate.weapon().ranged())
 			addDelta(result, Stat.MELEE_DAMAGE, before.attackDamage(), after.attackDamage());
 		addDelta(result, Stat.SPEED, before.speedPercent(), after.speedPercent());
-		addDelta(result, Stat.COST, before.cost(), after.cost());
 		return List.copyOf(result);
 	}
 	private static void addDelta(List<StatDelta> result, Stat stat, float current, float candidate) {
-		if (Float.isFinite(current) && Float.isFinite(candidate) && (stat == Stat.COST || Float.compare(current, candidate) != 0))
+		if (Float.isFinite(current) && Float.isFinite(candidate) && Float.compare(current, candidate) != 0)
 			result.add(new StatDelta(stat, current, candidate));
 	}
 	public static String equippedTitle(Slot slot, Loadout build) {
@@ -96,7 +94,7 @@ public final class EditorCatalog {
 					setSuffix = FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.armor.desc.full_set" : "flake.armor.desc.single");
 				}
 				String description = FlakeI18n.tr("flake.armor.choice_desc", item.armorFor(armorSlot), item.toughness(), setSuffix);
-				result.add(new Choice(item.name(), item.title(), armorSlot.title(), description, 0,
+				result.add(new Choice(item.name(), item.title(), armorSlot.title(), description,
 						List.of(item.title(), FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.tag.full_set" : "flake.tag.single_armor")),
 						candidate, item == build.armorAt(armorSlot)));
 			}
@@ -106,22 +104,22 @@ public final class EditorCatalog {
 					var tags = new ArrayList<String>(); tags.add(FlakeI18n.tr(item.ranged() ? "flake.tag.ranged" : "flake.tag.melee"));
 					if (item.name().contains("SWORD")) tags.add(FlakeI18n.tr("flake.tag.sword"));
 					if (item.name().contains("AXE")) tags.add(FlakeI18n.tr("flake.tag.axe"));
-					result.add(new Choice(item.name(), item.title(), item.category(), item.activeInfo(), item.cost(), List.copyOf(tags), build.withWeapon(item), item == build.weapon()));
+					result.add(new Choice(item.name(), item.title(), item.category(), item.activeInfo(), List.copyOf(tags), build.withWeapon(item), item == build.weapon()));
 				}
 			}
 			case PASSIVE -> {
 				for (var item : Loadout.PassiveItem.values()) {
 					var spec = dev.flake.shared.SliceRegistry.passive(item);
 					String category = spec != null ? spec.category() : FlakeI18n.tr("flake.category.defense");
-					result.add(new Choice(item.name(), item.title(), category, item.description(), item.cost(), List.of(category), build.withPassive(item), item == build.passiveItem()));
+					result.add(new Choice(item.name(), item.title(), category, item.description(), List.of(category), build.withPassive(item), item == build.passiveItem()));
 				}
 			}
 			case ACTIVE_1, ACTIVE_2 -> {
 				int index = slot == Slot.ACTIVE_1 ? 1 : 2;
-				for (var item : Loadout.ActiveItem.values()) result.add(new Choice(item.name(), item.title(), item.category(), item.description(), item.cost(), List.of(item.category()), build.withActiveItem(index, item), item == build.activeItemAt(index)));
+				for (var item : Loadout.ActiveItem.values()) result.add(new Choice(item.name(), item.title(), item.category(), item.description(), List.of(item.category()), build.withActiveItem(index, item), item == build.activeItemAt(index)));
 			}
 			case CLASS -> {
-				for (var item : Loadout.FighterClass.values()) result.add(new Choice(item.name(), item.title(), FlakeI18n.tr("flake.category.class"), item.description(), 0, List.of(), build.withClass(item), item == build.fighterClass()));
+				for (var item : Loadout.FighterClass.values()) result.add(new Choice(item.name(), item.title(), FlakeI18n.tr("flake.category.class"), item.description(), List.of(), build.withClass(item), item == build.fighterClass()));
 			}
 			default -> throw new IllegalArgumentException("Unsupported slot: " + slot);
 		}

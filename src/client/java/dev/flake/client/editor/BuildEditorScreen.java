@@ -1,6 +1,7 @@
 package dev.flake.client.editor;
 
 import dev.flake.build.Loadout;
+import dev.flake.client.ui.FlakeTooltip;
 import dev.flake.client.ui.FlakeUiClient;
 import dev.flake.client.ui.UiButton;
 import dev.flake.client.ui.UiIcons;
@@ -13,7 +14,6 @@ import dev.flake.shared.FlakeI18n;
 import dev.flake.ui.LobbyActionPayload;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -24,7 +24,7 @@ import java.util.Locale;
 /** Visual-first editor: eight equipment slots, a detached skin preview and a bottom stat strip. */
 public final class BuildEditorScreen extends Screen {
 	private static final ItemStack[] STAT_ICONS = {ItemStack.EMPTY, new ItemStack(Items.IRON_CHESTPLATE),
-			new ItemStack(Items.IRON_SWORD), new ItemStack(Items.FEATHER), new ItemStack(Items.EMERALD)};
+			new ItemStack(Items.IRON_SWORD), new ItemStack(Items.FEATHER)};
 	private final Screen parent;
 	private EditorLayout layout;
 	private BuildPreview preview;
@@ -36,6 +36,7 @@ public final class BuildEditorScreen extends Screen {
 	private String notice = "";
 	private boolean openingPicker;
 	private dev.flake.ui.BuildResultPayload seenResult;
+	private final java.util.Map<AbstractWidget, FlakeTooltip.Model> tooltips = new java.util.HashMap<>();
 
 	public BuildEditorScreen(Screen parent) { super(Component.literal(FlakeI18n.tr("flake.editor.title"))); this.parent = parent; }
 	public Loadout build() {
@@ -50,6 +51,7 @@ public final class BuildEditorScreen extends Screen {
 	}
 	@Override protected void init() {
 		openingPicker = false;
+		tooltips.clear();
 		layout = EditorLayout.fit(width, height);
 		if (acknowledged == null) acknowledged = serverBuild();
 		if (draft == null) draft = acknowledged;
@@ -60,9 +62,9 @@ public final class BuildEditorScreen extends Screen {
 		addRenderableWidget(new UiButton(x + w - 116, y + 7, 52, 20, FlakeI18n.tr("flake.editor.btn.back"), false, this::onClose));
 		Loadout b = build(); int sw = layout.sideWidth(), sh = layout.slotHeight();
 		addSlot(Slot.WEAPON, 0, b.weapon().title(), b.weapon().category(), UiIcons.weaponItem(b.weapon()), false);
-		addSlot(Slot.PASSIVE, 1, b.passiveItem().title(), FlakeI18n.tr("flake.editor.passive_cost", b.passiveItem().cost()), UiIcons.passiveItem(b.passiveItem()), b.passiveItem() == Loadout.PassiveItem.NONE);
-		addSlot(Slot.ACTIVE_1, 2, b.activeItem1().title(), FlakeI18n.tr("flake.editor.active_cost", b.activeItem1().cost()), UiIcons.activeItem(b.activeItem1()), b.activeItem1() == Loadout.ActiveItem.NONE);
-		addSlot(Slot.ACTIVE_2, 3, b.activeItem2().title(), FlakeI18n.tr("flake.editor.active_cost", b.activeItem2().cost()), UiIcons.activeItem(b.activeItem2()), b.activeItem2() == Loadout.ActiveItem.NONE);
+		addSlot(Slot.PASSIVE, 1, b.passiveItem().title(), b.passiveItem().description(), UiIcons.passiveItem(b.passiveItem()), b.passiveItem() == Loadout.PassiveItem.NONE);
+		addSlot(Slot.ACTIVE_1, 2, b.activeItem1().title(), b.activeItem1().description(), UiIcons.activeItem(b.activeItem1()), b.activeItem1() == Loadout.ActiveItem.NONE);
+		addSlot(Slot.ACTIVE_2, 3, b.activeItem2().title(), b.activeItem2().description(), UiIcons.activeItem(b.activeItem2()), b.activeItem2() == Loadout.ActiveItem.NONE);
 		int index = 0;
 		for (var slot : Loadout.ArmorSlot.values()) {
 			var mat = b.armorAt(slot);
@@ -76,7 +78,12 @@ public final class BuildEditorScreen extends Screen {
 					mat == Loadout.ArmorMaterial.NONE ? FlakeI18n.tr("flake.armor.none.short") : mat.title(),
 					FlakeI18n.tr("flake.editor.armor_pts", mat.armorFor(slot)), slot.name(), UiIcons.armorPieceItem(slot, mat), false, mat == Loadout.ArmorMaterial.NONE, UiTheme.CYAN,
 					() -> open(Slot.valueOf(slot.name()))));
-			widget.active = !locked(); widget.setTooltip(Tooltip.create(Component.literal(slot.title() + ": " + mat.title() + " · " + FlakeI18n.tr("flake.editor.armor_independent"))));
+			widget.active = !locked();
+			tooltips.put(widget, new FlakeTooltip.Model(UiIcons.armorPieceItem(slot, mat), mat.title(), slot.title(),
+					FlakeI18n.tr("flake.editor.armor_independent"),
+					java.util.List.of(new FlakeTooltip.Row(FlakeI18n.tr("flake.stat.armor.title"), Integer.toString(mat.armorFor(slot)), UiTheme.CYAN),
+							new FlakeTooltip.Row(FlakeI18n.tr("flake.stat.toughness.title"), number(mat.toughness()), UiTheme.CYAN)),
+					java.util.List.of(), java.util.List.of(), UiTheme.CYAN));
 		}
 		int classH = layout.bodyHeight() < 165 ? 24 : 34;
 		int classY = layout.bodyY() + layout.bodyHeight() - classH;
@@ -85,17 +92,22 @@ public final class BuildEditorScreen extends Screen {
 		preview.show(b); addRenderableWidget(preview);
 		var cls = addRenderableWidget(new UiSlotButton(layout.centerX(), classY, layout.centerWidth(), classH,
 				FlakeI18n.tr("flake.editor.class_caps"), b.fighterClass().title(), b.fighterClass().name(), "CLASS", ItemStack.EMPTY, true, false, UiTheme.CYAN, () -> open(Slot.CLASS)));
-		cls.active = !locked(); cls.setTooltip(Tooltip.create(Component.literal(b.fighterClass().description() + " · " + FlakeI18n.tr("flake.editor.class_tooltip_note"))));
+		cls.active = !locked();
+		tooltips.put(cls, new FlakeTooltip.Model(ItemStack.EMPTY, b.fighterClass().title(), FlakeI18n.tr("flake.slot.class"),
+				b.fighterClass().description(), java.util.List.of(), classAbilities(b.fighterClass().name()),
+				java.util.List.of(FlakeI18n.tr("flake.editor.class_tooltip_note")), UiTheme.CYAN));
 		var info = new AbstractWidget(layout.leftX(), layout.statsY(), w - layout.gap() * 2, layout.statsHeight(), Component.literal(FlakeI18n.tr("flake.editor.stats_narrator"))) {
 			@Override protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) { }
 			@Override protected void updateWidgetNarration(NarrationElementOutput output) { defaultButtonNarrationText(output); }
 		};
 		var stats = b.stats();
 		String passiveLine = stats.passiveBonuses().isEmpty() ? FlakeI18n.tr("flake.editor.passive_none") : String.join("\n", stats.passiveBonuses());
-		info.setTooltip(Tooltip.create(Component.literal(FlakeI18n.tr("flake.editor.stats_tooltip",
-				stats.maxHealth(), stats.absorption(), stats.armorPoints(), stats.armorToughness(), Math.round(stats.damageReductionPercent()),
-				b.weapon().ranged() ? FlakeI18n.tr("flake.editor.stats_tooltip_ranged") : FlakeI18n.tr("flake.editor.stats_tooltip_melee", stats.attackDamage()),
-				passiveLine, b.activeItem1().title(), b.activeItem2().title()))));
+		tooltips.put(info, new FlakeTooltip.Model(ItemStack.EMPTY, FlakeI18n.tr("flake.editor.stats_narrator"), "",
+				FlakeI18n.tr("flake.editor.stats_tooltip",
+						stats.maxHealth(), stats.absorption(), stats.armorPoints(), stats.armorToughness(), Math.round(stats.damageReductionPercent()),
+						b.weapon().ranged() ? FlakeI18n.tr("flake.editor.stats_tooltip_ranged") : FlakeI18n.tr("flake.editor.stats_tooltip_melee", stats.attackDamage()),
+						passiveLine, b.activeItem1().title(), b.activeItem2().title()),
+				java.util.List.of(), java.util.List.of(), java.util.List.of(), UiTheme.CYAN));
 		addRenderableWidget(info);
 	}
 	private void addSlot(Slot slot, int index, String title, String category, ItemStack icon, boolean empty) {
@@ -110,7 +122,22 @@ public final class BuildEditorScreen extends Screen {
 		var widget = addRenderableWidget(new UiSlotButton(layout.leftX(), layout.slotY(index), layout.sideWidth(), layout.slotHeight(),
 				label, shown, category, slot == Slot.WEAPON ? "WEAPON" : slot == Slot.PASSIVE ? "PASSIVE" : "UTILITY", icon, false, empty, UiTheme.CYAN, () -> open(slot)));
 		String details = switch (slot) { case WEAPON -> build().weapon().activeInfo(); case PASSIVE -> build().passiveItem().description(); case ACTIVE_1 -> build().activeItem1().description(); case ACTIVE_2 -> build().activeItem2().description(); default -> ""; };
-		widget.active = !locked(); widget.setTooltip(Tooltip.create(Component.literal(slot.title() + ": " + title + "\n" + category + "\n" + details + "\n" + FlakeI18n.tr("flake.editor.click_to_choose"))));
+		widget.active = !locked();
+		String modelCategory = slot == Slot.WEAPON ? build().weapon().category() : slot.title();
+		tooltips.put(widget, new FlakeTooltip.Model(icon, title, modelCategory, details, java.util.List.of(),
+				java.util.List.of(), java.util.List.of(FlakeI18n.tr("flake.editor.click_to_choose")), UiTheme.CYAN));
+	}
+	private static java.util.List<String> classAbilities(String classId) {
+		var lines = new java.util.ArrayList<String>();
+		for (int index = 1; index <= dev.flake.ability.AbilitySlots.COUNT; index++) {
+			var ability = dev.flake.ability.AbilitySlots.resolve(classId, index);
+			lines.add(dev.flake.client.FlakeClient.abilityKeyLabel(index) + ": "
+					+ (ability.implemented() ? ability.title() : FlakeI18n.tr("flake.ability.unassigned")));
+		}
+		return java.util.List.copyOf(lines);
+	}
+	private static String number(float value) {
+		return value == Math.round(value) ? Integer.toString(Math.round(value)) : String.format(java.util.Locale.ROOT, "%.1f", value);
 	}
 	private void open(Slot slot) { if (!locked()) { openingPicker = true; minecraft.gui.setScreen(new ItemPickerScreen(this, slot)); } }
 	private static String compactTitle(Slot slot, Loadout b) {
@@ -176,6 +203,15 @@ public final class BuildEditorScreen extends Screen {
 		extractStats(g);
 		preview.show(build());
 		super.extractRenderState(g, mx, my, delta);
+		for (var entry : tooltips.entrySet()) {
+			var widget = entry.getKey();
+			if (!widget.visible) continue;
+			if (widget.isHovered() || (widget.isFocused() && minecraft.getLastInputType().isKeyboard())) {
+				g.nextStratum();
+				FlakeTooltip.render(g, entry.getValue(), widget.isHovered() ? mx : widget.getX(), widget.isHovered() ? my : widget.getBottom());
+				break;
+			}
+		}
 	}
 	private void extractStats(GuiGraphicsExtractor g) {
 		var b = build(); var stats = b.stats(); int x = layout.leftX(), y = layout.statsY(), w = layout.width() - layout.gap() * 2;
@@ -187,23 +223,21 @@ public final class BuildEditorScreen extends Screen {
 			FlakeI18n.tr(compact ? "flake.editor.col.hp_short" : "flake.editor.col.hp"),
 			FlakeI18n.tr("flake.editor.col.armor"),
 			FlakeI18n.tr("flake.editor.col.damage"),
-			FlakeI18n.tr(compact ? "flake.editor.col.speed_short" : "flake.editor.col.speed"),
-			FlakeI18n.tr(compact ? "flake.editor.col.cost_short" : "flake.editor.col.cost")
+			FlakeI18n.tr(compact ? "flake.editor.col.speed_short" : "flake.editor.col.speed")
 		};
 		String[] values = {
 			String.format(Locale.ROOT, "%.0f HP%s", stats.maxHealth(), stats.absorption() > 0 ? " +2" : ""),
 			compact ? stats.armorPoints() + " / 20" : stats.armorPoints() + " · ≤" + Math.round(stats.damageReductionPercent()) + "%*",
 			Float.isNaN(stats.attackDamage()) ? FlakeI18n.tr("flake.editor.ranged_shot") : String.format(Locale.ROOT, "%.1f HP", stats.attackDamage()),
-			stats.speedPercent() + "%",
-			stats.cost() + " / " + Loadout.BUDGET
+			stats.speedPercent() + "%"
 		};
-		int col = w / 5;
-		for (int i = 0; i < 5; i++) {
+		int col = w / 4;
+		for (int i = 0; i < 4; i++) {
 			int iconX = x + i * col + 7;
 			if (i == 0) UiIcons.heart(g, iconX + 1, y + 7, 0xffc99b91);
 			else UiIcons.scaledItem(g, STAT_ICONS[i], iconX, y + 5, 0.625f);
 			UiTheme.text(g, labels[i], iconX + 13, y + 6, col - 22, UiTheme.MUTED);
-			UiTheme.scaledText(g, values[i], x + i * col + 7, y + 18, col - 12, 1f, i == 4 ? UiTheme.CYAN : UiTheme.TEXT);
+			UiTheme.scaledText(g, values[i], x + i * col + 7, y + 18, col - 12, 1f, i == 3 ? UiTheme.CYAN : UiTheme.TEXT);
 		}
 		String prefix = FlakeI18n.tr("flake.editor.passive_prefix");
 		String effects = stats.passiveBonuses().isEmpty() ? FlakeI18n.tr("flake.editor.passive_none")

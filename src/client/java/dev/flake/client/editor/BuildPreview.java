@@ -78,7 +78,7 @@ final class BuildPreview extends AbstractWidget {
 		g.entity(state, scale, translation, rotation, camera, getX(), getY(), getRight(), getBottom());
 		if (isFocused()) g.outline(getX(), getY(), width, height, UiTheme.CYAN);
 	}
-	@Override protected void onDrag(MouseButtonEvent event, double dx, double dy) { yaw += (float) dx * 1.1f; }
+	@Override protected void onDrag(MouseButtonEvent event, double dx, double dy) { yaw -= (float) dx * 1.1f; }
 	@Override public boolean keyPressed(KeyEvent event) {
 		if (event.key() == InputConstants.KEY_LEFT || event.key() == InputConstants.KEY_RIGHT) {
 			yaw += event.key() == InputConstants.KEY_LEFT ? -15f : 15f; return true;

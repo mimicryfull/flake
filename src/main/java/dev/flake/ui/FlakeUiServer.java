@@ -254,8 +254,6 @@ public final class FlakeUiServer implements ModInitializer {
 				build.passiveItem().name(),
 				build.activeItem1().name(),
 				build.activeItem2().name(),
-				build.cost(),
-				Loadout.BUDGET,
 				build.errors().isEmpty(),
 				clsSpec.cooldownRemaining(id, 1, now),
 				clsSpec.cooldownTotal(id, 1, now),

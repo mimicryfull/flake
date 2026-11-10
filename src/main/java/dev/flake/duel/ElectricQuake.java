@@ -4,7 +4,7 @@ import java.util.Optional;
 
 /**
  * Directional ground-hugging electric earthquake for the {@code CONCUSSED} class.
- * Damage grows with forward distance; the original inverse-distance knockback is preserved.
+ * Damage grows with forward distance; knockback stays inverse-distance but is deliberately restrained.
  */
 public final class ElectricQuake {
 	public static final double MIN_FORWARD = 0.35;
@@ -15,10 +15,10 @@ public final class ElectricQuake {
 	public static final float MAX_DAMAGE = 9.0f;
 	public static final float MIN_DAMAGE = 2.5f;
 
-	public static final double MAX_STRENGTH = 0.78;
-	public static final double MIN_STRENGTH = 0.28;
-	public static final double MAX_UPWARD = 0.42;
-	public static final double MIN_UPWARD = 0.18;
+	public static final double MAX_STRENGTH = 0.18;
+	public static final double MIN_STRENGTH = 0.07;
+	public static final double MAX_UPWARD = 0.12;
+	public static final double MIN_UPWARD = 0.05;
 
 	public static final int COOLDOWN_TICKS = 80;
 	public static final int PROPAGATION_TICKS = 10;

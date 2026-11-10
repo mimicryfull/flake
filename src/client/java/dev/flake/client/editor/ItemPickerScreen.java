@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.flake.ability.AbilitySlots;
 import dev.flake.build.Loadout;
 import dev.flake.client.FlakeClient;
+import dev.flake.client.ui.FlakeTooltip;
 import dev.flake.client.ui.UiButton;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
@@ -17,29 +18,20 @@ import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Vector2i;
 
 /** Separate Screen makes the picker truly modal: background controls cannot receive input. */
 public final class ItemPickerScreen extends Screen {
-	private static final ClientTooltipPositioner TOOLTIP_POSITIONER = (sw, sh, mx, my, tw, th) -> {
-		var position = DefaultTooltipPositioner.INSTANCE.positionTooltip(sw, sh, mx, my, tw, th);
-		return new Vector2i(Math.clamp(position.x(), 4, Math.max(4, sw - tw - 4)),
-				Math.clamp(position.y(), 4, Math.max(4, sh - th - 4)));
-	};
 	private final BuildEditorScreen editor;
 	private final Slot slot;
 	private EditBox search;
 	private String query = "", filter = "";
-	private int maxCost = 6, page;
+	private int page;
 	private int x, y, w, h, pages, results;
 	private List<Choice> choices = List.of();
 	private final List<AbstractWidget> dynamic = new ArrayList<>();
@@ -75,10 +67,7 @@ public final class ItemPickerScreen extends Screen {
 		addDynamic(new UiButton(x + 12, y + 57, filterW, 18, FlakeI18n.tr("flake.picker.filter_btn", filter), !filter.equals(allLabel), () -> {
 			filter = filters.get((filters.indexOf(filter) + 1) % filters.size()); page = 0; refresh();
 		}));
-		addDynamic(new UiButton(x + 18 + filterW, y + 57, w - 30 - filterW, 18,
-				maxCost == 6 ? FlakeI18n.tr("flake.picker.cost_all") : FlakeI18n.tr("flake.picker.cost_limit", maxCost),
-				maxCost != 6, () -> { maxCost = maxCost == 6 ? 0 : maxCost == 4 ? 6 : maxCost + 1; page = 0; refresh(); }));
-		List<Choice> filtered = choices.stream().filter(c -> c.matches(query, filter, maxCost)).toList();
+		List<Choice> filtered = choices.stream().filter(c -> c.matches(query, filter)).toList();
 		results = filtered.size();
 		int areaH = h - 112;
 		int gap = 4;
@@ -117,8 +106,16 @@ public final class ItemPickerScreen extends Screen {
 		UiTheme.panel(g, x, y, w, h);
 		UiTheme.scaledText(g, slot == Slot.CLASS ? FlakeI18n.tr("flake.picker.choose_class") : slot.title(), x + 12, y + 11, w - 90, 1.15f, UiTheme.TEXT);
 		if (results == 0) UiTheme.centeredText(g, FlakeI18n.tr("flake.picker.empty"), x + w / 2, y + h / 2 + 12, w - 30, UiTheme.MUTED);
-		UiTheme.text(g, FlakeI18n.tr("flake.picker.footer", results, page + 1, pages, editor.build().cost()), x + 12, y + h - 19, w - (pages > 1 ? 116 : 24), UiTheme.MUTED);
+		UiTheme.text(g, FlakeI18n.tr("flake.picker.footer", results, page + 1, pages), x + 12, y + h - 19, w - (pages > 1 ? 116 : 24), UiTheme.MUTED);
 		super.extractRenderState(g, mx, my, delta);
+		for (var child : children()) {
+			if (!(child instanceof PickerRow row) || !row.visible) continue;
+			if (row.isHovered() || (row.isFocused() && minecraft.getLastInputType().isKeyboard())) {
+				g.nextStratum();
+				FlakeTooltip.render(g, row.tooltip, row.isHovered() ? mx : row.getX(), row.isHovered() ? my : row.getBottom());
+				break;
+			}
+		}
 	}
 	@Override public void onClose() { minecraft.gui.setScreen(editor); }
 	@Override public boolean isPauseScreen() { return false; }
@@ -130,7 +127,7 @@ public final class ItemPickerScreen extends Screen {
 		private final ItemStack icon;
 		private final String abilitiesSummary;
 		private final boolean eligible;
-		private final Tooltip details;
+		private final FlakeTooltip.Model tooltip;
 		private float hover;
 		private long frame = System.nanoTime();
 		PickerRow(int rx, int ry, int rw, int rh, Choice choice) {
@@ -145,26 +142,20 @@ public final class ItemPickerScreen extends Screen {
 				}
 			}
 			abilitiesSummary = String.join("  ·  ", abilityLines);
-			String tooltip = choice.title() + "\n" + choice.category() + " · " + FlakeI18n.tr("flake.picker.cost_pts", choice.cost()) + "\n" + choice.description()
-					+ (abilityLines.isEmpty() ? "" : "\n" + String.join("\n", abilityLines)) + "\n" + choice.eligibility();
-			var detail = Component.literal(tooltip);
-			detail.append(Component.literal("\n" + FlakeI18n.tr("flake.picker.current_prefix", EditorCatalog.equippedTitle(slot, editor.build())))
-					.withStyle(style -> style.withColor(UiTheme.MUTED & 0xffffff)));
+			var rows = new ArrayList<FlakeTooltip.Row>();
 			for (var change : EditorCatalog.comparison(editor.build(), choice.candidate())) {
-				String values = number(change.current()) + " → " + number(change.candidate());
-				if (change.stat() == EditorCatalog.Stat.COST) values = number(change.current()) + "/" + Loadout.BUDGET + " → " + number(change.candidate()) + "/" + Loadout.BUDGET;
-				String difference = change.delta() == 0 ? FlakeI18n.tr("flake.picker.no_change") : (change.delta() > 0 ? "+" : "") + number(change.delta()) + change.stat().unit();
-				int color = change.delta() == 0 ? UiTheme.MUTED & 0xffffff : change.improvement() ? 0x6ee7b7 : 0xff7b7b;
-				detail.append(Component.literal("\n" + change.stat().title() + ": " + values + (change.stat() == EditorCatalog.Stat.COST ? "" : change.stat().unit()) + " (" + difference + ")")
-						.withStyle(style -> style.withColor(color)));
+				String values = number(change.current()) + " → " + number(change.candidate()) + change.stat().unit();
+				String difference = change.delta() == 0 ? FlakeI18n.tr("flake.picker.no_change")
+						: (change.delta() > 0 ? "+" : "") + number(change.delta()) + change.stat().unit();
+				int color = change.delta() == 0 ? UiTheme.MUTED : change.improvement() ? UiTheme.GREEN : UiTheme.RED;
+				rows.add(new FlakeTooltip.Row(change.stat().title(), values + "  (" + difference + ")", color));
 			}
-			details = Tooltip.create(detail);
-			setTooltip(details);
-		}
-		@Override protected void extractTooltipForNextRenderPass(GuiGraphicsExtractor g, int mx, int my) {
-			if (isHovered() || (isFocused() && minecraft.getLastInputType().isKeyboard()))
-				g.setTooltipForNextFrame(font, details.toCharSequence(minecraft), TOOLTIP_POSITIONER,
-						isHovered() ? mx : getX(), isHovered() ? my : getBottom(), true);
+			var notes = new ArrayList<String>();
+			notes.add(FlakeI18n.tr("flake.picker.current_prefix", EditorCatalog.equippedTitle(slot, editor.build())));
+			notes.add(choice.eligibility());
+			int accent = choice.selected() ? UiTheme.GREEN : !eligible ? UiTheme.AMBER : UiTheme.CYAN;
+			tooltip = new FlakeTooltip.Model(icon, choice.title(), choice.category(), choice.description(),
+					rows, abilityLines, notes, accent);
 		}
 		@Override protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
 			long now = System.nanoTime(); float step = Math.min(1f, (now - frame) / 85_000_000f); frame = now;
@@ -194,9 +185,9 @@ public final class ItemPickerScreen extends Screen {
 			}
 
 			String statusText = choice.selected() ? FlakeI18n.tr("flake.picker.badge.equipped")
-					: !eligible ? (choice.candidate().cost() > 6 ? FlakeI18n.tr("flake.picker.badge.budget") : FlakeI18n.tr("flake.picker.badge.taken"))
+					: !eligible ? FlakeI18n.tr("flake.picker.badge.taken")
 					: FlakeI18n.tr("flake.picker.badge.select");
-			String badgeText = slot == Slot.CLASS ? statusText : FlakeI18n.tr("flake.picker.cost_pts", choice.cost()) + " · " + statusText;
+			String badgeText = statusText;
 			int badgeW = font.width(badgeText) + 10;
 			int badgeX = getRight() - badgeW - 6;
 			int badgeY = ry + 5;

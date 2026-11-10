@@ -35,7 +35,7 @@ class HudStatePayloadTest {
 		var original = HudStatePayload.legacy(
 				"CONCUSSED", "DIAMOND", "DIAMOND", "IRON", "DIAMOND", "DIAMOND_SWORD",
 				"IRON_AEGIS", "GOLDEN_APPLE", "WIND_CHARGE",
-				6, 6, true, 32, 60, 10, 22, 40, 80, 4, 10, false, true,
+				true, 32, 60, 10, 22, 40, 80, 4, 10, false, true,
 				"FIGHTING", 2, 840, 0, 1, 0, 2,
 				new Fighter("PlayerOne", "CONCUSSED", 18.5f, 20.0f, true),
 				new Fighter("PlayerTwo", "BASTION", 12.0f, 20.0f, false),
@@ -57,7 +57,6 @@ class HudStatePayloadTest {
 		assertEquals(dev.flake.build.Loadout.PassiveItem.IRON_AEGIS, loadout.passiveItem());
 		assertEquals(dev.flake.build.Loadout.ActiveItem.GOLDEN_APPLE, loadout.activeItem1());
 		assertEquals(dev.flake.build.Loadout.ActiveItem.WIND_CHARGE, loadout.activeItem2());
-		assertEquals(6, loadout.cost());
 		assertEquals(32, decoded.slotCooldownRemaining(1));
 		assertEquals(40, decoded.slotCooldownRemaining(2));
 		assertEquals(10, decoded.slotActiveElapsed(1));
@@ -68,7 +67,7 @@ class HudStatePayloadTest {
 	@Test void encodesViewerRoleItemTotalsAndInfiniteStatuses() {
 		var original = new HudStatePayload(
 				"BASTION", "DIAMOND", "DIAMOND", "DIAMOND", "DIAMOND", "DIAMOND_SWORD",
-				"NONE", "SHIELD", "ENDER_PEARL", 5, 6, true,
+				"NONE", "SHIELD", "ENDER_PEARL", true,
 				0, 120, -1, 0, 0, 280, -1, 80, false, true,
 				"FIGHTING", 1, 0, 300, 0, 0, 2,
 				new Fighter("A", "BASTION", 20f, 20f, false),
@@ -98,7 +97,7 @@ class HudStatePayloadTest {
 
 	@Test void malformedStatusesAndCooldownsAreBounded() {
 		var build = HudStatePayload.legacy("BASTION", "NONE", "NONE", "NONE", "NONE", "IRON_SWORD", "NONE", "NONE", "NONE",
-				6, 6, true, 0, 0, -1, 0, 0, 0, -1, 0, false, true, "PREPARING", 1, 0, 0, 0, 0, 1, null, null, "", 0, false, false,
+				true, 0, 0, -1, 0, 0, 0, -1, 0, false, true, "PREPARING", 1, 0, 0, 0, 0, 1, null, null, "", 0, false, false,
 				List.of(new HudStatePayload.Status("stun", -5, -9, 0)));
 		assertEquals(0, build.statuses().getFirst().ticksLeft());
 		assertEquals(0, build.statuses().getFirst().totalTicks());
@@ -107,7 +106,7 @@ class HudStatePayloadTest {
 
 	private HudStatePayload payload(String fighterClass, String active1, String active2) {
 		return HudStatePayload.legacy(fighterClass, "NONE", "GOLD", "CHAINMAIL", "IRON", "IRON_SWORD",
-				"MOBILITY", active1, active2, 6, 6, true,
+				"MOBILITY", active1, active2, true,
 				0, 60, -1, 22, 0, 80, -1, 10, false, true,
 				"PREPARING", 1, 0, 0, 0, 0, 1, null, null, "", 0, false, false, List.of());
 	}

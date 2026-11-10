@@ -28,6 +28,8 @@ public final class ShockwaveVisuals {
 	private static final int RAM_DURATION = (int) Math.ceil(BastionAnimation.Ram.DURATION * 20) + 4;
 	/** Screen slash window for the Void Paladin crit. */
 	private static final int CRIT_DURATION = (int) Math.ceil(CritAnimation.DURATION * 20) + 2;
+	/** Compact hammer-contact burst. */
+	private static final int HAMMER_DURATION = (int) Math.ceil(HammerAnimation.DURATION * 20) + 2;
 	private static final Identifier EFFECT = Identifier.fromNamespaceAndPath(ExampleMod.MOD_ID, "shockwave");
 	private static final HashMap<UUID, Integer> active = new HashMap<>();
 	private static final HashSet<UUID> disabled = new HashSet<>();
@@ -192,6 +194,15 @@ public final class ShockwaveVisuals {
 			ServerPlayNetworking.send(player, payload);
 			extend(player, now + CRIT_DURATION);
 		}
+	}
+
+	/** Control Hammer stun: a tight world-space pressure burst at the confirmed contact point. */
+	public static void hammerStun(ServerPlayer source, net.minecraft.world.entity.LivingEntity target) {
+		if (target == null) return;
+		var contact = target.position().add(0, target.getBbHeight() * 0.55, 0);
+		var payload = new ShockwavePayload(contact, source.getId(), ShockwavePayload.Phase.HAMMER_STUN,
+				0.0f, target.getId(), contact);
+		broadcast(source, payload, contact, HAMMER_DURATION);
 	}
 
 	/** Cube of Darkness: purely visual; the server already resolved the target, damage and cooldown. */
