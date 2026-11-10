@@ -29,6 +29,12 @@ class GhoulAnimationTest {
 		assertEquals(0, GhoulAnimation.absorption(0.1f, duration));
 		assertTrue(GhoulAnimation.absorption(duration + 0.025f, duration) > 0.99f);
 		assertEquals(0, GhoulAnimation.absorption(duration + 0.24f, duration));
+		assertEquals(0, GhoulAnimation.burst(-0.01f));
+		assertTrue(GhoulAnimation.burst(0.06f) > 0.98f);
+		assertEquals(0, GhoulAnimation.burst(0.55f));
+		assertTrue(GhoulAnimation.heartbeat(0.28f) > 0.95f);
+		assertTrue(GhoulAnimation.heartbeat(0.43f) > 0.5f);
+		assertEquals(0, GhoulAnimation.heartbeat(0.85f));
 	}
 
 	@Test void worldHistoryInterpolatesTimestampsAcrossDifferentFrameRates() {

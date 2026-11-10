@@ -37,6 +37,22 @@ public final class GhoulAnimation {
 				* (1 - smooth(duration + 0.045f, duration + 0.23f, age));
 	}
 
+	/** Initial crimson surge when Bloodlust is activated. */
+	public static float burst(float age) {
+		if (age < 0 || age >= 0.36f) return 0;
+		return smooth(0, 0.045f, age) * (1 - smooth(0.085f, 0.36f, age));
+	}
+
+	/** Double-beat arterial pulse for Bloodlust aura and first-person predatory vignette. */
+	public static float heartbeat(float age) {
+		if (age < 0) return 0;
+		float s1 = Math.max(0f, (float) Math.sin(age * 5.6f));
+		float s2 = Math.max(0f, (float) Math.sin(age * 5.6f - 0.85f));
+		float p1 = s1 * s1; p1 = p1 * p1 * p1;
+		float p2 = s2 * s2; p2 = p2 * p2; p2 = p2 * p2;
+		return Math.min(1f, p1 + 0.55f * p2);
+	}
+
 	public static boolean confirmedHealing(boolean bloodlust, float taken, float before, float after) {
 		return bloodlust && taken > 0 && Float.isFinite(after) && after > before;
 	}

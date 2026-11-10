@@ -211,7 +211,11 @@ public final class ClassSkills {
 		boolean hit = target.hurtServer(level, p.damageSources().playerAttack(p), CrystalClaw.skillDamage(p, 4.0f));
 		p.heal(1.5f);
 		ShockwaveVisuals.bloodLunge(p, target, dir, hit);
-		sound(level, p, SoundEvents.MACE_SMASH_AIR, 0.6f, 1.4f);
+		sound(level, p, SoundEvents.MACE_SMASH_AIR, 0.65f, 1.35f);
+		if (hit) {
+			sound(level, p, SoundEvents.PLAYER_ATTACK_CRIT, 0.8f, 0.78f);
+			sound(level, p, SoundEvents.PHANTOM_BITE, 0.7f, 1.18f);
+		}
 		return true;
 	}
 
@@ -219,7 +223,8 @@ public final class ClassSkills {
 		p.addEffect(new MobEffectInstance(MobEffects.SPEED, BLOODLUST_TICKS, 0, false, false, true));
 		BLOODLUST_UNTIL.put(p.getUUID(), now + BLOODLUST_TICKS);
 		ShockwaveVisuals.bloodlust(p, true);
-		sound(level, p, SoundEvents.LIGHTNING_BOLT_IMPACT, 0.3f, 1.8f);
+		sound(level, p, SoundEvents.LIGHTNING_BOLT_IMPACT, 0.32f, 1.75f);
+		sound(level, p, SoundEvents.WARDEN_HEARTBEAT, 0.85f, 1.1f);
 		return true;
 	}
 

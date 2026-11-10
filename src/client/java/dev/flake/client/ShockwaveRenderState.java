@@ -282,17 +282,20 @@ public final class ShockwaveRenderState {
 		var source = client.level.getEntity(wave.sourceId);
 		var target = wave.targetId >= 0 ? client.level.getEntity(wave.targetId) : null;
 		Vec3 body = source != null ? source.getPosition(partial) : wave.lastBody;
-		Vec3 dir = new Vec3(Math.cos(wave.yaw), 0, Math.sin(wave.yaw));
+		double dirX = Math.cos(wave.yaw), dirZ = Math.sin(wave.yaw);
 		wave.sampleMotion(body, age);
 		float bodyHeight = source != null ? source.getBbHeight() : 1.8f;
 		float targetHeight = target != null ? target.getBbHeight() : 1.8f;
 		Vec3 impact = wave.aim;
-		Vec3 mid = body.add(0, bodyHeight * 0.5, 0).lerp(impact, 0.55);
+		double midX = body.x + (impact.x - body.x) * 0.55;
+		double midY = (body.y + bodyHeight * 0.5) + (impact.y - (body.y + bodyHeight * 0.5)) * 0.55;
+		double midZ = body.z + (impact.z - body.z) * 0.55;
+		double dx = midX - cameraPos.x, dy = midY - cameraPos.y, dz = midZ - cameraPos.z;
+		if (dx * dx + dy * dy + dz * dz > 64 * 64) return;
 		float span = (float) body.distanceTo(impact);
-		if (mid.distanceToSqr(cameraPos) > 64 * 64) return;
-		float ox = (float) (mid.x - cameraPos.x), oy = (float) (mid.y - cameraPos.y), oz = (float) (mid.z - cameraPos.z);
 		int position = 36 + index * 4;
-		values[position] = ox; values[position + 1] = oy; values[position + 2] = oz; values[position + 3] = span * 0.5f + 1.8f;
+		values[position] = (float) dx; values[position + 1] = (float) dy; values[position + 2] = (float) dz;
+		values[position + 3] = span * 0.5f + 2.2f;
 		int style = 36 + ShockwaveAnimation.MAX_WAVES * 4 + index * 4;
 		values[style] = 1.0f;
 		values[style + 1] = age;
@@ -307,10 +310,12 @@ public final class ShockwaveRenderState {
 		values[bounds + 5] = (float) (impact.y - cameraPos.y);
 		values[bounds + 6] = (float) (impact.z - cameraPos.z);
 		values[bounds + 7] = 1.0f + (wave.shieldRam ? 0.42f : 0.0f);
-		Vec3 victim = target != null ? target.getPosition(partial) : impact.add(0, -targetHeight * 0.52, 0);
-		values[bounds + 8] = (float) (victim.x - cameraPos.x);
-		values[bounds + 9] = (float) (victim.y - cameraPos.y);
-		values[bounds + 10] = (float) (victim.z - cameraPos.z);
+		double vx = target != null ? target.getX(partial) : impact.x;
+		double vy = target != null ? target.getY(partial) : impact.y - targetHeight * 0.52;
+		double vz = target != null ? target.getZ(partial) : impact.z;
+		values[bounds + 8] = (float) (vx - cameraPos.x);
+		values[bounds + 9] = (float) (vy - cameraPos.y);
+		values[bounds + 10] = (float) (vz - cameraPos.z);
 		values[bounds + 11] = targetHeight;
 		for (int i = 0; i < wave.history.length; i++) {
 			int entry = bounds + 12 + i * 4;
@@ -320,18 +325,23 @@ public final class ShockwaveRenderState {
 			values[entry + 3] = bodyHeight;
 		}
 		int material = MATERIAL_OFFSET + index * GroundLightning.MOTES * 4;
-		values[material] = (float) dir.x; values[material + 1] = (float) dir.y; values[material + 2] = (float) dir.z;
+		values[material] = (float) dirX; values[material + 1] = 0f; values[material + 2] = (float) dirZ;
 		values[material + 3] = wave.shieldRam ? 1.0f : 0.0f;
 		values[material + 4] = targetHeight;
 		values[material + 5] = wave.targetId >= 0 ? 1 : 0;
 		values[material + 6] = wave.targetId >= 0 ? BastionAnimation.Ram.impact(age) : 0;
 		values[material + 7] = wave.targetId >= 0 ? BastionAnimation.Ram.suppression(age) : 0;
-		Vec3 lag = wave.lagBody.subtract(body);
-		if (lag.lengthSqr() > 0.16) lag = lag.normalize().scale(0.4);
-		values[material + 8] = (float) lag.x;
-		values[material + 9] = (float) lag.y;
-		values[material + 10] = (float) lag.z;
-		values[material + 11] = (float) Math.min(1, lag.length() * 3);
+		double lagX = wave.lagBody.x - body.x, lagY = wave.lagBody.y - body.y, lagZ = wave.lagBody.z - body.z;
+		double lagLenSq = lagX * lagX + lagY * lagY + lagZ * lagZ;
+		if (lagLenSq > 0.16) {
+			double s = 0.4 / Math.sqrt(lagLenSq);
+			lagX *= s; lagY *= s; lagZ *= s;
+			lagLenSq = 0.16;
+		}
+		values[material + 8] = (float) lagX;
+		values[material + 9] = (float) lagY;
+		values[material + 10] = (float) lagZ;
+		values[material + 11] = (float) Math.min(1, Math.sqrt(lagLenSq) * 3);
 	}
 
 	/** One homing bolt: start/target are tracked live; the server-chosen target id is never re-evaluated. */

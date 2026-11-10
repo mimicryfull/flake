@@ -736,12 +736,27 @@ const float BASTION_LIMITS[11] = float[11](1,1,1,1,1.05,1.05,0.88,0.88,1,1,1);
 void bastionPlate(vec3 ray, float sceneDistance, vec3 centre, mat3 basis, vec3 ext,
                   float alpha, float age, float seed, float excitation, float dissolve,
                   inout vec3 light, inout float darkness) {
-    if (alpha < 0.001 || !intersectsBound(ray, sceneDistance, centre, length(ext))) return;
+    float maxExt = max(ext.x, max(ext.y, ext.z)) * 1.42;
+    if (alpha < 0.001 || !intersectsBound(ray, sceneDistance, centre, maxExt)) return;
     vec3 ro = (transpose(basis) * -centre) / ext;
     vec3 rd = (transpose(basis) * ray) / ext;
-    float nearHit = -1e6, farHit = 1e6;
-    int nearFace = 0, farFace = 0;
-    for (int i = 0; i < 11; i++) {
+    // Fast vectorized slab test for the 5 axis-aligned box faces (x = +-1, y = +-1, z = -1) before bevel planes.
+    vec3 safeRd = mix(vec3(-1.0), vec3(1.0), step(vec3(0.0), rd)) * max(abs(rd), vec3(0.000001));
+    vec3 t0 = (-vec3(1.0) - ro) / safeRd;
+    vec3 t1 = (vec3(1.0, 1.0, 1.25) - ro) / safeRd;
+    vec3 nearBox = min(t0, t1), farBox = max(t0, t1);
+    float nearHit = max(max(nearBox.x, nearBox.y), nearBox.z);
+    float farHit = min(min(farBox.x, farBox.y), farBox.z);
+    if (farHit < max(nearHit, 0.0) || nearHit > sceneDistance) return;
+
+    int nearFace = nearBox.x > nearBox.y && nearBox.x > nearBox.z ? (rd.x < 0.0 ? 0 : 1)
+                 : (nearBox.y > nearBox.z ? (rd.y < 0.0 ? 2 : 3) : 8);
+    int farFace = farBox.x < farBox.y && farBox.x < farBox.z ? (rd.x > 0.0 ? 0 : 1)
+                : (farBox.y < farBox.z ? (rd.y > 0.0 ? 2 : 3) : 8);
+
+    // Only test the 6 bevel & ridged front planes (indices 4..7, 9..10).
+    for (int i = 4; i < 11; i++) {
+        if (i == 8) continue;
         float d = dot(BASTION_PLANES[i], rd);
         float h = BASTION_LIMITS[i] - dot(BASTION_PLANES[i], ro);
         if (abs(d) < 0.000001) { if (h < 0.0) return; }
@@ -758,30 +773,39 @@ void bastionPlate(vec3 ray, float sceneDistance, vec3 centre, mat3 basis, vec3 e
     vec3 p = ro + rd * hit;
     vec3 normal = normalize(basis * (BASTION_PLANES[face] / ext));
     float facing = abs(dot(normal, ray));
-    float fresnel = pow(1.0 - facing, 2.5);
+    float invFacing = 1.0 - facing;
+    float fresnel = invFacing * invFacing * sqrt(max(0.0, invFacing));
     // Silhouette inset follows the polygon, not a square UV border.
-    float border = 10.0;
-    for (int i = 0; i < 8; i++)
-        if (i != face) border = min(border, BASTION_LIMITS[i] - dot(BASTION_PLANES[i], p));
+    float border = min(min(1.0 - abs(p.x), 1.0 - abs(p.y)),
+                   min(min(1.05 - dot(BASTION_PLANES[4].xy, abs(p.xy)), 0.88 - dot(vec2(0.78, 0.63), vec2(abs(p.x), -p.y))), 10.0));
     float aa = max(0.008, hit * 0.0009 / min(ext.x, ext.y));
-    float rim = 1.0 - smoothstep(0.015, 0.035 + aa, border);
-    float inset = exp(-pow((border - 0.13) / (0.013 + aa), 2.0));
-    float spine = exp(-pow(p.x / 0.035, 2.0)) * (1.0 - smoothstep(0.55, 0.95, abs(p.y)));
+    float rim = 1.0 - smoothstep(0.015, 0.038 + aa, border);
+    float insetDiff = (border - 0.13) / (0.014 + aa);
+    float inset = exp(-insetDiff * insetDiff);
+    float spineDiff = p.x / 0.035;
+    float spine = exp(-spineDiff * spineDiff) * (1.0 - smoothstep(0.55, 0.95, abs(p.y)));
     float nacre = 0.5 + 0.5 * sin(p.y * 9.0 + sin(p.x * 7.0 + seed) * 1.4 - age * 1.5 + seed);
-    float lamina = pow(0.5 + 0.5 * sin(p.y * 31.0 + p.x * 12.0 - age * 2.2 + seed), 8.0);
-    float scan = exp(-pow((p.y - sin(age * 1.8 + seed) * 1.2) / 0.16, 2.0));
-    float erosion = softNoise(p.xy * 5.0 + vec2(seed, age * 0.9));
-    float intact = 1.0 - smoothstep(erosion - 0.13, erosion + 0.13, dissolve * 1.2 - 0.12);
-    float burn = exp(-pow((erosion - dissolve * 1.2 + 0.12) / 0.08, 2.0)) * step(0.01, dissolve);
+    float lamBase = 0.5 + 0.5 * sin(p.y * 31.0 + p.x * 12.0 - age * 2.2 + seed);
+    float lam2 = lamBase * lamBase; float lam4 = lam2 * lam2; float lamina = lam4 * lam4;
+    float scanDiff = (p.y - sin(age * 1.8 + seed) * 1.2) / 0.16;
+    float scan = exp(-scanDiff * scanDiff);
+    float intact = 1.0;
+    float burn = 0.0;
+    if (dissolve > 0.001) {
+        float erosion = softNoise(p.xy * 5.0 + vec2(seed, age * 0.9));
+        intact = 1.0 - smoothstep(erosion - 0.13, erosion + 0.13, dissolve * 1.2 - 0.12);
+        float burnDiff = (erosion - dissolve * 1.2 + 0.12) / 0.08;
+        burn = exp(-burnDiff * burnDiff);
+    }
     float visible = smoothstep(0.0, 0.045, sceneDistance - hit) * intact * alpha;
     vec3 pearl = mix(BASTION_GOLD, BASTION_PALE, nacre * 0.72 + fresnel * 0.28);
-    float body = 0.055 + nacre * 0.035 + lamina * 0.018;
-    light += (pearl * (body + fresnel * 0.10 + inset * 0.09 + scan * 0.045)
-           + mix(BASTION_GOLD, BASTION_PALE, 0.30) * rim * 0.34
-           + BASTION_WHITE * (spine * 0.065 + excitation * (0.25 + rim * 0.6) + burn * 0.6)) * visible;
+    float body = 0.068 + nacre * 0.042 + lamina * 0.024;
+    light += (pearl * (body + fresnel * 0.13 + inset * 0.11 + scan * 0.055)
+           + mix(BASTION_GOLD, BASTION_PALE, 0.35) * rim * 0.42
+           + BASTION_WHITE * (spine * 0.08 + excitation * (0.30 + rim * 0.68) + burn * 0.65)) * visible;
     // Thin amber occlusion gives thickness without hiding the player behind opaque armour.
-    float faceShade = max(0.0, dot(normal, normalize(vec3(-0.4,0.8,0.25))));
-    darkness += (0.045 + (1.0 - faceShade) * 0.035 + float(face == 8) * 0.035) * visible * (1.0 - rim);
+    float faceShade = max(0.0, dot(normal, normalize(vec3(-0.4, 0.8, 0.25))));
+    darkness += (0.052 + (1.0 - faceShade) * 0.040 + float(face == 8) * 0.038) * visible * (1.0 - rim * 0.85);
 }
 
 void ramStreak(vec3 ray, float sceneDistance, vec3 start, vec3 end, float width, float alpha,
@@ -798,7 +822,7 @@ void ramStreak(vec3 ray, float sceneDistance, vec3 start, vec3 end, float width,
     if (dist > width * 3.5) return;
     float core = 1.0 - smoothstep(width * 0.32, width * 0.82, dist);
     float halo = exp(-dist * dist / (width * width * 4.5));
-    light += colour * (core * 0.55 + halo * 0.22) * alpha;
+    light += colour * (core * 0.62 + halo * 0.26) * alpha;
 }
 
 void dustPuff(vec3 ray, float sceneDistance, vec3 centre, float radius, float alpha,
@@ -810,13 +834,26 @@ void dustPuff(vec3 ray, float sceneDistance, vec3 centre, float radius, float al
     float front = along - sqrt(max(0.0, radius * radius - impact * impact));
     float visible = smoothstep(-0.02, 0.06, sceneDistance - front);
     float glow = exp(-impact * impact / (radius * radius * 1.35));
-    light += DUST * glow * alpha * 0.42 * visible;
-    darkness += glow * alpha * 0.14 * visible;
+    light += DUST * glow * alpha * 0.46 * visible;
+    darkness += glow * alpha * 0.15 * visible;
+}
+
+void goldenFloorRing(vec3 ray, float sceneDistance, vec3 centre, float radius, float width, float alpha, vec3 col, inout vec3 light) {
+    if (alpha <= 0.001 || abs(ray.y) < 0.0001) return;
+    float hit = centre.y / ray.y;
+    if (hit <= 0.0 || hit > sceneDistance + 0.02) return;
+    vec2 rel = (ray * hit - centre).xz;
+    float r = length(rel);
+    float diff = (r - radius) / width;
+    if (abs(diff) > 3.2) return;
+    float band = exp(-diff * diff);
+    light += col * band * alpha;
 }
 
 // Shield Ram: interlocking chevrons, motion-history ribbons, then a compact fractured pressure crown.
 void shieldRam(vec3 ray, float sceneDistance, int wave,
                inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
+    if (!intersectsBound(ray, sceneDistance, WaveOrigins[wave].xyz, WaveOrigins[wave].w)) return;
     vec4 body = QuakeBounds[wave * 8];
     vec4 impact = QuakeBounds[wave * 8 + 1];
     vec4 victim = QuakeBounds[wave * 8 + 2];
@@ -838,11 +875,12 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
     // On a confirmed hit the assembled structure compresses into the fixed contact, never chases knockback.
     nose = mix(nose, impact.xyz, confirmed * smoothstep(0.055, 0.10, age));
     if (crown > 0.001 && intersectsBound(ray, sceneDistance, nose, 2.0)) {
+        float sqAge = (age - 0.10) / 0.025;
+        float squeeze = 1.0 - confirmed * 0.32 * exp(-sqAge * sqAge);
         for (int k = 0; k < 6; k++) {
             float f = float(k), wing = mod(f, 2.0) * 2.0 - 1.0, tier = floor(f / 2.0);
             float spring = bastionSpring((age - f * 0.006) / 0.10);
             float load = sin(age * 88.0 - f * 2.3) * 0.012 * inertia.w;
-            float squeeze = 1.0 - confirmed * 0.32 * exp(-pow((age - 0.10) / 0.025, 2.0));
             vec3 offset = side * wing * (0.25 + (1.0 - spring) * 0.85 + rupture * (0.55 + tier * 0.17))
                         + up * ((tier - 1.0) * 0.43 * squeeze + (1.0 - spring) * (tier - 0.5) * 0.8)
                         - dir * (0.18 + tier * 0.12 + abs(1.0 - spring) * 0.45 + rupture * 0.2);
@@ -851,17 +889,17 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
             vec3 ext = vec3(0.37 + shield * 0.035, 0.30 * squeeze, 0.085 + shield * 0.035);
             ext.y *= 1.0 + (1.0 - spring) * 0.4;
             bastionPlate(ray, sceneDistance, p, bastionBasis(normal, wing * (0.10 + (1.0 - spring) * 0.8)),
-                         ext, crown * (1.0 + shield * 0.22), age, f * 1.7, contact.z * 0.55,
+                         ext, crown * (1.0 + shield * 0.25), age, f * 1.7, contact.z * 0.60,
                          max(rupture * 0.8, smoothstep(0.30, 0.48, age)), light, darkness);
         }
         ramStreak(ray, sceneDistance, nose - dir * 0.28 - up * 0.35, nose + up * 0.38,
-                  0.028 + shield * 0.012, crown * (0.45 + contact.z), BASTION_WHITE, light);
+                  0.030 + shield * 0.014, crown * (0.52 + contact.z), BASTION_WHITE, light);
         float along = dot(ray, nose);
         if (along > 0.0 && along < sceneDistance) {
             float d = length(ray * along - nose);
             float lens = exp(-d * d * 12.0) * crown * (1.0 - smoothstep(0.10, 0.18, age));
             vec2 projected = texCoord - screenPosition(nose);
-            distortion -= projected / max(length(projected), 0.001) * lens * 0.22;
+            distortion -= projected / max(length(projected), 0.001) * lens * 0.24;
         }
     }
 
@@ -879,14 +917,14 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
                 vec3 next = QuakeBounds[wave * 8 + 3 + j].xyz + offset;
                 float tail = 1.0 - float(j) / 5.0;
                 if (distance(previous, next) > 0.018)
-                    ramStreak(ray, sceneDistance, previous, next, 0.023 + tail * 0.02,
-                              trail * tail * (0.45 + shield * 0.15), mix(BASTION_GOLD, BASTION_PALE, tail), light);
+                    ramStreak(ray, sceneDistance, previous, next, 0.024 + tail * 0.022,
+                              trail * tail * (0.48 + shield * 0.18), mix(BASTION_GOLD, BASTION_PALE, tail), light);
                 previous = next;
             }
         }
         for (int k = 0; k < 3; k++) {
             vec3 foot = QuakeBounds[wave * 8 + 3 + k * 2].xyz + up * 0.07;
-            dustPuff(ray, sceneDistance, foot, 0.13 + float(k) * 0.035, trail * 0.22, light, darkness);
+            dustPuff(ray, sceneDistance, foot, 0.13 + float(k) * 0.035, trail * 0.24, light, darkness);
         }
         // A few armour slivers peel off the loaded edges, tumble, then lag behind the moving body.
         int slivers = DepthConfig.z < 0.5 ? 2 : 4;
@@ -906,15 +944,21 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
 
     if (confirmed < 0.5) return; // A miss only sheds and dissolves its wedge. No explosion or suppression.
     float t = age - 0.10;
-    if (t >= 0.0 && t < 0.55 && intersectsBound(ray, sceneDistance, impact.xyz, 2.2)) {
+    if (t >= 0.0 && t < 0.55 && intersectsBound(ray, sceneDistance, impact.xyz, 2.3)) {
         float flash = contact.z;
         float along = dot(ray, impact.xyz);
         if (along > 0.0 && along < sceneDistance) {
             vec3 delta = ray * along - impact.xyz;
             float glow = exp(-dot(delta, delta) / (0.035 + t * 0.5)) * flash;
-            light += (BASTION_WHITE * 1.5 + BASTION_GOLD * 0.35) * glow * (1.0 + shield * 0.45);
+            light += (BASTION_WHITE * 1.55 + BASTION_GOLD * 0.42) * glow * (1.0 + shield * 0.45);
             vec2 projected = texCoord - screenPosition(impact.xyz);
             distortion += projected / max(length(projected), 0.001) * glow * 0.65;
+        }
+        // Golden ground shock-ring radiating from the confirmed impact footpoint
+        if (t < 0.34) {
+            float ringEnv = (1.0 - smoothstep(0.08, 0.34, t)) * (0.65 + shield * 0.35);
+            goldenFloorRing(ray, sceneDistance, vec3(impact.x, victim.y + 0.05, impact.z),
+                            0.25 + (1.0 - exp(-t * 11.0)) * 1.55, 0.075, ringEnv * 0.65, BASTION_PALE, light);
         }
         // Six forward-canted facets form a brief 3D pressure front, NOT a flat expanding ring.
         float reach = 1.0 - exp(-t * 13.0);
@@ -925,8 +969,8 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
             vec3 p = impact.xyz + radial * (0.18 + reach * 0.95) + dir * reach * 0.38;
             vec3 normal = normalize(dir * 0.55 + radial);
             bastionPlate(ray, sceneDistance, p, bastionBasis(normal, angle * 0.15),
-                         vec3(0.22 + reach * 0.08, 0.32, 0.035), pressure * 0.72,
-                         age, f, flash * 0.35, reach * 0.45, light, darkness);
+                         vec3(0.22 + reach * 0.08, 0.32, 0.035), pressure * 0.76,
+                         age, f, flash * 0.40, reach * 0.45, light, darkness);
         }
         int count = DepthConfig.z < 0.5 ? 4 : (DepthConfig.z < 1.5 ? 6 : 8);
         for (int k = 0; k < 8; k++) {
@@ -939,9 +983,9 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
             float life = (1.0 - smoothstep(0.16 + seed * 0.1, 0.42 + seed * 0.1, t));
             mat3 basis = bastionBasis(normalize(dir + side * sin(a + t * 9.0)), a + t * (3.0 + seed * 4.0));
             bastionPlate(ray, sceneDistance, p, basis, vec3(0.065, 0.12 + seed * 0.07, 0.027),
-                         life, age, f, flash * 0.3, 1.0 - life, light, darkness);
+                         life, age, f, flash * 0.32, 1.0 - life, light, darkness);
             vec3 tail = p - velocity * exp(-t * 4.5) * 0.045;
-            ramStreak(ray, sceneDistance, p, tail, 0.014, life * 0.65, BASTION_GOLD, light);
+            ramStreak(ray, sceneDistance, p, tail, 0.014, life * 0.68, BASTION_GOLD, light);
         }
     }
     if (contact.w > 0.001 && intersectsBound(ray, sceneDistance, victim.xyz + up * victim.w * 0.5, victim.w * 0.65 + 0.85)) {
@@ -952,8 +996,8 @@ void shieldRam(vec3 ray, float sceneDistance, int wave,
             vec3 p = victim.xyz + up * victim.w * (0.43 + mod(f, 2.0) * 0.2)
                    + radial * (0.42 + (1.0 - clampIn) * 0.38);
             bastionPlate(ray, sceneDistance, p, bastionBasis(radial, (f - 1.5) * 0.16),
-                         vec3(0.15, victim.w * 0.18, 0.035), contact.w * 0.55,
-                         age, f, exp(-max(0.0, age - 0.14) * 15.0) * 0.3,
+                         vec3(0.15, victim.w * 0.18, 0.035), contact.w * 0.58,
+                         age, f, exp(-max(0.0, age - 0.14) * 15.0) * 0.35,
                          smoothstep(0.58, 1.08, age), light, darkness);
         }
     }
@@ -980,6 +1024,17 @@ void bulwarkAura(vec3 ray, float sceneDistance, int wave, bool owner,
     float hitAge = incoming.w;
     vec3 hitDir = incoming.xyz;
     bool directed = length(hitDir) > 0.1;
+
+    // Fortress ground lock ring + reactive golden ripple when taking a hit under Bulwark
+    float lockRingAlpha = smoothstep(0.08, 0.28, age) * (1.0 - release) * alpha * interior;
+    goldenFloorRing(ray, sceneDistance, feet + vec3(0.0, 0.04, 0.0), 0.72 + 0.02 * sin(age * 2.4), 0.045,
+                    lockRingAlpha * (0.28 + params.w * 0.45), mix(BASTION_GOLD, BASTION_PALE, 0.4), light);
+    if (hitAge >= 0.0 && hitAge < 0.42) {
+        float hitRipple = (1.0 - smoothstep(0.05, 0.42, hitAge)) * alpha;
+        goldenFloorRing(ray, sceneDistance, feet + vec3(0.0, 0.05, 0.0), 0.68 + hitAge * 2.4, 0.06,
+                        hitRipple * 0.62, BASTION_WHITE, light);
+    }
+
     for (int k = 0; k < 12; k++) {
         float f = float(k), course = floor(f / 6.0), sector = mod(f, 6.0);
         float seed = f * 1.913;
@@ -997,7 +1052,8 @@ void bulwarkAura(vec3 ray, float sceneDistance, int wave, bool owner,
         float impulse = elapsed >= 0.0 ? exp(-elapsed * 14.0) * sin(elapsed * 37.0) : 0.0;
         float locality = directed ? exp(-angular * angular * 1.9) : 0.20;
         float excitation = params.y * locality;
-        float wavefront = elapsed > 0.0 ? exp(-pow((angular - hitAge * 8.0) / 0.3, 2.0)) * exp(-hitAge * 6.0) : 0.0;
+        float wfDiff = (angular - hitAge * 8.0) / 0.3;
+        float wavefront = elapsed > 0.0 ? exp(-wfDiff * wfDiff) * exp(-hitAge * 6.0) : 0.0;
         float loose = smoothstep(0.0, 0.48, max(0.0, exitAge - sector * 0.012 - course * 0.025));
         float breathe = sin(age * 1.6 + seed) * 0.012 + sin(age * 2.7 - seed) * 0.006;
         float radius = 0.76 + course * 0.12 + (1.0 - spring) * (0.9 + course * 0.3)
@@ -1008,19 +1064,20 @@ void bulwarkAura(vec3 ray, float sceneDistance, int wave, bool owner,
         float roll = (1.0 - spring) * sin(seed + 0.4) * 1.15 + breathe * 0.3 + loose * sin(seed) * 0.55;
         vec3 normal = normalize(radial + vec3(0, course < 0.5 ? -0.12 : 0.18, 0)
                                 + tangent * ((1.0 - spring) * 0.8 + impulse * locality * 0.2));
-        float settle = exp(-pow((localAge - 0.23) / 0.055, 2.0)) * 0.35;
+        float settleDiff = (localAge - 0.23) / 0.055;
+        float settle = exp(-settleDiff * settleDiff) * 0.35;
         vec3 ext = vec3(course < 0.5 ? 0.34 : 0.39, height * (course < 0.5 ? 0.27 : 0.25), course < 0.5 ? 0.085 : 0.10);
         ext.y *= 1.0 + (1.0 - spring) * 0.18;
         ext.x *= 1.0 - (1.0 - spring) * 0.12;
         float plateAlpha = alpha * interior * smoothstep(0.0, 0.04, localAge);
         bastionPlate(ray, sceneDistance, p, bastionBasis(normal, roll), ext, plateAlpha,
-                     age, seed, excitation * 0.8 + wavefront * 0.2 + settle + params.w * 0.12,
+                     age, seed, excitation * 0.85 + wavefront * 0.25 + settle + params.w * 0.15,
                      loose, light, darkness);
         // Interior reinforcement is spatially separated from the translucent outer armour.
         if (mod(f, 2.0) < 0.5 && DepthConfig.z > 0.5) {
             vec3 inner = feet + radial * (0.55 + loose * 0.5) + vec3(0, y, 0);
             bastionPlate(ray, sceneDistance, inner, bastionBasis(normal, roll * 0.4), ext * vec3(0.20,0.87,0.55),
-                         plateAlpha * 0.62, age + 0.6, seed, excitation * 0.4 + params.x * (0.012 + 0.008 * sin(age * 2.0 + seed)), loose, light, darkness);
+                         plateAlpha * 0.62, age + 0.6, seed, excitation * 0.4 + params.x * (0.015 + 0.010 * sin(age * 2.0 + seed)), loose, light, darkness);
         }
         // Follow-through only during departure: a short wake behind each independently released segment.
         if (loose > 0.02 && loose < 0.95)
@@ -1034,41 +1091,51 @@ void bulwarkAura(vec3 ray, float sceneDistance, int wave, bool owner,
         float radius = 0.67 + (1.0 - spring) * 0.40 + release * 0.15;
         vec3 key = feet + radial * radius + vec3(0,0.065 + abs(1.0 - spring) * 0.2,0);
         mat3 basis = mat3(vec3(-radial.z,0,radial.x), radial, vec3(0,1,0));
-        bastionPlate(ray, sceneDistance, key, basis, vec3(0.14,0.32,0.045), alpha * 0.7,
-                     age, f, params.w * 0.25, release * 0.8, light, darkness);
+        bastionPlate(ray, sceneDistance, key, basis, vec3(0.14,0.32,0.045), alpha * 0.72,
+                     age, f, params.w * 0.28, release * 0.8, light, darkness);
         float lock = smoothstep(0.12, 0.3, age) * (1.0 - release);
         vec3 lower = feet + radial * 0.62 + vec3(0,0.14,0);
         vec3 upper = feet + radial * 0.72 + vec3(0,height * 0.7,0);
-        ramStreak(ray, sceneDistance, lower, upper, 0.014, lock * alpha * interior * 0.28,
+        ramStreak(ray, sceneDistance, lower, upper, 0.014, lock * alpha * interior * 0.32,
                   BASTION_PALE, light);
     }
 }
 
-// ---- Ghoul: living, viscous blood ribbons ------------------------------------
-const vec3 GHOUL_DEEP = vec3(0.259, 0.027, 0.078); // #420714
-const vec3 GHOUL_BLOOD = vec3(0.471, 0.043, 0.125); // #780B20
-const vec3 GHOUL_RED = vec3(0.769, 0.086, 0.212); // #C41636
-const vec3 GHOUL_RUBY = vec3(1.0, 0.204, 0.329); // #FF3454
-const vec3 GHOUL_HOT = vec3(1.0, 0.76, 0.80);
+// ---- Ghoul: living, viscous blood ribbons + crimson mist & droplets ----------
+const vec3 GHOUL_DEEP = vec3(0.22, 0.012, 0.048);
+const vec3 GHOUL_BLOOD = vec3(0.58, 0.032, 0.125);
+const vec3 GHOUL_RED = vec3(0.88, 0.072, 0.195);
+const vec3 GHOUL_RUBY = vec3(1.0, 0.185, 0.31);
+const vec3 GHOUL_HOT = vec3(1.0, 0.74, 0.78);
 
 // Anisotropic finite capsule: a twisted, thick membrane, NOT a billboard or laser.
-// Closest ray/segment approach is solved in the ribbon's elliptical metric (no raymarch).
+// Fast isotropic ray-to-segment rejection runs BEFORE computing basis/trig.
 void ghoulRibbon(vec3 ray, float sceneDistance, vec3 start, vec3 end, float width, float alpha,
                  float age, float seed, int kind, vec3 body, float feeding,
                  inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor) {
     vec3 segment = end - start;
-    float span = length(segment);
-    if (span < 0.003 || width <= 0.0 || alpha <= 0.001) return;
-    if (!intersectsBound(ray, sceneDistance, (start + end) * 0.5, span * 0.5 + width * 3.5)) return;
+    float span2 = dot(segment, segment);
+    if (span2 < 0.00001 || width <= 0.0 || alpha <= 0.001) return;
+    // Fast isotropic closest-approach check before any trig or matrix math:
+    float b0 = dot(ray, segment), d0 = dot(ray, start), e0 = dot(segment, start);
+    float along0 = clamp((b0 * d0 - e0) / max(0.00001, span2 - b0 * b0), 0.0, 1.0);
+    vec3 midPt = start + segment * along0;
+    float hit0 = dot(midPt, ray);
+    if (hit0 <= 0.0 || hit0 > sceneDistance + width) return;
+    vec3 diff0 = ray * hit0 - midPt;
+    if (dot(diff0, diff0) > width * width * 5.2) return;
+
+    float span = sqrt(span2);
     vec3 tangent = segment / span;
     vec3 side = cross(tangent, abs(tangent.y) > 0.96 ? vec3(1,0,0) : vec3(0,1,0));
     side = normalize(side);
     vec3 normal = cross(tangent, side);
-    float twist = seed * 2.13 + age * (kind == 0 ? 0.65 : 1.7);
-    vec3 x = side * cos(twist) + normal * sin(twist);
-    vec3 y = normal * cos(twist) - side * sin(twist);
-    width *= 0.92 + 0.08 * sin(age * 17.0 + seed * 4.0);
-    float thickness = width * (kind == 0 ? 0.44 : (kind == 2 ? 0.62 : 0.28));
+    float twist = seed * 2.13 + age * (kind == 0 ? 0.85 : 2.1);
+    float ct = cos(twist), st = sin(twist);
+    vec3 x = side * ct + normal * st;
+    vec3 y = normal * ct - side * st;
+    width *= 0.94 + 0.08 * sin(age * 17.0 + seed * 4.0);
+    float thickness = width * (kind == 0 ? 0.48 : (kind == 2 ? 0.65 : 0.34));
     vec3 scale = vec3(width, thickness, width);
     mat3 basis = transpose(mat3(x, y, tangent));
     vec3 r = (basis * ray) / scale, s = (basis * start) / scale, d = (basis * segment) / scale;
@@ -1078,76 +1145,137 @@ void ghoulRibbon(vec3 ray, float sceneDistance, vec3 start, vec3 end, float widt
     if (hit <= 0.0 || hit > sceneDistance) return;
     vec3 q = r * hit - s - d * along;
     float dist2 = dot(q,q);
-    if (dist2 > 8.0) return;
+    if (dist2 > 7.5) return;
     vec3 p = mix(start, end, along) - body;
-    float turbulence = sin(dot(p, vec3(14,9,11)) - age * 11.0 + sin(p.y * 17.0 + seed) * 0.75);
-    float vein = pow(0.5 + 0.5 * sin(dot(p, vec3(23,19,7)) + turbulence * 1.5 - age * 7.0), 12.0);
-    float pulse = pow(max(0.0, sin(p.y * 6.0 - age * 9.0 + seed)), 10.0);
-    float membrane = exp(-dist2 * 1.9);
-    float core = exp(-dist2 * 7.0);
-    float rim = exp(-pow((sqrt(dist2) - 0.85) / 0.24, 2.0));
-    float visible = smoothstep(0.0, max(0.015, width * 0.45), sceneDistance - hit) * alpha;
-    // Dark outer meniscus, ruby liquid core, tiny pink hotspots only at moving energy pulses.
-    vec3 liquid = mix(GHOUL_DEEP, GHOUL_RED, clamp(core * 0.8 + 0.12 * turbulence, 0.0, 1.0));
-    float coverage = membrane * visible * (kind == 1 ? 0.46 : 0.40);
-    // Union within a continuous ribbon: overlapping rounded segment ends must not form
-    // regularly spaced bright beads. Distinct ribbons are layered by the caller afterwards.
+    float turbulence = sin(dot(p, vec3(14,9,11)) - age * 12.0 + sin(p.y * 17.0 + seed) * 0.75);
+    float vBase = 0.5 + 0.5 * sin(dot(p, vec3(23,19,7)) + turbulence * 1.5 - age * 7.5);
+    float v2 = vBase * vBase; float v4 = v2 * v2; float vein = v4 * v4 * v4;
+    float pBase = max(0.0, sin(p.y * 6.0 - age * 9.5 + seed));
+    float p2 = pBase * pBase; float p4 = p2 * p2; float pulse = p4 * p4 * p2;
+    float membrane = exp(-dist2 * 1.65);
+    float core = exp(-dist2 * 5.8);
+    float rimDiff = (sqrt(dist2) - 0.85) / 0.25;
+    float rim = exp(-rimDiff * rimDiff);
+    float visible = smoothstep(0.0, max(0.015, width * 0.45), sceneDistance - hit) * min(alpha, 1.35);
+    // Saturated crimson-to-ruby liquid core with dark coagulated outer meniscus and hot arterial pulses.
+    vec3 liquid = mix(GHOUL_DEEP, GHOUL_RED, clamp(core * 0.92 + 0.16 * turbulence, 0.0, 1.0));
+    liquid = mix(liquid, GHOUL_RUBY, core * (0.45 + pulse * 0.35));
+    float coverage = min(1.0, membrane * visible * (kind == 1 ? 0.78 : (kind == 2 ? 0.84 : 0.72)));
     if (coverage > chipAlpha) {
-        chipColor = liquid * (1.0 - vein * 0.48) * coverage;
+        chipColor = liquid * (1.0 - vein * 0.42) * coverage;
         chipAlpha = coverage;
     }
-    darkness = max(darkness, rim * visible * 0.065);
-    float ingestionWave = feeding * exp(-pow((p.y - 0.9 - sin(age * 14.0) * 0.55) / 0.32, 2.0));
-    light = max(light, (GHOUL_RUBY * core * (0.36 + pulse * 0.20 + ingestionWave * 0.55) * (1.0 - vein * 0.6)
-           + GHOUL_BLOOD * membrane * 0.13 + GHOUL_HOT * core * pulse * 0.025) * visible);
+    darkness = max(darkness, rim * visible * 0.16);
+    float ingDiff = (p.y - 0.9 - sin(age * 14.0) * 0.55) / 0.34;
+    float ingestionWave = feeding * exp(-ingDiff * ingDiff);
+    light = max(light, (GHOUL_RUBY * core * (0.78 + pulse * 0.45 + ingestionWave * 0.85) * (1.0 - vein * 0.45)
+           + GHOUL_BLOOD * membrane * 0.32 + GHOUL_HOT * core * (pulse * 0.22 + ingestionWave * 0.28)) * visible);
 }
 
 // Compact volumetric energy knot. Used for extraction/ingestion/contact only, never an enclosing aura sphere.
 void ghoulKnot(vec3 ray, float sceneDistance, vec3 centre, vec3 radii, float alpha, float age, float hot,
                inout vec3 light, inout float darkness) {
-    if (alpha <= 0.001 || !intersectsBound(ray, sceneDistance, centre, length(radii) * 1.5)) return;
+    if (alpha <= 0.001 || !intersectsBound(ray, sceneDistance, centre, max(radii.x, max(radii.y, radii.z)) * 1.6)) return;
     vec3 r = ray / radii, o = centre / radii;
     float a = dot(r,r), along = dot(r,o), disc = along * along - a * (dot(o,o) - 1.0);
     if (disc <= 0.0) return;
     float front = (along - sqrt(disc)) / a;
     if (front <= 0.0 || front > sceneDistance) return;
     vec3 p = (ray * front - centre) / radii;
-    float fresnel = pow(1.0 - abs(dot(normalize(p / radii), ray)), 2.0);
+    float invF = 1.0 - abs(dot(normalize(p / radii), ray));
+    float fresnel = invF * invF;
     float churn = 0.6 + 0.4 * sin(p.x * 13.0 + age * 22.0) * sin(p.y * 11.0 - p.z * 7.0 - age * 17.0);
+    float ch2 = churn * churn; float ch5 = ch2 * ch2 * churn;
     float visible = smoothstep(0.0, 0.035, sceneDistance - front) * alpha;
-    light += (GHOUL_RUBY * (0.25 + fresnel * 0.45 + churn * 0.18) + GHOUL_HOT * hot * pow(churn, 5.0) * 0.32) * visible;
-    darkness += (1.0 - fresnel) * visible * 0.13;
+    light += (GHOUL_RUBY * (0.45 + fresnel * 0.65 + churn * 0.28) + GHOUL_HOT * hot * ch5 * 0.48) * visible;
+    darkness += (1.0 - fresnel) * visible * 0.22;
 }
 
 void ghoulBlood(vec3 ray, float sceneDistance, int wave,
                 inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
+    if (!intersectsBound(ray, sceneDistance, WaveOrigins[wave].xyz, WaveOrigins[wave].w)) return;
     int material = wave * 32;
     vec4 body = QuakeMaterials[material];
     float age = WaveStyles[wave].y;
+    vec4 auraState = QuakeMaterials[material + 2]; // auraAge, release, aura, swing
+    vec4 lunge = QuakeMaterials[material + 3];     // lungeAge, confirmed, flash, compression
+    vec4 contact = QuakeMaterials[material + 4];
+    vec4 launch = QuakeMaterials[material + 8];    // launchX, launchY, launchZ, lungeYaw
     float inside = QuakeMaterials[material + 9].z;
     float feeding = QuakeMaterials[material + 7].w + QuakeMaterials[material + 8].w;
-    vec4 lunge = QuakeMaterials[material + 3];
+    float heartbeat = QuakeMaterials[material + 10].y;
+    float aura = auraState.z;
+    float swing = auraState.w;
+    float height = max(1.2, body.w);
+
+    // 1. Volumetric crimson torso mist + arterial floor pulse ring & orbiting 3D blood droplets during Bloodlust
+    float mistAlpha = max(aura, lunge.w * 0.65) * mix(1.0, 0.35, inside);
+    if (mistAlpha > 0.005 && intersectsBound(ray, sceneDistance, body.xyz + vec3(0.0, height * 0.55, 0.0), 1.65)) {
+        vec3 a = body.xyz + vec3(0.0, 0.14, 0.0);
+        vec3 seg = vec3(0.0, height - 0.20, 0.0);
+        float bb = dot(ray, seg), d = dot(ray, a), e = dot(seg, a);
+        float along = clamp((bb * d - e) / max(0.000001, dot(seg, seg) - bb * bb), 0.0, 1.0);
+        vec3 pt = a + seg * along;
+        float mistHit = dot(pt, ray);
+        if (mistHit > 0.0 && mistHit < sceneDistance + 0.16) {
+            vec3 sep = ray * mistHit - pt;
+            float r = length(sep);
+            if (r < 0.92) {
+                float az = atan(sep.z, sep.x);
+                float h = along * seg.y;
+                float artery = 0.55 + 0.45 * sin(h * 5.8 - age * 7.5 + sin(az * 3.0 + age * 2.6));
+                float shell = smoothstep(0.14, 0.32, r) * (1.0 - smoothstep(0.45, 0.90, r));
+                float coreGlow = exp(-r * r / 0.26) * (0.48 + heartbeat * 0.25 + feeding * 0.45);
+                float fadeEnds = smoothstep(0.0, 0.15, along) * (1.0 - smoothstep(0.82, 1.0, along));
+                float mist = (shell * artery + coreGlow) * fadeEnds * mistAlpha;
+                darkness += shell * artery * fadeEnds * mistAlpha * 0.28;
+                light += (GHOUL_BLOOD * 0.65 + GHOUL_RUBY * (0.48 * artery + feeding * 0.35)) * mist;
+            }
+        }
+        // Crimson arterial floor pulse ring on activation and heartbeat
+        if (auraState.x >= 0.0 && auraState.x < 0.45) {
+            float ringEnv = (1.0 - smoothstep(0.08, 0.45, auraState.x)) * mistAlpha;
+            goldenFloorRing(ray, sceneDistance, body.xyz + vec3(0.0, 0.04, 0.0),
+                            0.25 + auraState.x * 2.8, 0.065, ringEnv * 0.75, GHOUL_RUBY, light);
+        }
+        // Orbiting & rising 3D crimson blood droplets / shards around the Vampire
+        int dropCount = DepthConfig.z < 0.5 ? 5 : (DepthConfig.z < 1.5 ? 8 : 10);
+        for (int k = 0; k < 10; k++) {
+            if (k >= dropCount) break;
+            float fk = float(k);
+            float h1 = fract(fk * 0.618034 + 0.17);
+            float h2 = fract(fk * 0.381966 + 0.53);
+            float speed = 0.72 + 0.42 * h1 + feeding * 0.35;
+            float phase = fract(age * speed + fk / 10.0);
+            float env = sin(phase * 3.14159);
+            float ang = fk * 2.39996 + age * (1.35 + 0.8 * (h2 - 0.5) + swing * 1.2) + phase * 1.5;
+            float rad = 0.36 + 0.24 * h2 + 0.06 * sin(phase * 6.28318 + fk);
+            float y = 0.10 + 0.25 * h1 + phase * (height * 0.90 + 0.25);
+            vec3 dPos = body.xyz + vec3(cos(ang) * rad, y, sin(ang) * rad);
+            float sz = (0.022 + 0.015 * h1) * (0.45 + 0.55 * env) * (1.0 + feeding * 0.25);
+            bloodCube(ray, sceneDistance, dPos, vec3(sz, sz * 1.45, sz), mistAlpha * env * 0.95, light, chipAlpha, chipColor);
+        }
+    }
+
+    // 2. Living blood ribbons (aura wings, secondary claws, lunge wake, and siphon strands)
     for (int group = 0; group < 8; group++) {
         vec4 bound = QuakeBounds[wave * 8 + group];
         if (bound.w <= 0.0 || !intersectsBound(ray, sceneDistance, bound.xyz, bound.w)) continue;
         int kind = group < 2 ? 0 : (group < 5 ? 1 : (group < 7 ? 2 : 3));
-        if (group == 7 && !(lunge.y > 0.5 && lunge.x >= 0.055 && lunge.x < 0.405)) kind = 0;
-        float viewScale = kind == 0 ? mix(1.0, 0.40, inside) : 1.0;
+        if (group == 7 && !(lunge.y > 0.5 && lunge.x >= 0.055 && lunge.x < 0.435)) kind = 0;
+        float viewScale = kind == 0 ? mix(1.0, 0.38, inside) : 1.0;
         vec3 ribbonLight = vec3(0), ribbonColor = vec3(0);
         float ribbonDark = 0.0, ribbonAlpha = 0.0;
         for (int j = 0; j < 8; j++) {
             int index = wave * 64 + group * 8 + j;
             vec4 start = QuakeStarts[index], end = QuakeEnds[index];
             if (start.w <= 0.0 || end.w <= 0.0) continue;
-            // Reconstruct smooth Hermite tangents from neighbouring rig samples. Thin curved ribbons
-            // must not turn into four obvious straight laser chords when viewed from the side.
             int pathCount = group >= 5 ? 4 : 8;
             float seed = float(group) + (pathCount == 4 ? float(j / 4) * 0.3 : 0.0);
             int node = j % pathCount;
             vec3 before = node > 0 && QuakeStarts[index - 1].w > 0.0 ? QuakeStarts[index - 1].xyz : start.xyz * 2.0 - end.xyz;
             vec3 after = node < pathCount - 1 && QuakeStarts[index + 1].w > 0.0 ? QuakeEnds[index + 1].xyz : end.xyz * 2.0 - start.xyz;
             vec3 midpoint = (-before + start.xyz * 9.0 + end.xyz * 9.0 - after) / 16.0;
-            // Two bounded analytic half-segments. No screen-space extrusion or camera-facing quads.
             ghoulRibbon(ray, sceneDistance, start.xyz, midpoint, start.w, end.w * viewScale,
                         age, seed, kind, body.xyz, kind == 0 ? feeding : 0.0, ribbonLight, ribbonDark, ribbonAlpha, ribbonColor);
             ghoulRibbon(ray, sceneDistance, midpoint, end.xyz, start.w * 0.96, end.w * viewScale,
@@ -1155,24 +1283,80 @@ void ghoulBlood(vec3 ray, float sceneDistance, int wave,
         }
         light += ribbonLight; darkness += ribbonDark; chipAlpha += ribbonAlpha; chipColor += ribbonColor;
     }
+
+    // 3. Blood Siphon extraction & ingestion knots + chest absorption ring
     for (int i = 0; i < 2; i++) {
         vec4 extraction = QuakeMaterials[material + 5 + i];
         vec4 ingestion = QuakeMaterials[material + 7 + i];
-        ghoulKnot(ray, sceneDistance, extraction.xyz, vec3(0.10,0.13,0.085), extraction.w, age, 0.25, light, darkness);
-        ghoulKnot(ray, sceneDistance, ingestion.xyz, vec3(0.14,0.22,0.12), ingestion.w * 0.8, age, 0.12, light, darkness);
+        ghoulKnot(ray, sceneDistance, extraction.xyz, vec3(0.12, 0.16, 0.11), extraction.w * 1.2, age, 0.45, light, darkness);
+        ghoulKnot(ray, sceneDistance, ingestion.xyz, vec3(0.16, 0.25, 0.15), ingestion.w * 1.1, age, 0.35, light, darkness);
     }
-    vec4 contact = QuakeMaterials[material + 4];
-    if (lunge.y > 0.5 && lunge.x >= 0.055 && lunge.x < 0.405) {
+
+    // 4. Blood Lunge launch shockwave, shedding wake droplets, and confirmed impact rupture
+    if (lunge.x >= 0.0 && lunge.x < 0.82) {
+        float lYaw = launch.w;
+        vec3 lDir = vec3(cos(lYaw), 0.0, sin(lYaw));
+        vec3 lSide = vec3(-lDir.z, 0.0, lDir.x);
+        if (lunge.x < 0.32) {
+            float lEnv = 1.0 - smoothstep(0.05, 0.32, lunge.x);
+            goldenFloorRing(ray, sceneDistance, launch.xyz + vec3(0.0, 0.05, 0.0),
+                            0.22 + (1.0 - exp(-lunge.x * 12.0)) * 1.35, 0.06, lEnv * 0.72, GHOUL_RUBY, light);
+        }
+        // Shedding blood droplets along the dash wake
+        int wakeDrops = DepthConfig.z < 0.5 ? 3 : 6;
+        for (int k = 0; k < 6; k++) {
+            if (k >= wakeDrops) break;
+            float fk = float(k);
+            float local = lunge.x - fk * 0.032;
+            if (local <= 0.0 || local > 0.36) continue;
+            float sideSgn = mod(fk, 2.0) * 2.0 - 1.0;
+            vec3 dOrigin = mix(launch.xyz, body.xyz, clamp(fk / 6.0, 0.0, 1.0)) + vec3(0.0, height * (0.38 + 0.08 * mod(fk, 3.0)), 0.0);
+            vec3 dPos = dOrigin + lSide * sideSgn * (0.22 + local * 0.85) - lDir * local * 0.55 - vec3(0.0, local * local * 3.2, 0.0);
+            float fade = sin(local / 0.36 * 3.14159);
+            bloodCube(ray, sceneDistance, dPos, vec3(0.024, 0.034, 0.024), fade * 0.9, light, chipAlpha, chipColor);
+        }
+    }
+
+    if (lunge.y > 0.5 && lunge.x >= 0.055 && lunge.x < 0.48) {
         float t = lunge.x - 0.055;
-        ghoulKnot(ray, sceneDistance, contact.xyz, vec3(0.14,0.23,0.14) * (1.0 + t * 3.0),
-                  contact.w * 1.3, age, 1.0, light, darkness);
-        if (intersectsBound(ray, sceneDistance, contact.xyz, 1.3)) {
-            for (int k = 0; k < 3; k++) {
+        ghoulKnot(ray, sceneDistance, contact.xyz, vec3(0.17, 0.27, 0.17) * (1.0 + t * 3.2),
+                  contact.w * 1.45, age, 1.0, light, darkness);
+        if (intersectsBound(ray, sceneDistance, contact.xyz, 1.85)) {
+            float lYaw = launch.w;
+            vec3 A = vec3(-cos(lYaw), 0.0, -sin(lYaw));
+            vec3 up = vec3(0.0, 1.0, 0.0);
+            vec3 side = vec3(-A.z, 0.0, A.x);
+            // Twin cross-slash crimson blades across the victim
+            float cutAlpha = (1.0 - smoothstep(0.08, 0.32, t));
+            float reach = 0.88 * smoothstep(0.0, 0.055, t);
+            if (cutAlpha > 0.001) {
+                vec3 X1 = normalize(side * 0.78 - up * 0.62);
+                vec3 Y1 = normalize(cross(A, X1));
+                critCut(ray, sceneDistance, contact.xyz, mat3(X1, Y1, A), vec3(reach, 0.032, 0.11),
+                        cutAlpha, light, chipAlpha, chipColor);
+                vec3 X2 = normalize(side * 0.78 + up * 0.62);
+                vec3 Y2 = normalize(cross(A, X2));
+                critCut(ray, sceneDistance, contact.xyz, mat3(X2, Y2, A), vec3(reach * 0.82, 0.026, 0.11),
+                        cutAlpha * 0.88, light, chipAlpha, chipColor);
+            }
+            // Spatial impact lens + bursting 3D blood drops
+            float along = dot(ray, contact.xyz);
+            if (along > 0.0 && along < sceneDistance) {
+                float d = length(ray * along - contact.xyz);
+                float lens = exp(-d * d / (0.18 + t * 0.9)) * cutAlpha * 0.55;
+                vec2 proj = texCoord - screenPosition(contact.xyz);
+                distortion += proj / max(length(proj), 0.001) * lens;
+            }
+            int burstDrops = DepthConfig.z < 0.5 ? 4 : (DepthConfig.z < 1.5 ? 6 : 8);
+            for (int k = 0; k < 8; k++) {
+                if (k >= burstDrops) break;
                 float f = float(k), a = f * 2.39996 + QuakeMaterials[material + 9].y;
-                vec3 speed = vec3(cos(a) * 2.4, 1.2 + f * 0.3, sin(a) * 2.4);
-                vec3 p = contact.xyz + speed * (1.0 - exp(-t * 5.0)) / 5.0 - vec3(0,t*t*3.0,0);
-                ghoulKnot(ray, sceneDistance, p, vec3(0.027,0.065,0.035),
-                          (1.0 - smoothstep(0.12,0.32,t)) * 0.6, age + f, 0.0, light, darkness);
+                float seed = fract(f * 0.618034 + 0.31);
+                vec3 speed = vec3(cos(a) * (1.8 + seed * 1.4), 1.1 + seed * 1.2, sin(a) * (1.8 + seed * 1.4));
+                vec3 p = contact.xyz + speed * (1.0 - exp(-t * 4.8)) / 4.8 - vec3(0.0, t * t * 4.2, 0.0);
+                float dFade = 1.0 - smoothstep(0.14, 0.42, t);
+                float sz = 0.022 + 0.014 * seed;
+                bloodCube(ray, sceneDistance, p, vec3(sz, sz * 1.35, sz), dFade, light, chipAlpha, chipColor);
             }
         }
     }
@@ -1207,6 +1391,11 @@ void main() {
     float bulwarkScale = 1.0;
     float bulwarkPulse = 0.0;
     float bulwarkAbsorb = 0.0;
+    float ghoulStrength = 0.0;
+    float ghoulAge = 0.0;
+    float ghoulScale = 1.0;
+    float ghoulBurst = 0.0;
+    float ghoulHeartbeat = 0.0;
     vec3 chipColor = vec3(0.0);
     vec2 distortion = vec2(0.0);
 
@@ -1218,6 +1407,13 @@ void main() {
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
         if (charging > 11.5) {
+            if (WaveStyles[i].w > 0.0) {
+                ghoulStrength = max(ghoulStrength, WaveStyles[i].w);
+                ghoulAge = age;
+                ghoulScale = QuakeMaterials[i * 32 + 9].w;
+                ghoulBurst = max(ghoulBurst, QuakeMaterials[i * 32 + 10].x);
+                ghoulHeartbeat = max(ghoulHeartbeat, QuakeMaterials[i * 32 + 10].y);
+            }
             ghoulBlood(ray, sceneDistance, i, light, darkness, chipAlpha, chipColor, distortion);
             continue;
         }
@@ -1341,6 +1537,10 @@ void main() {
         vec2 radialBurst = texCoord - 0.5;
         split += radialBurst * (0.35 + length(radialBurst) * 1.4) * maskBurst * 0.05 * min(maskScale, 1.5);
     }
+    if (ghoulBurst > 0.001) {
+        vec2 radialGhoul = texCoord - 0.5;
+        split += radialGhoul * (0.28 + length(radialGhoul) * 1.15) * ghoulBurst * 0.032 * min(ghoulScale, 1.5);
+    }
     if (critAlpha > 0.0) {
         // Very short impact recoil: a few frames of radial pressure, no lingering screen tint.
         float flash = exp(-critAge * 30.0) * min(critAlpha * 2.0, 1.0);
@@ -1392,6 +1592,16 @@ void main() {
         vec3 plate = mix(BASTION_GOLD, BASTION_PALE, bulwarkAbsorb * 0.5);
         color += plate * edge * (0.018 + 0.004 * sin(bulwarkAge * 2.4)) * s;
         color += BASTION_WHITE * bulwarkPulse * edge * 0.035 * s;
+    }
+    if (ghoulStrength > 0.0) {
+        float s = ghoulStrength * ghoulScale;
+        vec2 bloodUv = (texCoord - 0.5) * vec2(aspectRatio, 1.0);
+        float radius = length(bloodUv);
+        float edge = smoothstep(0.28, 1.10, radius);
+        float vein = 0.5 + 0.5 * sin(atan(bloodUv.y, bloodUv.x) * 7.0 + sin(radius * 12.0 - ghoulAge * 4.5));
+        float pulse = 0.032 + 0.024 * ghoulHeartbeat + 0.035 * ghoulBurst;
+        color *= 1.0 - min(edge * 0.24 * s, 0.45);
+        color += mix(GHOUL_BLOOD, GHOUL_RUBY, 0.45 + 0.35 * vein) * edge * pulse * s;
     }
     fragColor = vec4(color, original.a);
 }
