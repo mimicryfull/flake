@@ -1,0 +1,21 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  // Auto Efficient chooses a cost-effective model dynamically per task.
+  "model": "kilo/kilo-auto/efficient",
+  "subagent_model": "kilo/kilo-auto/efficient",
+  "agent": {
+    "code": { "model": "kilo/kilo-auto/efficient", "steps": 22 },
+    "debug": { "model": "kilo/kilo-auto/efficient", "steps": 18 },
+    "plan": { "model": "kilo/kilo-auto/efficient", "steps": 9 },
+    "explore": { "model": "kilo/z-ai/glm-5.3-flash", "steps": 8 },
+    "compaction": { "model": "kilo/z-ai/glm-5.3-flash" },
+    "title": { "model": "kilo/z-ai/glm-5.3-flash" },
+    "summary": { "model": "kilo/z-ai/glm-5.3-flash" }
+  },
+  "compaction": {
+    "auto": true,
+    "threshold_percent": 80,
+    "prune": true
+  },
+  "lsp": true
+}

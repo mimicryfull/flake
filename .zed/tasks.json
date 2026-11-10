@@ -1,0 +1,22 @@
+[
+  {
+    "label": "Gradle: build",
+    "command": "./gradlew",
+    "args": ["build"],
+    "env": {
+      "JAVA_HOME": "/home/katanix/.local/share/jdks/jdk-25.0.5+8"
+    },
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false
+  },
+  {
+    "label": "Gradle: run client",
+    "command": "./gradlew",
+    "args": ["runClient"],
+    "env": {
+      "JAVA_HOME": "/home/katanix/.local/share/jdks/jdk-25.0.5+8"
+    },
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false
+  }
+]

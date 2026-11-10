@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.flake.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": ["PostPassMixin"],
+  "injectors": { "defaultRequire": 1 }
+}
