@@ -2,7 +2,7 @@
 
 This is a PATH INDEX ONLY. Confirm implementations from live source; paths and identifiers can change.
 
-- Indexed source/resource paths: 262
+- Indexed source/resource paths: 277
 
 ## Abilities and combat
 Matches: 62
@@ -44,7 +44,7 @@ Matches: 62
 - (+27 omitted; use `rg --files` and `rg` for live search)
 
 ## VFX and shaders
-Matches: 22
+Matches: 37
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/item/OrbitalRailgunRenderer.java`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/rendering/AbstractOrbitalRailgunShader.java`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/rendering/OrbitalRailgunGuiShader.java`
@@ -64,12 +64,26 @@ Matches: 22
 - `src/client/java/dev/flake/client/ShockwaveRenderState.java`
 - `src/client/java/dev/flake/client/ui/mixin/EffectIconsMixin.java`
 - `src/client/resources/assets/flake/post_effect/shockwave.json`
+- `src/client/resources/assets/flake/shaders/include/classes/bastion/bastion_common.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/bastion/bulwark.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/bastion/shield_ram.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/concussed/electric_quake.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/concussed/gravitational_dissonance.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/vampire/blood_lunge.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/vampire/bloodlust.glsl`
+- `src/client/resources/assets/flake/shaders/include/classes/vampire/vampire_common.glsl`
+- `src/client/resources/assets/flake/shaders/include/common/blood_primitives.glsl`
+- `src/client/resources/assets/flake/shaders/include/common/uniforms_and_math.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/crystal_claw.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/cube_of_darkness.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/matadora.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/screen_overlays.glsl`
+- `src/client/resources/assets/flake/shaders/include/weapons/void_paladin_crit.glsl`
 - `src/client/resources/assets/flake/shaders/post/shockwave.fsh`
-- `src/main/java/dev/flake/duel/VfxTimeline.java`
-- `src/test/java/dev/flake/duel/VfxAnimationTest.java`
+- (+2 omitted; use `rg --files` and `rg` for live search)
 
 ## Items and builds
-Matches: 37
+Matches: 41
 - `build.gradle`
 - `reference/orbital-railgun/build.gradle`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/item/OrbitalRailgunRenderer.java`
@@ -83,6 +97,10 @@ Matches: 37
 - `src/client/java/dev/flake/client/editor/ItemPickerScreen.java`
 - `src/client/java/dev/flake/client/ui/FlakeItemHud.java`
 - `src/client/java/dev/flake/client/ui/UiItemRow.java`
+- `src/client/resources/assets/flake/shaders/include/items/crystal_claw.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/cube_of_darkness.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/matadora.glsl`
+- `src/client/resources/assets/flake/shaders/include/items/screen_overlays.glsl`
 - `src/main/java/dev/flake/duel/DuelEquipment.java`
 - `src/main/java/dev/flake/duel/InventorySnapshot.java`
 - `src/main/java/dev/flake/duel/InventorySnapshotStore.java`
@@ -101,14 +119,10 @@ Matches: 37
 - `src/main/resources/assets/flake/models/item/control_hammer.json`
 - `src/main/resources/assets/flake/models/item/crystal_claw.json`
 - `src/main/resources/assets/flake/models/item/cube_of_darkness.json`
-- `src/main/resources/assets/flake/models/item/matadora.json`
-- `src/main/resources/assets/flake/models/item/melting_amethyst.json`
-- `src/main/resources/assets/flake/models/item/smoke_bomb.json`
-- `src/main/resources/assets/flake/models/item/void_paladin.json`
-- (+2 omitted; use `rg --files` and `rg` for live search)
+- (+6 omitted; use `rg --files` and `rg` for live search)
 
 ## UI and client
-Matches: 67
+Matches: 82
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/OrbitalRailgunClient.java`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/item/OrbitalRailgunRenderer.java`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/mixin/AbstractClientPlayerEntity.java`
@@ -144,7 +158,7 @@ Matches: 67
 - `reference/orbital-railgun/src/client/resources/assets/orbital_railgun/shaders/program/strike.fsh`
 - `reference/orbital-railgun/src/client/resources/assets/orbital_railgun/shaders/program/strike.json`
 - `reference/orbital-railgun/src/client/resources/assets/orbital_railgun/shaders/program/strike.vsh`
-- (+32 omitted; use `rg --files` and `rg` for live search)
+- (+47 omitted; use `rg --files` and `rg` for live search)
 
 ## Arena and persistence
 Matches: 13
@@ -187,6 +201,7 @@ Matches: 9
 ## Count by extension
 - `(none)`: 1
 - `.fsh`: 4
+- `.glsl`: 15
 - `.gradle`: 4
 - `.java`: 132
 - `.json`: 113

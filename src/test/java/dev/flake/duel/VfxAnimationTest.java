@@ -79,4 +79,52 @@ class VfxAnimationTest {
 		assertEquals(0, ImpactAnimation.envelope(ImpactAnimation.DURATION));
 		assertEquals(0, ImpactAnimation.displacement(ImpactAnimation.DURATION));
 	}
+
+	@Test void modularShaderIncludesExistAndAssembleCompletePostShader() throws Exception {
+		var root = java.nio.file.Path.of("src/client/resources/assets/flake/shaders");
+		var fshPath = root.resolve("post/shockwave.fsh");
+		assertTrue(java.nio.file.Files.exists(fshPath), "Missing post/shockwave.fsh");
+		String fsh = java.nio.file.Files.readString(fshPath);
+
+		var includePattern = java.util.regex.Pattern.compile("#include\\s+<flake:([^>]+)>");
+		var matcher = includePattern.matcher(fsh);
+		var assembled = new StringBuilder();
+		int includeCount = 0;
+		int lastEnd = 0;
+		while (matcher.find()) {
+			assembled.append(fsh, lastEnd, matcher.start());
+			String relPath = matcher.group(1);
+			var includeFile = root.resolve("include").resolve(relPath);
+			assertTrue(java.nio.file.Files.exists(includeFile), "Missing shader include: " + includeFile);
+			String content = java.nio.file.Files.readString(includeFile);
+			assertFalse(content.isBlank(), "Empty shader include: " + includeFile);
+			assembled.append(content).append('\n');
+			lastEnd = matcher.end();
+			includeCount++;
+		}
+		assembled.append(fsh.substring(lastEnd));
+		assertEquals(15, includeCount, "Expected 15 modular shader includes in shockwave.fsh");
+
+		String full = assembled.toString();
+		for (String requiredSymbol : new String[] {
+				"void gravitationalDissonanceWave(",
+				"void electricQuake(",
+				"void darkBolt(",
+				"void maskAura(",
+				"void crystalAura(",
+				"void critBurst(",
+				"void bastionPlate(",
+				"void shieldRam(",
+				"void bulwarkAura(",
+				"void ghoulRibbon(",
+				"void ghoulBloodLunge(",
+				"void ghoulBloodlustMistAndDroplets(",
+				"void ghoulBlood(",
+				"void applyBloodlustScreenOverlay(",
+				"void applyBulwarkScreenOverlay(",
+				"void applyMaskAndCrystalOverlay("
+		}) {
+			assertTrue(full.contains(requiredSymbol), "Missing GLSL symbol in assembled shader: " + requiredSymbol);
+		}
+	}
 }
