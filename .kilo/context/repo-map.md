@@ -2,18 +2,20 @@
 
 This is a PATH INDEX ONLY. Confirm implementations from live source; paths and identifiers can change.
 
-- Indexed source/resource paths: 251
+- Indexed source/resource paths: 262
 
 ## Abilities and combat
-Matches: 57
+Matches: 62
 - `reference/orbital-railgun/src/main/resources/data/orbital_railgun/damage_type/strike.json`
 - `src/main/java/dev/flake/ability/AbilitySlotPayload.java`
 - `src/main/java/dev/flake/ability/AbilitySlots.java`
 - `src/main/java/dev/flake/ability/ClassSkills.java`
 - `src/main/java/dev/flake/duel/BastionAnimation.java`
+- `src/main/java/dev/flake/duel/CombatFeedback.java`
 - `src/main/java/dev/flake/duel/ControlHammer.java`
 - `src/main/java/dev/flake/duel/Cooldowns.java`
 - `src/main/java/dev/flake/duel/CritAnimation.java`
+- `src/main/java/dev/flake/duel/CritCounter.java`
 - `src/main/java/dev/flake/duel/CrystalClaw.java`
 - `src/main/java/dev/flake/duel/CrystalClawAnimation.java`
 - `src/main/java/dev/flake/duel/DarkBoltAnimation.java`
@@ -23,6 +25,7 @@ Matches: 57
 - `src/main/java/dev/flake/duel/DuelMatch.java`
 - `src/main/java/dev/flake/duel/DuelPlayerState.java`
 - `src/main/java/dev/flake/duel/DuelPreparation.java`
+- `src/main/java/dev/flake/duel/DuelRecovery.java`
 - `src/main/java/dev/flake/duel/DuelRuntime.java`
 - `src/main/java/dev/flake/duel/ElectricQuake.java`
 - `src/main/java/dev/flake/duel/EnergyMotes.java`
@@ -33,15 +36,12 @@ Matches: 57
 - `src/main/java/dev/flake/duel/InventorySnapshotStore.java`
 - `src/main/java/dev/flake/duel/MaskAnimation.java`
 - `src/main/java/dev/flake/duel/Matadora.java`
+- `src/main/java/dev/flake/duel/MatchRuntime.java`
 - `src/main/java/dev/flake/duel/MeltingAmethyst.java`
 - `src/main/java/dev/flake/duel/PvpVitals.java`
 - `src/main/java/dev/flake/duel/RecoveryJournal.java`
 - `src/main/java/dev/flake/duel/Shockwave.java`
-- `src/main/java/dev/flake/duel/ShockwaveAnimation.java`
-- `src/main/java/dev/flake/duel/ShockwavePayload.java`
-- `src/main/java/dev/flake/duel/ShockwaveVisuals.java`
-- `src/main/java/dev/flake/duel/VfxTimeline.java`
-- (+22 omitted; use `rg --files` and `rg` for live search)
+- (+27 omitted; use `rg --files` and `rg` for live search)
 
 ## VFX and shaders
 Matches: 22
@@ -69,7 +69,7 @@ Matches: 22
 - `src/test/java/dev/flake/duel/VfxAnimationTest.java`
 
 ## Items and builds
-Matches: 36
+Matches: 37
 - `build.gradle`
 - `reference/orbital-railgun/build.gradle`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/item/OrbitalRailgunRenderer.java`
@@ -87,7 +87,8 @@ Matches: 36
 - `src/main/java/dev/flake/duel/InventorySnapshot.java`
 - `src/main/java/dev/flake/duel/InventorySnapshotStore.java`
 - `src/main/java/dev/flake/shared/FlakeActiveItem.java`
-- `src/main/java/dev/flake/ui/mixin/LoadoutUiBridgeMixin.java`
+- `src/main/java/dev/flake/ui/BuildApplyPayload.java`
+- `src/main/java/dev/flake/ui/BuildResultPayload.java`
 - `src/main/resources/assets/flake/items/adrenaline.json`
 - `src/main/resources/assets/flake/items/control_hammer.json`
 - `src/main/resources/assets/flake/items/crystal_claw.json`
@@ -104,11 +105,10 @@ Matches: 36
 - `src/main/resources/assets/flake/models/item/melting_amethyst.json`
 - `src/main/resources/assets/flake/models/item/smoke_bomb.json`
 - `src/main/resources/assets/flake/models/item/void_paladin.json`
-- `src/test/java/dev/flake/duel/InventorySnapshotStoreTest.java`
-- (+1 omitted; use `rg --files` and `rg` for live search)
+- (+2 omitted; use `rg --files` and `rg` for live search)
 
 ## UI and client
-Matches: 66
+Matches: 67
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/OrbitalRailgunClient.java`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/item/OrbitalRailgunRenderer.java`
 - `reference/orbital-railgun/src/client/java/io/github/mishkis/orbital_railgun/client/mixin/AbstractClientPlayerEntity.java`
@@ -144,27 +144,31 @@ Matches: 66
 - `reference/orbital-railgun/src/client/resources/assets/orbital_railgun/shaders/program/strike.fsh`
 - `reference/orbital-railgun/src/client/resources/assets/orbital_railgun/shaders/program/strike.json`
 - `reference/orbital-railgun/src/client/resources/assets/orbital_railgun/shaders/program/strike.vsh`
-- (+31 omitted; use `rg --files` and `rg` for live search)
+- (+32 omitted; use `rg --files` and `rg` for live search)
 
 ## Arena and persistence
-Matches: 11
+Matches: 13
 - `src/main/java/dev/flake/arena/Arena.java`
 - `src/main/java/dev/flake/arena/ArenaCommands.java`
 - `src/main/java/dev/flake/arena/ArenaDraft.java`
+- `src/main/java/dev/flake/arena/ArenaRepository.java`
 - `src/main/java/dev/flake/arena/ArenaStore.java`
 - `src/main/java/dev/flake/duel/InventorySnapshot.java`
 - `src/main/java/dev/flake/duel/InventorySnapshotStore.java`
 - `src/main/java/dev/flake/ui/LobbySnapshotPayload.java`
 - `src/test/java/dev/flake/arena/ArenaDraftTest.java`
+- `src/test/java/dev/flake/arena/ArenaRepositoryTest.java`
 - `src/test/java/dev/flake/arena/ArenaTest.java`
 - `src/test/java/dev/flake/duel/InventorySnapshotStoreTest.java`
 - `src/test/java/dev/flake/duel/InventorySnapshotTest.java`
 
 ## Networking
-Matches: 7
+Matches: 9
 - `src/main/java/dev/flake/ability/AbilitySlotPayload.java`
 - `src/main/java/dev/flake/duel/ShockwavePayload.java`
 - `src/main/java/dev/flake/duel/mixin/DuelPacketSafetyMixin.java`
+- `src/main/java/dev/flake/ui/BuildApplyPayload.java`
+- `src/main/java/dev/flake/ui/BuildResultPayload.java`
 - `src/main/java/dev/flake/ui/HudStatePayload.java`
 - `src/main/java/dev/flake/ui/LobbyActionPayload.java`
 - `src/main/java/dev/flake/ui/LobbySnapshotPayload.java`
@@ -184,8 +188,8 @@ Matches: 7
 - `(none)`: 1
 - `.fsh`: 4
 - `.gradle`: 4
-- `.java`: 120
-- `.json`: 114
+- `.java`: 132
+- `.json`: 113
 - `.jsonc`: 1
 - `.properties`: 5
 - `.vsh`: 2

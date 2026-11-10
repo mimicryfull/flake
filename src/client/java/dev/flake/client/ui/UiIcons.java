@@ -51,6 +51,12 @@ public final class UiIcons {
 				case LEGGINGS -> Items.DIAMOND_LEGGINGS;
 				case BOOTS -> Items.DIAMOND_BOOTS;
 			});
+			case OBSIDIAN -> new ItemStack(switch (slot) {
+				case HELMET -> Items.NETHERITE_HELMET;
+				case CHESTPLATE -> Items.NETHERITE_CHESTPLATE;
+				case LEGGINGS -> Items.NETHERITE_LEGGINGS;
+				case BOOTS -> Items.NETHERITE_BOOTS;
+			});
 		};
 	}
 

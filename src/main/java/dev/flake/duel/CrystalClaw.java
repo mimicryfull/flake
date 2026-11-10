@@ -59,6 +59,11 @@ public final class CrystalClaw {
 		return active(player) ? damage * SKILL_DAMAGE_MULTIPLIER : damage;
 	}
 
+	/** Server-side skill damage multiplier including defender's 4/4 Obsidian Carapace dampening. */
+	public static float skillDamage(ServerPlayer attacker, net.minecraft.world.entity.LivingEntity target, float damage) {
+		return dev.flake.slices.armor.ObsidianArmorSlice.mitigateSkillDamage(target, skillDamage(attacker, damage));
+	}
+
 	public static boolean activate(ServerPlayer player) {
 		var id = player.getUUID();
 		if (DuelRuntime.blocksAbility(id) || active(player)) return false;

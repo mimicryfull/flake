@@ -87,7 +87,14 @@ public final class EditorCatalog {
 			var armorSlot = slot.armorSlot();
 			for (var item : Loadout.ArmorMaterial.values()) {
 				var candidate = build.withArmorSlot(armorSlot, item);
-				String setSuffix = FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.armor.desc.full_set" : "flake.armor.desc.single");
+				String setSuffix;
+				if (item == Loadout.ArmorMaterial.OBSIDIAN) {
+					setSuffix = FlakeI18n.tr(candidate.hasFullObsidianSet()
+							? "flake.armor.obsidian.desc_set"
+							: "flake.armor.obsidian.desc_piece");
+				} else {
+					setSuffix = FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.armor.desc.full_set" : "flake.armor.desc.single");
+				}
 				String description = FlakeI18n.tr("flake.armor.choice_desc", item.armorFor(armorSlot), item.toughness(), setSuffix);
 				result.add(new Choice(item.name(), item.title(), armorSlot.title(), description, 0,
 						List.of(item.title(), FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.tag.full_set" : "flake.tag.single_armor")),

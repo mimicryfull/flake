@@ -259,6 +259,7 @@ public final class MatchRuntime {
 		int nextHotbarSlot = 0;
 		dev.flake.shared.SliceRegistry.resetPlayer(player);
 		PvpVitals.apply(player);
+		dev.flake.slices.armor.ObsidianArmorSlice.applyKit(player, build);
 
 		var weaponSpec = dev.flake.shared.SliceRegistry.weapon(build.weapon());
 		player.getInventory().setItem(nextHotbarSlot++, weaponSpec.createStack());
@@ -316,6 +317,12 @@ public final class MatchRuntime {
 				case CHESTPLATE -> Items.DIAMOND_CHESTPLATE;
 				case LEGGINGS -> Items.DIAMOND_LEGGINGS;
 				case BOOTS -> Items.DIAMOND_BOOTS;
+			};
+			case OBSIDIAN -> switch (slot) {
+				case HELMET -> Items.NETHERITE_HELMET;
+				case CHESTPLATE -> Items.NETHERITE_CHESTPLATE;
+				case LEGGINGS -> Items.NETHERITE_LEGGINGS;
+				case BOOTS -> Items.NETHERITE_BOOTS;
 			};
 		};
 		return item == null ? ItemStack.EMPTY : DuelEquipment.temporary(new ItemStack(item));

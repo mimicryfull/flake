@@ -179,7 +179,7 @@ public final class ClassSkills {
 		sound(level, p, shield ? SoundEvents.MACE_SMASH_GROUND : SoundEvents.ANVIL_LAND, shield ? 0.9f : 0.6f, shield ? 0.72f : 0.8f);
 		LivingEntity confirmed = null;
 		if (target != null) {
-			float damage = CrystalClaw.skillDamage(p, p.getOffhandItem().is(Items.SHIELD) ? 6.0f : 4.0f); // a raised shield hits harder
+			float damage = CrystalClaw.skillDamage(p, target, p.getOffhandItem().is(Items.SHIELD) ? 6.0f : 4.0f); // a raised shield hits harder
 			if (target.hurtServer(level, p.damageSources().playerAttack(p), damage)) confirmed = target;
 			launch(target, dir.scale(1.2).add(0, 0.35, 0));
 			target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20, 2, false, false, true));
@@ -208,7 +208,7 @@ public final class ClassSkills {
 		if (target == null) return false;
 		Vec3 dir = horizontalDir(p.position(), target.position(), p);
 		launch(p, dir.scale(1.7).add(0, 0.22, 0));
-		boolean hit = target.hurtServer(level, p.damageSources().playerAttack(p), CrystalClaw.skillDamage(p, 4.0f));
+		boolean hit = target.hurtServer(level, p.damageSources().playerAttack(p), CrystalClaw.skillDamage(p, target, 4.0f));
 		p.heal(1.5f);
 		ShockwaveVisuals.bloodLunge(p, target, dir, hit);
 		sound(level, p, SoundEvents.MACE_SMASH_AIR, 0.65f, 1.35f);
@@ -243,7 +243,7 @@ public final class ClassSkills {
 		p.fallDistance = 0;
 		for (var other : candidates(p, level, origin, 3.5)) {
 			if (other.position().distanceToSqr(origin) > 3.5 * 3.5) continue;
-			other.hurtServer(level, p.damageSources().explosion(p, p), CrystalClaw.skillDamage(p, 3.0f));
+			other.hurtServer(level, p.damageSources().explosion(p, p), CrystalClaw.skillDamage(p, other, 3.0f));
 			launch(other, horizontalDir(origin, other.position(), p).scale(1.2).add(0, 0.5, 0));
 		}
 		level.sendParticles(ParticleTypes.EXPLOSION, origin.x, origin.y + 0.2, origin.z, 2, 0.3, 0.1, 0.3, 0);
@@ -351,7 +351,7 @@ public final class ClassSkills {
 				if (now < mine.armedAt) continue;
 				for (var victim : candidates(owner, mine.level, mine.pos, 2.0)) {
 					if (victim.position().distanceToSqr(mine.pos) > MINE_TRIGGER_RADIUS * MINE_TRIGGER_RADIUS) continue;
-					victim.hurtServer(mine.level, owner.damageSources().explosion(owner, owner), CrystalClaw.skillDamage(owner, 6.0f));
+					victim.hurtServer(mine.level, owner.damageSources().explosion(owner, owner), CrystalClaw.skillDamage(owner, victim, 6.0f));
 					launch(victim, horizontalDir(mine.pos, victim.position(), owner).scale(0.9).add(0, 0.7, 0));
 					victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 30, 1, false, true, true));
 					mine.level.sendParticles(ParticleTypes.EXPLOSION, mine.pos.x, mine.pos.y + 0.3, mine.pos.z, 2, 0.3, 0.1, 0.3, 0);

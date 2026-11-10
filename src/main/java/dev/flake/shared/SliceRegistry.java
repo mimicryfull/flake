@@ -6,6 +6,7 @@ import dev.flake.shared.CombatSlice.ClassSpec;
 import dev.flake.shared.CombatSlice.Lifecycle;
 import dev.flake.shared.CombatSlice.PassiveSpec;
 import dev.flake.shared.CombatSlice.WeaponSpec;
+import dev.flake.slices.armor.ObsidianArmorSlice;
 import dev.flake.slices.classes.ClassSlices;
 import dev.flake.slices.controlhammer.ControlHammerSlice;
 import dev.flake.slices.crystalclaw.CrystalClawSlice;
@@ -50,6 +51,7 @@ public final class SliceRegistry {
 		GadgetsSlice.install();
 		PassivesSlice.install();
 		ClassSlices.install();
+		ObsidianArmorSlice.install();
 	}
 
 	public static void registerWeapon(WeaponSpec spec) { WEAPONS.put(spec.id(), spec); }
