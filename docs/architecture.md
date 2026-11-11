@@ -9,6 +9,12 @@ Flake — feature-first модульний моноліт. Межі потріб
 - `combat/` — спільні правила, модифікатори шкоди, stun, кулдауни та здібності.
 - `content/` — каталог і контракти контенту; без імпортів конкретних фіч.
 - `bootstrap/` — явне підключення фіч, entrypoints і мережеві адаптери.
+- На клієнті: `bootstrap/FlakeClient` — запуск та input;
+  `client/network/FlakeUiClient` — мережеві адаптери й кеші UI;
+  `client/ui/` — тема, іконки, tooltip і спільні mixin-и;
+  `client/ui/widgets/` — повторно використовувані віджети.
+- Екрани лобі — `features/lobby/client/`, редактор — `features/loadout/client/`,
+  налаштування оверлею Матадори — `features/matadora/client/MaskSettings`.
 - `render/vfx/` — доставка VFX на сервері та спільний GPU-конвеєр на клієнті.
 - `features/loadout/` — модель білда, збереження, спільна операція зміни та редактор.
 - `features/lobby/` — кімнати, дії, права доступу та snapshot для конкретного глядача.

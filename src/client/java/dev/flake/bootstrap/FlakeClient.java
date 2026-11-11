@@ -1,4 +1,7 @@
-package dev.flake.client;
+package dev.flake.bootstrap;
+
+import dev.flake.features.lobby.client.FlakeScreen;
+import dev.flake.features.matadora.client.MaskSettings;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.flake.Flake;

@@ -1,10 +1,10 @@
 package dev.flake.features.hud.client;
 
-import dev.flake.client.ui.FlakeUiClient;
+import dev.flake.client.network.FlakeUiClient;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
 
-import dev.flake.client.FlakeClient;
+import dev.flake.bootstrap.FlakeClient;
 import dev.flake.combat.ability.AbilitySlots;
 import dev.flake.features.hud.HudStatePayload;
 import dev.flake.features.hud.HudStatePayload.SkillState;

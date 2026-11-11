@@ -12,8 +12,8 @@
 			"dev.flake.bootstrap.FlakeNetworking"
 		],
 		"client": [
-			"dev.flake.client.FlakeClient",
-			"dev.flake.client.ui.FlakeUiClient"
+			"dev.flake.bootstrap.FlakeClient",
+			"dev.flake.client.network.FlakeUiClient"
 		]
 	},
 	"mixins": [

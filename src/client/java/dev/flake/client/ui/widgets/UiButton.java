@@ -1,4 +1,6 @@
-package dev.flake.client.ui;
+package dev.flake.client.ui.widgets;
+
+import dev.flake.client.ui.UiTheme;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;

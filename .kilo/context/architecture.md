@@ -179,7 +179,7 @@ Persistence:
 - Гортач: `FlakeHudOverlay` (головний, картки здібностей лише для `PARTICIPANT`), `FlakePlayerHud` (броня/health), `FlakeItemHud` (хотбар/кулдауни, реальні key mappings), `FlakeTabOverlay` (онлайн + кімната кожного гравця), `client/ui/mixin/HudTabOverlayMixin`. **[П]** частково.
 - Екрани лобі: `FlakeScreen` (MAIN_MENU/BROWSER/CREATE_LOBBY/ROOM/BUILD_EDITOR/ARENA_SETTINGS), `LobbyManageScreen` (owner: invite/kick/transfer з посторінковими списками).
 - Редактор: `BuildEditorScreen` шле `BuildApplyPayload`, обробляє `BuildResultPayload` (STALE/INVALID/SAVE_FAILED/LOCKED) і показує `LoadState.CORRUPT` у футері.
-- Віджети: `UiTheme`, `UiCard`, `UiButton`, `UiSlotButton`, `UiItemRow`, `UiIcons`. **[П]** (деякі лише за назвами/використанням).
+- Спільні UI-інструменти: `client/ui/UiTheme`, `UiIcons`, `FlakeTooltip`; віджети — `client/ui/widgets/UiButton`, `UiSlotButton`. Невикористані `UiCard` і `UiItemRow` видалені. **[П]**
 - Ванільний `InventoryScreen` примусово закривається, коли активний Flake HUD. **[П]**
 - Клавіші: G — меню/редактор, H/R — здібності, PageUp/PageDown — гортання вкладки, коли затиснутий Tab. **[П]**
 
@@ -200,13 +200,17 @@ Persistence:
 | Gameplay balancing | Константи відповідної фічі та metadata | `Loadout.stats`, `EditorCatalog.comparison`, cooldown snapshots |
 | Custom GLSL VFX | `features/<name>/client/*Actor`, feature `*Visuals` | `render/vfx`, shader includes, client composition root |
 | Post-processing | `render/vfx/VfxRenderState`, `VfxBuffer`, `mixin/PostPassMixin` | `assets/flake/post_effect/shockwave.json`, shader ABI |
-| HUD | `features/hud`, `features/hud/client` | `CombatStatuses`, `FlakeUiClient`, shared `client/ui` |
+| HUD | `features/hud`, `features/hud/client` | `CombatStatuses`, `client/network/FlakeUiClient`, shared `client/ui` |
 | Build editor | `features/loadout/client`, `features/loadout/editor` | `LoadoutService`, BuildApply/Result payloads |
 | Server networking | `bootstrap/FlakeNetworking`, `combat/ability/AbilityInputServer` | Feature-owned payloads, `CombatVisuals` |
 | Duel | `features/duel/MatchRuntime`, `DuelRuntime`, `DuelMatch` | `kit/DuelKit`, `recovery/*`, `features/arena` |
-| Lobby | `features/lobby/LobbyManager`, `LobbyRoom`, `LobbyActions` | `LobbyProjection`, snapshot/action payloads |
+| Lobby | `features/lobby/LobbyManager`, `LobbyRoom`, `LobbyActions` | `LobbyProjection`, snapshot/action payloads, `features/lobby/client/FlakeScreen`, `LobbyManageScreen` |
 | Inventory recovery | `features/duel/recovery/*` | Write-ahead journal, receipt verification, `kit/DuelEquipment` |
 | Arena | `features/arena/*` | `MatchRuntime.preflight`, existing world paths |
+
+Клієнтський entrypoint — `bootstrap/FlakeClient`; мережеві кеші UI —
+`client/network/FlakeUiClient`; налаштування Матадори —
+`features/matadora/client/MaskSettings`. Порожні пакети попередньої структури прибрані.
 
 ## 12. Невідоме / неперевірене
 

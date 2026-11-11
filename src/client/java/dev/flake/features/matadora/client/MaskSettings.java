@@ -1,6 +1,5 @@
-package dev.flake.client;
+package dev.flake.features.matadora.client;
 
-import dev.flake.features.matadora.MatadoraRuntime;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;

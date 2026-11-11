@@ -2,10 +2,10 @@ package dev.flake.features.loadout.client;
 
 import dev.flake.features.loadout.Loadout;
 import dev.flake.client.ui.FlakeTooltip;
-import dev.flake.client.ui.FlakeUiClient;
-import dev.flake.client.ui.UiButton;
+import dev.flake.client.network.FlakeUiClient;
+import dev.flake.client.ui.widgets.UiButton;
 import dev.flake.client.ui.UiIcons;
-import dev.flake.client.ui.UiSlotButton;
+import dev.flake.client.ui.widgets.UiSlotButton;
 import dev.flake.client.ui.UiTheme;
 import dev.flake.features.loadout.editor.EditorCatalog;
 import dev.flake.features.loadout.editor.EditorCatalog.Slot;
@@ -131,7 +131,7 @@ public final class BuildEditorScreen extends Screen {
 		var lines = new java.util.ArrayList<String>();
 		for (int index = 1; index <= dev.flake.combat.ability.AbilitySlots.COUNT; index++) {
 			var ability = dev.flake.combat.ability.AbilitySlots.resolve(classId, index);
-			lines.add(dev.flake.client.FlakeClient.abilityKeyLabel(index) + ": "
+			lines.add(dev.flake.bootstrap.FlakeClient.abilityKeyLabel(index) + ": "
 					+ (ability.implemented() ? ability.title() : FlakeI18n.tr("flake.ability.unassigned")));
 		}
 		return java.util.List.copyOf(lines);

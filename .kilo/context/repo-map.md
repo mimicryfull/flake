@@ -2,7 +2,7 @@
 
 This is a PATH INDEX ONLY. Confirm implementations from live source; paths and identifiers can change.
 
-- Indexed source/resource paths: 286
+- Indexed source/resource paths: 284
 
 ## Abilities and combat
 Matches: 54
@@ -83,8 +83,7 @@ Matches: 52
 - (+17 omitted; use `rg --files` and `rg` for live search)
 
 ## Items and builds
-Matches: 55
-- `src/client/java/dev/flake/client/ui/UiItemRow.java`
+Matches: 54
 - `src/client/java/dev/flake/features/hud/client/FlakeItemHud.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildEditorScreen.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildPreview.java`
@@ -119,25 +118,21 @@ Matches: 55
 - `src/main/resources/assets/flake/items/melting_amethyst.json`
 - `src/main/resources/assets/flake/items/smoke_bomb.json`
 - `src/main/resources/assets/flake/items/void_paladin.json`
-- (+20 omitted; use `rg --files` and `rg` for live search)
+- `src/main/resources/assets/flake/models/item/adrenaline.json`
+- (+19 omitted; use `rg --files` and `rg` for live search)
 
 ## UI and client
-Matches: 103
+Matches: 101
 - `src/client/java/dev/flake/bootstrap/EffectActors.java`
-- `src/client/java/dev/flake/client/FlakeClient.java`
-- `src/client/java/dev/flake/client/FlakeScreen.java`
-- `src/client/java/dev/flake/client/LobbyManageScreen.java`
-- `src/client/java/dev/flake/client/MaskSettings.java`
+- `src/client/java/dev/flake/bootstrap/FlakeClient.java`
+- `src/client/java/dev/flake/client/network/FlakeUiClient.java`
 - `src/client/java/dev/flake/client/ui/FlakeTooltip.java`
-- `src/client/java/dev/flake/client/ui/FlakeUiClient.java`
-- `src/client/java/dev/flake/client/ui/UiButton.java`
-- `src/client/java/dev/flake/client/ui/UiCard.java`
 - `src/client/java/dev/flake/client/ui/UiIcons.java`
-- `src/client/java/dev/flake/client/ui/UiItemRow.java`
-- `src/client/java/dev/flake/client/ui/UiSlotButton.java`
 - `src/client/java/dev/flake/client/ui/UiTheme.java`
 - `src/client/java/dev/flake/client/ui/mixin/EffectIconsMixin.java`
 - `src/client/java/dev/flake/client/ui/mixin/HudTabOverlayMixin.java`
+- `src/client/java/dev/flake/client/ui/widgets/UiButton.java`
+- `src/client/java/dev/flake/client/ui/widgets/UiSlotButton.java`
 - `src/client/java/dev/flake/features/bastion/client/BulwarkActor.java`
 - `src/client/java/dev/flake/features/bastion/client/ShieldRamActor.java`
 - `src/client/java/dev/flake/features/concussed/client/ChargeActor.java`
@@ -154,11 +149,16 @@ Matches: 103
 - `src/client/java/dev/flake/features/loadout/client/BuildEditorScreen.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildPreview.java`
 - `src/client/java/dev/flake/features/loadout/client/ItemPickerScreen.java`
+- `src/client/java/dev/flake/features/lobby/client/FlakeScreen.java`
 - `src/client/java/dev/flake/features/lobby/client/FlakeTabOverlay.java`
+- `src/client/java/dev/flake/features/lobby/client/LobbyManageScreen.java`
+- `src/client/java/dev/flake/features/matadora/client/MaskSettings.java`
 - `src/client/java/dev/flake/features/matadora/client/MatadoraActor.java`
 - `src/client/java/dev/flake/features/vampire/client/GhoulRenderState.java`
 - `src/client/java/dev/flake/features/voidpaladin/client/CritActor.java`
-- (+68 omitted; use `rg --files` and `rg` for live search)
+- `src/client/java/dev/flake/render/vfx/EffectActor.java`
+- `src/client/java/dev/flake/render/vfx/FocusAuraActor.java`
+- (+66 omitted; use `rg --files` and `rg` for live search)
 
 ## Arena and persistence
 Matches: 13
@@ -177,7 +177,8 @@ Matches: 13
 - `src/test/java/dev/flake/features/duel/recovery/InventorySnapshotTest.java`
 
 ## Networking
-Matches: 11
+Matches: 12
+- `src/client/java/dev/flake/client/network/FlakeUiClient.java`
 - `src/main/java/dev/flake/bootstrap/FlakeNetworking.java`
 - `src/main/java/dev/flake/combat/ability/AbilitySlotPayload.java`
 - `src/main/java/dev/flake/features/duel/mixin/DuelPacketSafetyMixin.java`
@@ -205,7 +206,7 @@ Matches: 11
 - `.fsh`: 4
 - `.glsl`: 15
 - `.gradle`: 4
-- `.java`: 202
+- `.java`: 200
 - `.json`: 53
 - `.jsonc`: 1
 - `.properties`: 4

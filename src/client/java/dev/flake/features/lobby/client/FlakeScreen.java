@@ -1,8 +1,8 @@
-package dev.flake.client;
+package dev.flake.features.lobby.client;
 
 import dev.flake.features.loadout.client.BuildEditorScreen;
-import dev.flake.client.ui.FlakeUiClient;
-import dev.flake.client.ui.UiButton;
+import dev.flake.client.network.FlakeUiClient;
+import dev.flake.client.ui.widgets.UiButton;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
 import dev.flake.text.FlakeI18n;

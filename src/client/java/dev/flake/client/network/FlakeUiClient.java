@@ -1,4 +1,4 @@
-package dev.flake.client.ui;
+package dev.flake.client.network;
 
 import dev.flake.features.lobby.client.FlakeTabOverlay;
 

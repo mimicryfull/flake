@@ -1,6 +1,6 @@
 package dev.flake.features.hud.client;
 
-import dev.flake.client.ui.FlakeUiClient;
+import dev.flake.client.network.FlakeUiClient;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
 

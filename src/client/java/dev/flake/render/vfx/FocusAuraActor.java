@@ -1,6 +1,6 @@
 package dev.flake.render.vfx;
 
-import dev.flake.client.MaskSettings;
+import dev.flake.features.matadora.client.MaskSettings;
 
 /** Shared owner-overlay/body-aura placement. Each item owns its envelope and shader style. */
 public abstract class FocusAuraActor extends TimedBuffActor {

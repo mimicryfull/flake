@@ -1,6 +1,6 @@
 package dev.flake.features.lobby.client;
 
-import dev.flake.client.ui.FlakeUiClient;
+import dev.flake.client.network.FlakeUiClient;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
 
@@ -68,8 +68,8 @@ public final class FlakeTabOverlay {
 			UiTheme.text(g, status, killsX, rowY + 20, 110, p.ready() ? UiTheme.GREEN : UiTheme.MUTED);
 		}
 		UiTheme.text(g, FlakeI18n.tr("flake.tab.stats_note"), x + 14, y + h - 32, w - 28, UiTheme.MUTED);
-		String openKeyName = dev.flake.client.FlakeClient.openKey != null
-				? dev.flake.client.FlakeClient.openKey.getTranslatedKeyMessage().getString() : "G";
+		String openKeyName = dev.flake.bootstrap.FlakeClient.openKey != null
+				? dev.flake.bootstrap.FlakeClient.openKey.getTranslatedKeyMessage().getString() : "G";
 		String footer = pages > 1 ? FlakeUiClient.previousPageKey.getTranslatedKeyMessage().getString() + " / "
 				+ FlakeUiClient.nextPageKey.getTranslatedKeyMessage().getString() + " · " + FlakeI18n.tr("flake.tab.page", page + 1, pages)
 				: openKeyName + " · " + FlakeI18n.tr("flake.tab.open_hint");
