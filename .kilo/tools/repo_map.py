@@ -6,7 +6,8 @@ import sys
 from collections import Counter
 
 root = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else '.').resolve()
-exclude = {'.git', '.gradle', '.idea', 'build', 'out', 'target', 'node_modules', '.kilo', '.opencode', '.kilocode'}
+exclude = {'.git', '.gradle', '.idea', 'out', 'target', 'node_modules', '.kilo', '.opencode', '.kilocode'}
+root_outputs = {'build', 'bin', 'run'}
 exts = {'.java', '.glsl', '.vert', '.frag', '.fsh', '.vsh', '.json', '.json5', '.jsonc', '.mcmeta', '.gradle', '.kts', '.properties'}
 groups = {
     'Abilities and combat': ['abilit', 'skill', 'combat', 'damage', 'duel', 'cooldown', 'knockback'],
@@ -18,7 +19,9 @@ groups = {
 }
 files = []
 for dirname, dirs, names in os.walk(root):
-    dirs[:] = sorted(d for d in dirs if d not in exclude and not d.startswith('.git'))
+    dirs[:] = sorted(d for d in dirs if d not in exclude and not d.startswith('.git')
+                     and not (pathlib.Path(dirname) == root and d in root_outputs)
+                     and not (d == 'build' and 'src' not in pathlib.Path(dirname).relative_to(root).parts))
     base = pathlib.Path(dirname)
     for name in names:
         p = base / name
@@ -27,7 +30,8 @@ for dirname, dirs, names in os.walk(root):
 files.sort()
 out = ['# Flake repository map (generated)', '', 'This is a PATH INDEX ONLY. Confirm implementations from live source; paths and identifiers can change.', '', f'- Indexed source/resource paths: {len(files)}', '']
 for title, words in groups.items():
-    found = [f for f in files if any(word in f.lower() for word in words)]
+    found = sorted((f for f in files if any(word in f.lower() for word in words)),
+                   key=lambda f: (not f.startswith('src/'), f))
     out += [f'## {title}', f'Matches: {len(found)}']
     out += [f'- `{p}`' for p in found[:35]]
     if len(found) > 35:

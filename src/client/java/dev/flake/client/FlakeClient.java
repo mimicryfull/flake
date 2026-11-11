@@ -1,9 +1,9 @@
 package dev.flake.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.flake.ExampleMod;
-import dev.flake.ability.AbilitySlotPayload;
-import dev.flake.duel.ShockwavePayload;
+import dev.flake.Flake;
+import dev.flake.combat.ability.AbilitySlotPayload;
+import dev.flake.render.vfx.CombatVfxPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -19,26 +19,27 @@ public final class FlakeClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		dev.flake.shared.FlakeI18n.setLanguageSupplier(() -> {
+		dev.flake.bootstrap.EffectActors.install();
+		dev.flake.text.FlakeI18n.setLanguageSupplier(() -> {
 			var mc = net.minecraft.client.Minecraft.getInstance();
-			return mc != null && mc.options != null ? mc.options.languageCode : dev.flake.shared.FlakeI18n.UK_UA;
+			return mc != null && mc.options != null ? mc.options.languageCode : dev.flake.text.FlakeI18n.UK_UA;
 		});
 		MaskSettings.load();
-		dev.flake.client.ui.FlakePlayerHud.register();
+		dev.flake.features.hud.client.FlakePlayerHud.register();
 		// No inventory in PvP: the kit is used from the hotbar / item panel only.
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
-			if (dev.flake.client.ui.FlakePlayerHud.active() && screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)
+			if (dev.flake.features.hud.client.FlakePlayerHud.active() && screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)
 				client.execute(() -> client.setScreenAndShow(null));
 		});
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ShockwaveRenderState.clear());
-		ClientPlayNetworking.registerGlobalReceiver(ShockwavePayload.TYPE, (payload, context) ->
-				context.client().execute(() -> ShockwaveRenderState.receive(payload)));
-		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(ExampleMod.MOD_ID, "controls"));
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> dev.flake.render.vfx.VfxRenderState.clear());
+		ClientPlayNetworking.registerGlobalReceiver(CombatVfxPayload.TYPE, (payload, context) ->
+				context.client().execute(() -> dev.flake.render.vfx.VfxRenderState.receive(payload)));
+		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "controls"));
 		openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.open", InputConstants.KEY_G, category));
 		ability1Key = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.ability_1", InputConstants.KEY_H, category));
 		ability2Key = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.ability_2", InputConstants.KEY_R, category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			ShockwaveRenderState.checkWorld(client.level);
+			dev.flake.render.vfx.VfxRenderState.checkWorld(client.level);
 			while (openKey.consumeClick()) {
 				if (client.player != null && client.canInterruptScreen()) client.setScreenAndShow(new FlakeScreen());
 			}

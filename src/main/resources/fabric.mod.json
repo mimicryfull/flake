@@ -8,8 +8,8 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"dev.flake.ExampleMod",
-			"dev.flake.ui.FlakeUiServer"
+			"dev.flake.bootstrap.FlakeMod",
+			"dev.flake.bootstrap.FlakeNetworking"
 		],
 		"client": [
 			"dev.flake.client.FlakeClient",

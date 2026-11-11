@@ -1,6 +1,8 @@
 package dev.flake.client.ui;
 
-import dev.flake.shared.FlakeI18n;
+import dev.flake.features.loadout.Loadout;
+import dev.flake.text.FlakeI18n;
+import dev.flake.content.ContentCatalog;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
@@ -116,27 +118,19 @@ public final class UiTheme {
 	}
 
 	public static String className(String id) {
-		return switch (id) {
-			case "BASTION" -> FlakeI18n.tr("flake.class.bastion.title");
-			case "VAMPIRE" -> FlakeI18n.tr("flake.class.vampire.title");
-			case "DEMOLITIONIST" -> FlakeI18n.tr("flake.class.demolitionist.title");
-			case "CONCUSSED" -> FlakeI18n.tr("flake.class.concussed.title");
-			default -> FlakeI18n.tr("flake.accent.unknown.title");
-		};
+		try { return Loadout.FighterClass.valueOf(id).title(); }
+		catch (IllegalArgumentException ignored) { return FlakeI18n.tr("flake.accent.unknown.title"); }
 	}
 
 	public static String skillName(String classId) {
-		return dev.flake.ability.AbilitySlots.title(classId, 1);
+		return dev.flake.combat.ability.AbilitySlots.title(classId, 1);
 	}
 
 	public static String skillDetails(String classId) {
-		return switch (classId) {
-			case "CONCUSSED" -> FlakeI18n.tr("flake.class.concussed.summary");
-			case "BASTION" -> FlakeI18n.tr("flake.class.bastion.summary");
-			case "VAMPIRE" -> FlakeI18n.tr("flake.class.vampire.summary");
-			case "DEMOLITIONIST" -> FlakeI18n.tr("flake.class.demolitionist.summary");
-			default -> "";
-		};
+		try {
+			var spec = ContentCatalog.fighterClass(Loadout.FighterClass.valueOf(classId));
+			return spec == null ? "" : spec.skillSummary();
+		} catch (IllegalArgumentException ignored) { return ""; }
 	}
 
 	public static String armorName(String id) {
@@ -148,25 +142,21 @@ public final class UiTheme {
 	}
 
 	public static String weaponName(String id) {
-		return switch (id) {
-			case "IRON_SWORD" -> FlakeI18n.tr("flake.weapon.iron_sword.title");
-			case "STONE_AXE" -> FlakeI18n.tr("flake.weapon.stone_axe.title");
-			case "DIAMOND_SWORD" -> FlakeI18n.tr("flake.weapon.diamond_sword.title");
-			case "BOW" -> FlakeI18n.tr("flake.weapon.bow.short");
-			case "CROSSBOW" -> FlakeI18n.tr("flake.weapon.crossbow.short");
-			case "CONTROL_HAMMER" -> FlakeI18n.tr("flake.weapon.control_hammer.title");
-			default -> id;
-		};
+		try {
+			var spec = ContentCatalog.weapon(Loadout.Weapon.valueOf(id));
+			return spec == null ? id : spec.compactTitle();
+		} catch (IllegalArgumentException ignored) { return id; }
 	}
 
 	public static String accessoryName(String id) {
-		return switch (id) {
-			case "VITALITY" -> FlakeI18n.tr("flake.passive.vitality.short");
-			case "MOBILITY" -> FlakeI18n.tr("flake.passive.mobility.short");
-			case "REGENERATION" -> FlakeI18n.tr("flake.passive.regeneration.short");
-			case "WIND_CHARGE" -> FlakeI18n.tr("flake.active.wind_charge.title");
-			default -> id;
-		};
+		try {
+			var spec = ContentCatalog.passive(Loadout.PassiveItem.valueOf(id));
+			if (spec != null) return spec.compactTitle();
+		} catch (IllegalArgumentException ignored) { }
+		try {
+			var spec = ContentCatalog.active(Loadout.ActiveItem.valueOf(id));
+			return spec == null ? id : spec.compactTitle();
+		} catch (IllegalArgumentException ignored) { return id; }
 	}
 
 	public static String modeName(String modeId) {

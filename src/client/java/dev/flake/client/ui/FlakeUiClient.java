@@ -1,12 +1,14 @@
 package dev.flake.client.ui;
 
+import dev.flake.features.lobby.client.FlakeTabOverlay;
+
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.flake.build.Loadout;
-import dev.flake.ui.BuildApplyPayload;
-import dev.flake.ui.BuildResultPayload;
-import dev.flake.ui.HudStatePayload;
-import dev.flake.ui.LobbyActionPayload;
-import dev.flake.ui.LobbySnapshotPayload;
+import dev.flake.features.loadout.Loadout;
+import dev.flake.features.loadout.BuildApplyPayload;
+import dev.flake.features.loadout.BuildResultPayload;
+import dev.flake.features.hud.HudStatePayload;
+import dev.flake.features.lobby.LobbyActionPayload;
+import dev.flake.features.lobby.LobbySnapshotPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;

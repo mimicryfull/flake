@@ -1,12 +1,12 @@
 package dev.flake.client;
 
-import dev.flake.client.editor.BuildEditorScreen;
+import dev.flake.features.loadout.client.BuildEditorScreen;
 import dev.flake.client.ui.FlakeUiClient;
 import dev.flake.client.ui.UiButton;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
-import dev.flake.shared.FlakeI18n;
-import dev.flake.ui.LobbySnapshotPayload;
+import dev.flake.text.FlakeI18n;
+import dev.flake.features.lobby.LobbySnapshotPayload;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;

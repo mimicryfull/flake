@@ -1,7 +1,7 @@
 package dev.flake.client.ui.mixin;
 
-import dev.flake.client.ui.FlakeHudOverlay;
-import dev.flake.client.ui.FlakeTabOverlay;
+import dev.flake.features.hud.client.FlakeHudOverlay;
+import dev.flake.features.lobby.client.FlakeTabOverlay;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;

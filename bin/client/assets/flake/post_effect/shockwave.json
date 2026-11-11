@@ -1,0 +1,51 @@
+{
+  "targets": { "swap": {} },
+  "passes": [
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "flake:post/shockwave",
+      "inputs": [
+        { "sampler_name": "In", "target": "minecraft:main", "bilinear": true },
+        { "sampler_name": "Depth", "target": "minecraft:main", "use_depth_buffer": true }
+      ],
+      "output": "swap",
+      "uniforms": {
+        "ShockwaveConfig": [
+          { "name": "ViewProjection0", "type": "vec4", "value": [1, 0, 0, 0] },
+          { "name": "ViewProjection1", "type": "vec4", "value": [0, 1, 0, 0] },
+          { "name": "ViewProjection2", "type": "vec4", "value": [0, 0, 1, 0] },
+          { "name": "ViewProjection3", "type": "vec4", "value": [0, 0, 0, 1] },
+          { "name": "InverseViewProjection0", "type": "vec4", "value": [1, 0, 0, 0] },
+          { "name": "InverseViewProjection1", "type": "vec4", "value": [0, 1, 0, 0] },
+          { "name": "InverseViewProjection2", "type": "vec4", "value": [0, 0, 1, 0] },
+          { "name": "InverseViewProjection3", "type": "vec4", "value": [0, 0, 0, 1] },
+          { "name": "DepthConfig", "type": "vec4", "value": [1, 0, 0, 0] },
+          { "name": "WaveOrigin0", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveOrigin1", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveOrigin2", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveOrigin3", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveStyle0", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveStyle1", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveStyle2", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "WaveStyle3", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "ImpactConfig", "type": "vec4", "value": [0, 0, 0.5, 0.5] },
+          { "name": "MoteOrigins", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "MoteTails", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "QuakeMaterials", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "QuakeStarts", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "QuakeEnds", "type": "vec4", "value": [0, 0, 0, 0] },
+          { "name": "QuakeBounds", "type": "vec4", "value": [0, 0, 0, 0] }
+        ]
+      }
+    },
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "minecraft:post/blit",
+      "inputs": [{ "sampler_name": "In", "target": "swap" }],
+      "output": "minecraft:main",
+      "uniforms": {
+        "BlitConfig": [{ "name": "ColorModulate", "type": "vec4", "value": [1, 1, 1, 1] }]
+      }
+    }
+  ]
+}

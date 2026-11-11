@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "dev.flake.client.mixin",
+  "package": "dev.flake.render.vfx.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": ["PostPassMixin"],
   "injectors": { "defaultRequire": 1 }

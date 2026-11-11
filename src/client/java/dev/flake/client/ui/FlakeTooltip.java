@@ -101,7 +101,7 @@ public final class FlakeTooltip {
 
 		if (hasRows) {
 			contentY += 6;
-			UiTheme.text(g, dev.flake.shared.FlakeI18n.tr("flake.tooltip.stats"), x + PAD, contentY, innerWidth, UiTheme.TEXT);
+			UiTheme.text(g, dev.flake.text.FlakeI18n.tr("flake.tooltip.stats"), x + PAD, contentY, innerWidth, UiTheme.TEXT);
 			contentY += 10;
 			for (Row row : rows) {
 				int valueColor = row.tone() == 0 ? UiTheme.TEXT : row.tone();
@@ -116,7 +116,7 @@ public final class FlakeTooltip {
 
 		if (hasEffects) {
 			contentY += 6;
-			UiTheme.text(g, dev.flake.shared.FlakeI18n.tr("flake.tooltip.effects"), x + PAD, contentY, innerWidth, UiTheme.TEXT);
+			UiTheme.text(g, dev.flake.text.FlakeI18n.tr("flake.tooltip.effects"), x + PAD, contentY, innerWidth, UiTheme.TEXT);
 			contentY += 10;
 			for (String line : effects) {
 				g.fill(x + PAD, contentY + 4, x + PAD + 2, contentY + 6, model.accent());

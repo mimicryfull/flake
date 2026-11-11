@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "flake",
+	"version": "${version}",
+	"name": "Flake",
+	"description": "",
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.flake.bootstrap.FlakeMod",
+			"dev.flake.bootstrap.FlakeNetworking"
+		],
+		"client": [
+			"dev.flake.client.FlakeClient",
+			"dev.flake.client.ui.FlakeUiClient"
+		]
+	},
+	"mixins": [
+		"flake.duel.mixins.json",
+		{ "config": "flake.client.mixins.json", "environment": "client" },
+		{ "config": "flake.ui.client.mixins.json", "environment": "client" }
+	],
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

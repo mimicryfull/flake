@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "dev.flake.duel.mixin",
+  "package": "dev.flake.features.duel.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": ["DuelPlayerSafetyMixin", "DuelDeathSafetyMixin", "DuelPacketSafetyMixin", "DuelPickupSafetyMixin", "DuelArrowSafetyMixin"],
   "injectors": { "defaultRequire": 1 }

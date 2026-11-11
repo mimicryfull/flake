@@ -1,7 +1,7 @@
 package dev.flake.client.ui;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.flake.build.Loadout;
+import dev.flake.features.loadout.Loadout;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;

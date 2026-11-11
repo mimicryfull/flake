@@ -1,11 +1,12 @@
 package dev.flake.client;
 
+import dev.flake.features.matadora.MatadoraRuntime;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
 import net.fabricmc.loader.api.FabricLoader;
 
-/** Client-only tuning of the Matadora overlay (percent, 0..200). Persisted in config/flake-client.properties. */
+/** Client-only tuning of the MatadoraRuntime overlay (percent, 0..200). Persisted in config/flake-client.properties. */
 public final class MaskSettings {
 	public static final int[] STEPS = {0, 50, 100, 150, 200};
 	public static int density = 100, noise = 100, distortion = 100;

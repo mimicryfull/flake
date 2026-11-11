@@ -1,6 +1,6 @@
 package dev.flake.client.ui.mixin;
 
-import dev.flake.client.ui.StatusHud;
+import dev.flake.features.hud.client.StatusHud;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;

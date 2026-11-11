@@ -1,6 +1,7 @@
 package dev.flake.client.ui;
 
-import dev.flake.build.Loadout;
+import dev.flake.features.loadout.Loadout;
+import dev.flake.features.armor.ArmorItems;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -8,14 +9,9 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 
 public final class UiIcons {
-	private static final ItemStack IRON_ARMOR = new ItemStack(Items.IRON_CHESTPLATE);
-	private static final ItemStack DIAMOND_ARMOR = new ItemStack(Items.DIAMOND_CHESTPLATE);
+	private static final ItemStack IRON_ARMOR = ArmorItems.create(Loadout.ArmorMaterial.IRON, Loadout.ArmorSlot.CHESTPLATE);
+	private static final ItemStack DIAMOND_ARMOR = ArmorItems.create(Loadout.ArmorMaterial.DIAMOND, Loadout.ArmorSlot.CHESTPLATE);
 	private static final ItemStack IRON_SWORD = new ItemStack(Items.IRON_SWORD);
-	private static final ItemStack STONE_AXE = new ItemStack(Items.STONE_AXE);
-	private static final ItemStack DIAMOND_SWORD = new ItemStack(Items.DIAMOND_SWORD);
-	private static final ItemStack BOW = new ItemStack(Items.BOW);
-	private static final ItemStack CROSSBOW = new ItemStack(Items.CROSSBOW);
-	private static final ItemStack HAMMER = dev.flake.duel.ControlHammer.stack();
 	private static final ItemStack SPLASH_HEAL = PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_HEALING);
 
 	private UiIcons() {}
@@ -25,39 +21,7 @@ public final class UiIcons {
 	}
 
 	public static ItemStack armorPieceItem(Loadout.ArmorSlot slot, Loadout.ArmorMaterial material) {
-		return switch (material) {
-			case NONE -> ItemStack.EMPTY;
-			case CHAINMAIL -> new ItemStack(switch (slot) {
-				case HELMET -> Items.CHAINMAIL_HELMET;
-				case CHESTPLATE -> Items.CHAINMAIL_CHESTPLATE;
-				case LEGGINGS -> Items.CHAINMAIL_LEGGINGS;
-				case BOOTS -> Items.CHAINMAIL_BOOTS;
-			});
-			case GOLD -> new ItemStack(switch (slot) {
-				case HELMET -> Items.GOLDEN_HELMET;
-				case CHESTPLATE -> Items.GOLDEN_CHESTPLATE;
-				case LEGGINGS -> Items.GOLDEN_LEGGINGS;
-				case BOOTS -> Items.GOLDEN_BOOTS;
-			});
-			case IRON -> new ItemStack(switch (slot) {
-				case HELMET -> Items.IRON_HELMET;
-				case CHESTPLATE -> Items.IRON_CHESTPLATE;
-				case LEGGINGS -> Items.IRON_LEGGINGS;
-				case BOOTS -> Items.IRON_BOOTS;
-			});
-			case DIAMOND -> new ItemStack(switch (slot) {
-				case HELMET -> Items.DIAMOND_HELMET;
-				case CHESTPLATE -> Items.DIAMOND_CHESTPLATE;
-				case LEGGINGS -> Items.DIAMOND_LEGGINGS;
-				case BOOTS -> Items.DIAMOND_BOOTS;
-			});
-			case OBSIDIAN -> new ItemStack(switch (slot) {
-				case HELMET -> Items.NETHERITE_HELMET;
-				case CHESTPLATE -> Items.NETHERITE_CHESTPLATE;
-				case LEGGINGS -> Items.NETHERITE_LEGGINGS;
-				case BOOTS -> Items.NETHERITE_BOOTS;
-			});
-		};
+		return ArmorItems.create(material, slot);
 	}
 
 	public static ItemStack weaponItem(String id) {
@@ -66,23 +30,19 @@ public final class UiIcons {
 	}
 
 	public static ItemStack weaponItem(Loadout.Weapon weapon) {
-		var spec = dev.flake.shared.SliceRegistry.weapon(weapon);
+		var spec = dev.flake.content.ContentCatalog.weapon(weapon);
 		return spec != null ? spec.createStack() : IRON_SWORD;
 	}
 
 	public static ItemStack accessoryItem(Loadout.Accessory accessory) {
 		if (accessory == null) return ItemStack.EMPTY;
-		return switch (accessory) {
-			case VITALITY -> new ItemStack(Items.GLISTERING_MELON_SLICE);
-			case MOBILITY -> new ItemStack(Items.FEATHER);
-			case REGENERATION -> new ItemStack(Items.GHAST_TEAR);
-			case WIND_CHARGE -> new ItemStack(Items.WIND_CHARGE);
-		};
+		return accessory == Loadout.Accessory.WIND_CHARGE ? activeItem(Loadout.ActiveItem.WIND_CHARGE)
+				: passiveItem(Loadout.PassiveItem.valueOf(accessory.name()));
 	}
 
 	public static ItemStack passiveItem(Loadout.PassiveItem passive) {
 		if (passive == null) return ItemStack.EMPTY;
-		var spec = dev.flake.shared.SliceRegistry.passive(passive);
+		var spec = dev.flake.content.ContentCatalog.passive(passive);
 		return spec != null ? spec.createIcon() : ItemStack.EMPTY;
 	}
 
@@ -93,7 +53,7 @@ public final class UiIcons {
 
 	public static ItemStack activeItem(Loadout.ActiveItem item) {
 		if (item == null || item == Loadout.ActiveItem.NONE) return ItemStack.EMPTY;
-		var spec = dev.flake.shared.SliceRegistry.active(item);
+		var spec = dev.flake.content.ContentCatalog.active(item);
 		if (spec == null) return ItemStack.EMPTY;
 		var stack = spec.createStack();
 		if (stack.getCount() > 1) stack.setCount(1);
