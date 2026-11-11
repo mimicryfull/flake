@@ -1,17 +1,17 @@
-package dev.flake.features.matadora.client;
+package dev.flake.client.settings;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
 import net.fabricmc.loader.api.FabricLoader;
 
-/** Client-only tuning of the MatadoraRuntime overlay (percent, 0..200). Persisted in config/flake-client.properties. */
-public final class MaskSettings {
+/** Shared Matadora/Crystal Claw focus-overlay tuning. Existing mask.* config keys stay compatible. */
+public final class FocusOverlaySettings {
 	public static final int[] STEPS = {0, 50, 100, 150, 200};
 	public static int density = 100, noise = 100, distortion = 100;
 	private static final java.nio.file.Path FILE = FabricLoader.getInstance().getConfigDir().resolve("flake-client.properties");
 
-	private MaskSettings() {}
+	private FocusOverlaySettings() {}
 
 	public static void load() {
 		if (!Files.exists(FILE)) return;

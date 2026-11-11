@@ -31,7 +31,7 @@ public final class CrystalClawDefinition implements Lifecycle {
 	}
 
 	public static void registerItems() {
-		CrystalClawRuntime.bind(dev.flake.combat.ItemRegistration.active(CrystalClawRuntime.ID, (player, target) -> CrystalClawRuntime.activate(player)));
+		CrystalClawRuntime.bind(dev.flake.content.ItemRegistration.active(CrystalClawRuntime.ID, (player, target) -> CrystalClawRuntime.activate(player)));
 	}
 
 	@Override public void register() { CrystalClawRuntime.register(); }

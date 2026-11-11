@@ -36,7 +36,7 @@ public final class DuelRecovery {
 		final Set<UUID> players = new HashSet<>();
 		final Set<UUID> reported = new HashSet<>();
 	}
-	private static final dev.flake.combat.ServerState<Protection> PROTECTION = new dev.flake.combat.ServerState<>(Protection::new);
+	private static final dev.flake.runtime.ServerState<Protection> PROTECTION = new dev.flake.runtime.ServerState<>(Protection::new);
 
 	private DuelRecovery() {}
 

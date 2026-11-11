@@ -36,7 +36,7 @@ public final class DarkCubeRuntime {
 
 	private static SoundEvent sound;
 
-	private static final dev.flake.combat.ServerState<Map<UUID, Integer>> READY = new dev.flake.combat.ServerState<>(HashMap::new);
+	private static final dev.flake.runtime.ServerState<Map<UUID, Integer>> READY = new dev.flake.runtime.ServerState<>(HashMap::new);
 
 	private DarkCubeRuntime() {}
 

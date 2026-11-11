@@ -62,7 +62,7 @@ public final class ObsidianArmor implements Lifecycle {
 		final Map<UUID, Integer> ready = new HashMap<>();
 		boolean pulsing;
 	}
-	private static final dev.flake.combat.ServerState<State> STATES = new dev.flake.combat.ServerState<>(State::new);
+	private static final dev.flake.runtime.ServerState<State> STATES = new dev.flake.runtime.ServerState<>(State::new);
 	private static boolean registered;
 
 	private ObsidianArmor() {}

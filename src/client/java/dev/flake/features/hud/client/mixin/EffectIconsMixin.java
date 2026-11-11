@@ -1,4 +1,4 @@
-package dev.flake.client.ui.mixin;
+package dev.flake.features.hud.client.mixin;
 
 import dev.flake.features.hud.client.StatusHud;
 import net.minecraft.client.DeltaTracker;

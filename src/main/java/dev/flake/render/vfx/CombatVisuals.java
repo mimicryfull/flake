@@ -1,6 +1,6 @@
 package dev.flake.render.vfx;
 
-import dev.flake.combat.ServerState;
+import dev.flake.runtime.ServerState;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.UUID;

@@ -2,7 +2,6 @@ package dev.flake.combat;
 
 import dev.flake.features.duel.DuelRuntime;
 
-import dev.flake.features.controlhammer.ControlHammerRuntime;
 import dev.flake.text.FlakeI18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

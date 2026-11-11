@@ -1,5 +1,7 @@
 package dev.flake.combat;
 
+import dev.flake.runtime.ServerState;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;

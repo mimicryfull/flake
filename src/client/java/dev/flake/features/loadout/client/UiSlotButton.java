@@ -1,4 +1,4 @@
-package dev.flake.client.ui.widgets;
+package dev.flake.features.loadout.client;
 
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;

@@ -21,12 +21,12 @@ public final class DarkCubeDefinition implements Lifecycle {
 	private DarkCubeDefinition() {}
 
 	public static void registerItems() {
-		DarkCubeRuntime.bind(dev.flake.combat.ItemRegistration.register(DarkCubeRuntime.ID, key -> new ActiveCombatItem(
+		DarkCubeRuntime.bind(dev.flake.content.ItemRegistration.register(DarkCubeRuntime.ID, key -> new ActiveCombatItem(
 				new net.minecraft.world.item.Item.Properties().setId(key).stacksTo(1), DarkCubeRuntime.ID) {
 			@Override protected boolean canConsumeOnClient(net.minecraft.world.entity.player.Player player) { return DarkCubeRuntime.hasClientTarget(player); }
 			@Override protected boolean activateServer(ServerPlayer player, net.minecraft.world.entity.Entity target) { return DarkCubeRuntime.fire(player); }
 		}));
-		DarkCubeRuntime.bindSound(dev.flake.combat.ItemRegistration.sound(DarkCubeRuntime.ID));
+		DarkCubeRuntime.bindSound(dev.flake.content.ItemRegistration.sound(DarkCubeRuntime.ID));
 	}
 
 	public static void install() {

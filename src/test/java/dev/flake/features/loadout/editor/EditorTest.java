@@ -1,8 +1,7 @@
-package dev.flake.features.loadout;
+package dev.flake.features.loadout.editor;
 
-import dev.flake.features.loadout.editor.EditorCatalog;
+import dev.flake.features.loadout.Loadout;
 import dev.flake.features.loadout.editor.EditorCatalog.Slot;
-import dev.flake.features.loadout.editor.EditorLayout;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

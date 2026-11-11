@@ -30,8 +30,8 @@ public final class MatadoraDefinition implements Lifecycle {
 	}
 
 	public static void registerItems() {
-		MatadoraRuntime.bind(dev.flake.combat.ItemRegistration.active(MatadoraRuntime.ID, (player, target) -> MatadoraRuntime.activate(player)));
-		MatadoraRuntime.bindSound(dev.flake.combat.ItemRegistration.sound(MatadoraRuntime.SOUND_ID));
+		MatadoraRuntime.bind(dev.flake.content.ItemRegistration.active(MatadoraRuntime.ID, (player, target) -> MatadoraRuntime.activate(player)));
+		MatadoraRuntime.bindSound(dev.flake.content.ItemRegistration.sound(MatadoraRuntime.SOUND_ID));
 	}
 
 	@Override public void register() { MatadoraRuntime.register(); }

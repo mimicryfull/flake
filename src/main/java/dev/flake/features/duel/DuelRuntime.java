@@ -32,8 +32,8 @@ import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
  * One player can never be in two matches, which is what makes the lookup unambiguous.
  */
 public final class DuelRuntime {
-	private static final dev.flake.combat.ServerState<Map<UUID, MatchRuntime>> MATCHES =
-			new dev.flake.combat.ServerState<>(java.util.LinkedHashMap::new);
+	private static final dev.flake.runtime.ServerState<Map<UUID, MatchRuntime>> MATCHES =
+			new dev.flake.runtime.ServerState<>(java.util.LinkedHashMap::new);
 	private static boolean installed;
 
 	private DuelRuntime() {}

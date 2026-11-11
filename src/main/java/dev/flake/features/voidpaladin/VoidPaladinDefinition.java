@@ -19,7 +19,7 @@ public final class VoidPaladinDefinition implements Lifecycle {
 	private VoidPaladinDefinition() {}
 
 	public static void registerItems() {
-		VoidPaladinRuntime.bind(dev.flake.combat.ItemRegistration.register(net.minecraft.resources.Identifier.fromNamespaceAndPath("flake", "void_paladin"),
+		VoidPaladinRuntime.bind(dev.flake.content.ItemRegistration.register(net.minecraft.resources.Identifier.fromNamespaceAndPath("flake", "void_paladin"),
 				key -> new net.minecraft.world.item.Item(new net.minecraft.world.item.Item.Properties().setId(key)
 						.sword(net.minecraft.world.item.ToolMaterial.DIAMOND, 3.5f, -2.4f))));
 	}

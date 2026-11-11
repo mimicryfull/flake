@@ -2,18 +2,16 @@
 
 This is a PATH INDEX ONLY. Confirm implementations from live source; paths and identifiers can change.
 
-- Indexed source/resource paths: 284
+- Indexed source/resource paths: 286
 
 ## Abilities and combat
-Matches: 54
+Matches: 52
 - `src/main/java/dev/flake/combat/CombatEquipment.java`
 - `src/main/java/dev/flake/combat/CombatFeedback.java`
 - `src/main/java/dev/flake/combat/CombatModifiers.java`
 - `src/main/java/dev/flake/combat/CombatStatuses.java`
 - `src/main/java/dev/flake/combat/Cooldowns.java`
-- `src/main/java/dev/flake/combat/ItemRegistration.java`
 - `src/main/java/dev/flake/combat/PvpVitals.java`
-- `src/main/java/dev/flake/combat/ServerState.java`
 - `src/main/java/dev/flake/combat/Stuns.java`
 - `src/main/java/dev/flake/combat/ability/AbilityEffects.java`
 - `src/main/java/dev/flake/combat/ability/AbilityInputServer.java`
@@ -41,13 +39,15 @@ Matches: 54
 - `src/main/java/dev/flake/features/duel/mixin/DuelPlayerSafetyMixin.java`
 - `src/main/java/dev/flake/features/duel/recovery/DuelPlayerState.java`
 - `src/main/java/dev/flake/features/duel/recovery/DuelPreparation.java`
-- (+19 omitted; use `rg --files` and `rg` for live search)
+- `src/main/java/dev/flake/features/duel/recovery/DuelRecovery.java`
+- `src/main/java/dev/flake/features/duel/recovery/InventorySnapshot.java`
+- (+17 omitted; use `rg --files` and `rg` for live search)
 
 ## VFX and shaders
 Matches: 52
 - `src/client/java/dev/flake/bootstrap/EffectActors.java`
-- `src/client/java/dev/flake/client/ui/mixin/EffectIconsMixin.java`
 - `src/client/java/dev/flake/features/concussed/client/GroundLightning.java`
+- `src/client/java/dev/flake/features/hud/client/mixin/EffectIconsMixin.java`
 - `src/client/java/dev/flake/features/vampire/client/GhoulRenderState.java`
 - `src/client/java/dev/flake/render/vfx/EffectActor.java`
 - `src/client/java/dev/flake/render/vfx/FocusAuraActor.java`
@@ -83,18 +83,19 @@ Matches: 52
 - (+17 omitted; use `rg --files` and `rg` for live search)
 
 ## Items and builds
-Matches: 54
+Matches: 55
 - `src/client/java/dev/flake/features/hud/client/FlakeItemHud.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildEditorScreen.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildPreview.java`
 - `src/client/java/dev/flake/features/loadout/client/ItemPickerScreen.java`
+- `src/client/java/dev/flake/features/loadout/client/UiSlotButton.java`
 - `src/client/resources/assets/flake/shaders/include/items/crystal_claw.glsl`
 - `src/client/resources/assets/flake/shaders/include/items/cube_of_darkness.glsl`
 - `src/client/resources/assets/flake/shaders/include/items/matadora.glsl`
 - `src/client/resources/assets/flake/shaders/include/items/screen_overlays.glsl`
 - `src/main/java/dev/flake/combat/CombatEquipment.java`
-- `src/main/java/dev/flake/combat/ItemRegistration.java`
 - `src/main/java/dev/flake/combat/item/ActiveCombatItem.java`
+- `src/main/java/dev/flake/content/ItemRegistration.java`
 - `src/main/java/dev/flake/features/armor/ArmorItems.java`
 - `src/main/java/dev/flake/features/duel/kit/DuelEquipment.java`
 - `src/main/java/dev/flake/features/duel/recovery/InventorySnapshot.java`
@@ -118,21 +119,19 @@ Matches: 54
 - `src/main/resources/assets/flake/items/melting_amethyst.json`
 - `src/main/resources/assets/flake/items/smoke_bomb.json`
 - `src/main/resources/assets/flake/items/void_paladin.json`
-- `src/main/resources/assets/flake/models/item/adrenaline.json`
-- (+19 omitted; use `rg --files` and `rg` for live search)
+- (+20 omitted; use `rg --files` and `rg` for live search)
 
 ## UI and client
 Matches: 101
 - `src/client/java/dev/flake/bootstrap/EffectActors.java`
 - `src/client/java/dev/flake/bootstrap/FlakeClient.java`
 - `src/client/java/dev/flake/client/network/FlakeUiClient.java`
+- `src/client/java/dev/flake/client/settings/FocusOverlaySettings.java`
 - `src/client/java/dev/flake/client/ui/FlakeTooltip.java`
 - `src/client/java/dev/flake/client/ui/UiIcons.java`
 - `src/client/java/dev/flake/client/ui/UiTheme.java`
-- `src/client/java/dev/flake/client/ui/mixin/EffectIconsMixin.java`
 - `src/client/java/dev/flake/client/ui/mixin/HudTabOverlayMixin.java`
 - `src/client/java/dev/flake/client/ui/widgets/UiButton.java`
-- `src/client/java/dev/flake/client/ui/widgets/UiSlotButton.java`
 - `src/client/java/dev/flake/features/bastion/client/BulwarkActor.java`
 - `src/client/java/dev/flake/features/bastion/client/ShieldRamActor.java`
 - `src/client/java/dev/flake/features/concussed/client/ChargeActor.java`
@@ -146,13 +145,14 @@ Matches: 101
 - `src/client/java/dev/flake/features/hud/client/FlakeItemHud.java`
 - `src/client/java/dev/flake/features/hud/client/FlakePlayerHud.java`
 - `src/client/java/dev/flake/features/hud/client/StatusHud.java`
+- `src/client/java/dev/flake/features/hud/client/mixin/EffectIconsMixin.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildEditorScreen.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildPreview.java`
 - `src/client/java/dev/flake/features/loadout/client/ItemPickerScreen.java`
+- `src/client/java/dev/flake/features/loadout/client/UiSlotButton.java`
 - `src/client/java/dev/flake/features/lobby/client/FlakeScreen.java`
 - `src/client/java/dev/flake/features/lobby/client/FlakeTabOverlay.java`
 - `src/client/java/dev/flake/features/lobby/client/LobbyManageScreen.java`
-- `src/client/java/dev/flake/features/matadora/client/MaskSettings.java`
 - `src/client/java/dev/flake/features/matadora/client/MatadoraActor.java`
 - `src/client/java/dev/flake/features/vampire/client/GhoulRenderState.java`
 - `src/client/java/dev/flake/features/voidpaladin/client/CritActor.java`
@@ -206,7 +206,7 @@ Matches: 12
 - `.fsh`: 4
 - `.glsl`: 15
 - `.gradle`: 4
-- `.java`: 200
+- `.java`: 202
 - `.json`: 53
 - `.jsonc`: 1
 - `.properties`: 4

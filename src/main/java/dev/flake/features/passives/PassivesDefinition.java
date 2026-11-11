@@ -16,14 +16,14 @@ import net.minecraft.world.item.Items;
 /** Vertical slice for all Passive Items: metadata, editor icons, categories, kit application, and fight-tick logic. */
 public final class PassivesDefinition implements Lifecycle {
 	/** Per-player schedule for periodic passives; independent of global tick alignment and call rate. */
-	private static final dev.flake.combat.ServerState<dev.flake.features.passives.RegenerationSchedule> REGEN =
-			new dev.flake.combat.ServerState<>(dev.flake.features.passives.RegenerationSchedule::new);
+	private static final dev.flake.runtime.ServerState<dev.flake.features.passives.RegenerationSchedule> REGEN =
+			new dev.flake.runtime.ServerState<>(dev.flake.features.passives.RegenerationSchedule::new);
 	private static final float REGEN_HEAL = 0.5f;
 
 	private PassivesDefinition() {}
 
 	public static void registerItems() {
-		MeltingAmethyst.bind(dev.flake.combat.ItemRegistration.register(MeltingAmethyst.ID,
+		MeltingAmethyst.bind(dev.flake.content.ItemRegistration.register(MeltingAmethyst.ID,
 				key -> new net.minecraft.world.item.Item(new net.minecraft.world.item.Item.Properties().setId(key))));
 	}
 

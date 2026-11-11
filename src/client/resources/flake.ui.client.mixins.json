@@ -1,7 +1,7 @@
 {
 	"required": true,
-	"package": "dev.flake.client.ui.mixin",
+	"package": "dev.flake",
 	"compatibilityLevel": "JAVA_25",
-	"client": ["HudTabOverlayMixin", "EffectIconsMixin"],
+	"client": ["client.ui.mixin.HudTabOverlayMixin", "features.hud.client.mixin.EffectIconsMixin"],
 	"injectors": { "defaultRequire": 1 }
 }

@@ -8,13 +8,16 @@ Flake — feature-first модульний моноліт. Межі потріб
 - `features/<feature>/` — визначення, механіка та повідомлення конкретної фічі.
 - `combat/` — спільні правила, модифікатори шкоди, stun, кулдауни та здібності.
 - `content/` — каталог і контракти контенту; без імпортів конкретних фіч.
+- `content/ItemRegistration` — реєстрація Minecraft-предметів і звуків;
+  `runtime/ServerState` — спільне володіння станом на час життя сервера.
 - `bootstrap/` — явне підключення фіч, entrypoints і мережеві адаптери.
 - На клієнті: `bootstrap/FlakeClient` — запуск та input;
   `client/network/FlakeUiClient` — мережеві адаптери й кеші UI;
-  `client/ui/` — тема, іконки, tooltip і спільні mixin-и;
-  `client/ui/widgets/` — повторно використовувані віджети.
-- Екрани лобі — `features/lobby/client/`, редактор — `features/loadout/client/`,
-  налаштування оверлею Матадори — `features/matadora/client/MaskSettings`.
+  `client/ui/` — тема, іконки, tooltip і інтеграційний Tab-mixin;
+  `client/ui/widgets/` — спільні віджети, зараз `UiButton`;
+  `client/settings/` — персональні налаштування спільних focus-оверлеїв.
+- Екрани лобі — `features/lobby/client/`, редактор і його `UiSlotButton` —
+  `features/loadout/client/`, HUD-mixin-и — `features/hud/client/mixin/`.
 - `render/vfx/` — доставка VFX на сервері та спільний GPU-конвеєр на клієнті.
 - `features/loadout/` — модель білда, збереження, спільна операція зміни та редактор.
 - `features/lobby/` — кімнати, дії, права доступу та snapshot для конкретного глядача.
@@ -24,6 +27,10 @@ Flake — feature-first модульний моноліт. Межі потріб
 `src/main` містить common/server-код. Клієнтські реалізації лежать у дзеркальних
 пакетах `src/client`. Не переносити клієнтські Minecraft-класи у `src/main`.
 Тести повторюють пакети своїх предметів перевірки.
+
+Повний огляд призначення папок: [repository-layout.md](repository-layout.md).
+Історичні аудити й результати перевірок лежать у `docs/reports/`, плани —
+у `docs/planning/`, інструкції інструментів — у `docs/tooling/`.
 
 ## Додавання предмета
 

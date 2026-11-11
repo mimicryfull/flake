@@ -3,7 +3,6 @@ package dev.flake.features.concussed;
 /** Visual timing is independent of the server's knockback and cooldown. */
 public final class ShockwaveAnimation {
 	public static final float DURATION_SECONDS = 0.85f;
-	public static final int MAX_WAVES = 4;
 	public static final float VFX_DURATION_SECONDS = EnergyMotes.DURATION;
 
 	private ShockwaveAnimation() {}

@@ -45,7 +45,7 @@ public final class ControlHammerRuntime {
 		final Map<UUID, Integer> ready = new HashMap<>();
 		final Map<UUID, Integer> totals = new HashMap<>();
 	}
-	private static final dev.flake.combat.ServerState<State> STATES = new dev.flake.combat.ServerState<>(State::new);
+	private static final dev.flake.runtime.ServerState<State> STATES = new dev.flake.runtime.ServerState<>(State::new);
 
 	public static Item ITEM;
 

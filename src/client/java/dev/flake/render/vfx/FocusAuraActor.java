@@ -1,6 +1,6 @@
 package dev.flake.render.vfx;
 
-import dev.flake.features.matadora.client.MaskSettings;
+import dev.flake.client.settings.FocusOverlaySettings;
 
 /** Shared owner-overlay/body-aura placement. Each item owns its envelope and shader style. */
 public abstract class FocusAuraActor extends TimedBuffActor {
@@ -37,9 +37,9 @@ public abstract class FocusAuraActor extends TimedBuffActor {
 		values[slot.style + 3] = client.options.screenEffectScale().get().floatValue();
 		if (owner) {
 			values[slot.material] = burst(age);
-			values[slot.position] = MaskSettings.density / 100f;
-			values[slot.position + 1] = MaskSettings.noise / 100f;
-			values[slot.position + 2] = MaskSettings.distortion / 100f;
+			values[slot.position] = FocusOverlaySettings.density / 100f;
+			values[slot.position + 1] = FocusOverlaySettings.noise / 100f;
+			values[slot.position + 2] = FocusOverlaySettings.distortion / 100f;
 		}
 		return false;
 	}

@@ -36,7 +36,7 @@ public final class MatadoraRuntime {
 		final Map<UUID, Integer> buffs = new HashMap<>();
 		final Map<UUID, Integer> ready = new HashMap<>();
 	}
-	private static final dev.flake.combat.ServerState<State> STATES = new dev.flake.combat.ServerState<>(State::new);
+	private static final dev.flake.runtime.ServerState<State> STATES = new dev.flake.runtime.ServerState<>(State::new);
 
 	private MatadoraRuntime() {}
 

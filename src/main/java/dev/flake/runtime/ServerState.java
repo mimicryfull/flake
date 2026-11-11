@@ -1,4 +1,4 @@
-package dev.flake.combat;
+package dev.flake.runtime;
 
 import java.util.IdentityHashMap;
 import java.util.Map;

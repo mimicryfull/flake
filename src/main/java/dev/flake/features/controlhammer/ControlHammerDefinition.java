@@ -29,7 +29,7 @@ public final class ControlHammerDefinition implements Lifecycle {
     }
 
 	public static void registerItems() {
-		ControlHammerRuntime.bind(dev.flake.combat.ItemRegistration.register(ControlHammerRuntime.MODEL, key -> new ActiveCombatItem(
+		ControlHammerRuntime.bind(dev.flake.content.ItemRegistration.register(ControlHammerRuntime.MODEL, key -> new ActiveCombatItem(
 				new net.minecraft.world.item.Item.Properties().setId(key).sword(net.minecraft.world.item.ToolMaterial.IRON, 3f, -2.4f), ControlHammerRuntime.MODEL) {
 			@Override protected boolean canConsumeOnClient(net.minecraft.world.entity.player.Player player) { return ControlHammerRuntime.hasClientTarget(player); }
 			@Override protected boolean activateServer(ServerPlayer player, net.minecraft.world.entity.Entity target) { return ControlHammerRuntime.use(player, target); }

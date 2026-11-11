@@ -23,7 +23,7 @@ public final class UtilityEquipment implements Lifecycle {
 
 	private static net.minecraft.world.item.Item gadget(String path, int cooldown, Gadgets.Effect effect) {
 		var id = net.minecraft.resources.Identifier.fromNamespaceAndPath("flake", path);
-		return dev.flake.combat.ItemRegistration.active(id, (player, target) -> {
+		return dev.flake.content.ItemRegistration.active(id, (player, target) -> {
 			if (dev.flake.features.duel.DuelRuntime.blocksAbility(player.getUUID()) || !effect.apply(player, player.level())) return false;
 			player.getCooldowns().addCooldown(id, cooldown);
 			return true;

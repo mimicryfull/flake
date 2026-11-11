@@ -1,4 +1,4 @@
-package dev.flake.combat;
+package dev.flake.content;
 
 import dev.flake.combat.item.ActiveCombatItem;
 import java.util.function.BiPredicate;

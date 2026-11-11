@@ -1,7 +1,7 @@
 package dev.flake.bootstrap;
 
 import dev.flake.features.lobby.client.FlakeScreen;
-import dev.flake.features.matadora.client.MaskSettings;
+import dev.flake.client.settings.FocusOverlaySettings;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.flake.Flake;
@@ -27,7 +27,7 @@ public final class FlakeClient implements ClientModInitializer {
 			var mc = net.minecraft.client.Minecraft.getInstance();
 			return mc != null && mc.options != null ? mc.options.languageCode : dev.flake.text.FlakeI18n.UK_UA;
 		});
-		MaskSettings.load();
+		FocusOverlaySettings.load();
 		dev.flake.features.hud.client.FlakePlayerHud.register();
 		// No inventory in PvP: the kit is used from the hotbar / item panel only.
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {

@@ -5,7 +5,6 @@ import dev.flake.client.ui.FlakeTooltip;
 import dev.flake.client.network.FlakeUiClient;
 import dev.flake.client.ui.widgets.UiButton;
 import dev.flake.client.ui.UiIcons;
-import dev.flake.client.ui.widgets.UiSlotButton;
 import dev.flake.client.ui.UiTheme;
 import dev.flake.features.loadout.editor.EditorCatalog;
 import dev.flake.features.loadout.editor.EditorCatalog.Slot;

@@ -170,7 +170,7 @@ Persistence:
 | `combat.ability.AbilitySlotPayload` | C→S | `AbilityInputServer` | H/R, слот 1..2 → `ClassAbilityApplication` |
 | `render.vfx.CombatVfxPayload` | S→C | `CombatVisuals` | VFX-фази; чинний wire ID `flake:shockwave` |
 
-- Клієнтський стан: `client/ui/FlakeUiClient` (snapshot/hud/build result, 5-секундна свіжість, типові дії `query/createLobby/join/ready/startMatch/kick/invite/transfer/deleteRoom/settings/applyBuild`).
+- Клієнтський стан: `client/network/FlakeUiClient` (snapshot/hud/build result, 5-секундна свіжість, типові дії `query/createLobby/join/ready/startMatch/kick/invite/transfer/deleteRoom/settings/applyBuild`).
 - `ui/mixin/LoadoutUiBridgeMixin` **видалено** разом із `flake.ui.mixins.json`: глобального лобі більше немає, стан тримає `LobbyManager`.
 - Snapshot roster обмежений `ROSTER_CAP = 256` рядків; учасники власної кімнати завжди першими.
 
@@ -179,7 +179,7 @@ Persistence:
 - Гортач: `FlakeHudOverlay` (головний, картки здібностей лише для `PARTICIPANT`), `FlakePlayerHud` (броня/health), `FlakeItemHud` (хотбар/кулдауни, реальні key mappings), `FlakeTabOverlay` (онлайн + кімната кожного гравця), `client/ui/mixin/HudTabOverlayMixin`. **[П]** частково.
 - Екрани лобі: `FlakeScreen` (MAIN_MENU/BROWSER/CREATE_LOBBY/ROOM/BUILD_EDITOR/ARENA_SETTINGS), `LobbyManageScreen` (owner: invite/kick/transfer з посторінковими списками).
 - Редактор: `BuildEditorScreen` шле `BuildApplyPayload`, обробляє `BuildResultPayload` (STALE/INVALID/SAVE_FAILED/LOCKED) і показує `LoadState.CORRUPT` у футері.
-- Спільні UI-інструменти: `client/ui/UiTheme`, `UiIcons`, `FlakeTooltip`; віджети — `client/ui/widgets/UiButton`, `UiSlotButton`. Невикористані `UiCard` і `UiItemRow` видалені. **[П]**
+- Спільні UI-інструменти: `client/ui/UiTheme`, `UiIcons`, `FlakeTooltip`, `client/ui/widgets/UiButton`; редакторний `UiSlotButton` — у `features/loadout/client`. `EffectIconsMixin` належить `features/hud/client/mixin`; спільний Tab-адаптер лишається у `client/ui/mixin`. **[П]**
 - Ванільний `InventoryScreen` примусово закривається, коли активний Flake HUD. **[П]**
 - Клавіші: G — меню/редактор, H/R — здібності, PageUp/PageDown — гортання вкладки, коли затиснутий Tab. **[П]**
 
@@ -195,7 +195,7 @@ Persistence:
 
 | Task category | Entry points | Related components |
 |---|---|---|
-| New item/weapon | `features/<name>/*Definition`, `features/loadout/Loadout`, `bootstrap/Features` | `ContentSpec`, `ItemRegistration`, assets/lang |
+| New item/weapon | `features/<name>/*Definition`, `features/loadout/Loadout`, `bootstrap/Features` | `ContentSpec`, `content/ItemRegistration`, assets/lang |
 | Class ability | `features/<class>/*Runtime`, `*Definition` | `combat/ability`, `ContentCatalog`, feature Visuals/actor |
 | Gameplay balancing | Константи відповідної фічі та metadata | `Loadout.stats`, `EditorCatalog.comparison`, cooldown snapshots |
 | Custom GLSL VFX | `features/<name>/client/*Actor`, feature `*Visuals` | `render/vfx`, shader includes, client composition root |
@@ -209,8 +209,11 @@ Persistence:
 | Arena | `features/arena/*` | `MatchRuntime.preflight`, existing world paths |
 
 Клієнтський entrypoint — `bootstrap/FlakeClient`; мережеві кеші UI —
-`client/network/FlakeUiClient`; налаштування Матадори —
-`features/matadora/client/MaskSettings`. Порожні пакети попередньої структури прибрані.
+`client/network/FlakeUiClient`; спільні налаштування оверлеїв Матадори та Crystal Claw —
+`client/settings/FocusOverlaySettings` (старі `mask.*` ключі збережені).
+Server lifecycle storage — `runtime/ServerState`, реєстрація предметів —
+`content/ItemRegistration`. VFX-буфер сам визначає свій бюджет, а не імпортує конкретну фічу.
+Огляд усіх груп директорій — `docs/repository-layout.md`; історичні звіти — `docs/reports/`.
 
 ## 12. Невідоме / неперевірене
 

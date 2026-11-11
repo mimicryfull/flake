@@ -70,7 +70,7 @@ public final class VoidPaladinRuntime {
         final Map<UUID, Boolean> pendingSwings = new HashMap<>();
         final List<Label> labels = new ArrayList<>();
     }
-    private static final dev.flake.combat.ServerState<State> STATES = new dev.flake.combat.ServerState<>(State::new);
+    private static final dev.flake.runtime.ServerState<State> STATES = new dev.flake.runtime.ServerState<>(State::new);
 
     private static final Method SET_TEXT_OPACITY = opacitySetter();
 
