@@ -40,7 +40,8 @@ void weaponStreak(vec3 ray, float sceneDistance, int wave,
     float coverage = clamp(intensity * 1.4 + headGlow * 0.9, 0.0, 1.0);
     chipColor += color * coverage;
     chipAlpha += coverage;
-    distortion += normalize(separation + vec3(0.0001)) * intensity * 0.14;
+    vec2 radial = texCoord - screenPosition(point);
+    distortion += radial / max(length(radial), 0.001) * intensity * 0.14;
 }
 
 void broadswordSweep(vec3 ray, float sceneDistance, int wave,
@@ -68,5 +69,6 @@ void broadswordSweep(vec3 ray, float sceneDistance, int wave,
     float coverage = clamp(intensity * 1.2, 0.0, 1.0);
     chipColor += color * coverage;
     chipAlpha += coverage;
-    distortion += normalize(relative + vec3(0.0001)) * intensity * 0.18;
+    vec2 radial = texCoord - screenPosition(origin);
+    distortion += radial / max(length(radial), 0.001) * intensity * 0.18;
 }
