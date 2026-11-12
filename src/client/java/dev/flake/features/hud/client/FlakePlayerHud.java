@@ -25,8 +25,7 @@ public final class FlakePlayerHud {
 	public static boolean active() {
 		if (!dev.flake.client.settings.BattleModeSettings.enabled()) return false;
 		var hud = FlakeUiClient.hud();
-		return hud != null && FlakeUiClient.hudFresh() && hud.participant()
-				&& ("COUNTDOWN".equals(hud.phase()) || "FIGHTING".equals(hud.phase()));
+		return hud != null && FlakeUiClient.hudFresh();
 	}
 
 	public static void register() {

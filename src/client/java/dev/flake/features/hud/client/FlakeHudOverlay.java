@@ -39,12 +39,6 @@ public final class FlakeHudOverlay {
 		if (screen != null && !(screen instanceof ChatScreen)) return;
 		var hud = FlakeUiClient.hud();
 		if (hud == null) return;
-		// Flake HUD (top bar, build panel, statuses, ability cards, item HUD) belongs to the lobby only.
-		if (!hud.inLobby()) {
-			topBarSlide = 0f;
-			lastCountdownWhole = -1;
-			return;
-		}
 
 		long now = System.nanoTime();
 		float dt = lastFrameNano == 0 ? 0.016f : Math.min(0.1f, Math.max(0.001f, (now - lastFrameNano) / 1_000_000_000.0f));
@@ -52,16 +46,18 @@ public final class FlakeHudOverlay {
 		float timeSec = (now / 1_000_000L % 100_000L) / 1000.0f;
 		float elapsed = FlakeUiClient.hudElapsedSeconds();
 
-		if (!client.options.keyPlayerList.isDown()) {
+		if (!hud.inLobby()) {
+			topBarSlide = 0f;
+			lastCountdownWhole = -1;
+		} else if (!client.options.keyPlayerList.isDown()) {
 			extractDuelBar(g, hud, elapsed, dt, timeSec);
 		}
 		if (BattleModeSettings.enabled()) {
 			extractBuildHud(g, client, hud, dt);
 			StatusHud.extract(g, client, hud, dt);
-			// Spectators and free-roam players must not see castable ability cards for a fight they are not in.
-			if (hud.participant()) extractSkillHud(g, client, hud, elapsed, dt, timeSec);
+			extractSkillHud(g, client, hud, elapsed, dt, timeSec);
 			FlakePlayerHud.extract(g, client);
-			if (hud.participant() && ("COUNTDOWN".equals(hud.phase()) || "FIGHTING".equals(hud.phase()))) FlakeItemHud.extract(g, client, timeSec);
+			FlakeItemHud.extract(g, client, timeSec);
 		} else {
 			FlakePlayerHud.extract(g, client);
 		}
