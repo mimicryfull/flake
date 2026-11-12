@@ -19,7 +19,8 @@
 	"mixins": [
 		"flake.duel.mixins.json",
 		{ "config": "flake.client.mixins.json", "environment": "client" },
-		{ "config": "flake.ui.client.mixins.json", "environment": "client" }
+		{ "config": "flake.ui.client.mixins.json", "environment": "client" },
+		{ "config": "flake.hud.client.mixins.json", "environment": "client" }
 	],
 	"depends": {
 		"fabricloader": ">=0.20.1",

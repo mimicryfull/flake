@@ -23,6 +23,7 @@ public final class FlakePlayerHud {
 
 	/** Активний під час відліку та бою лише для учасників; глядачі бачать ванільний HUD. */
 	public static boolean active() {
+		if (!dev.flake.client.settings.BattleModeSettings.enabled()) return false;
 		var hud = FlakeUiClient.hud();
 		return hud != null && FlakeUiClient.hudFresh() && hud.participant()
 				&& ("COUNTDOWN".equals(hud.phase()) || "FIGHTING".equals(hud.phase()));

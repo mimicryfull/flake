@@ -29,7 +29,8 @@ public final class StatusHud {
 	private StatusHud() {}
 
 	public static boolean active() {
-		return active && System.nanoTime() - lastExtractNano < 500_000_000L;
+		return dev.flake.client.settings.BattleModeSettings.enabled()
+				&& active && System.nanoTime() - lastExtractNano < 500_000_000L;
 	}
 
 	public static void extract(GuiGraphicsExtractor g, Minecraft client, HudStatePayload hud, float dt) {

@@ -1,6 +1,7 @@
 package dev.flake.bootstrap;
 
 import dev.flake.features.lobby.client.FlakeScreen;
+import dev.flake.client.settings.BattleModeSettings;
 import dev.flake.client.settings.FocusOverlaySettings;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -19,6 +20,7 @@ public final class FlakeClient implements ClientModInitializer {
 	public static KeyMapping openKey;
 	public static KeyMapping ability1Key;
 	public static KeyMapping ability2Key;
+	public static KeyMapping battleModeKey;
 
 	@Override
 	public void onInitializeClient() {
@@ -28,6 +30,7 @@ public final class FlakeClient implements ClientModInitializer {
 			return mc != null && mc.options != null ? mc.options.languageCode : dev.flake.text.FlakeI18n.UK_UA;
 		});
 		FocusOverlaySettings.load();
+		BattleModeSettings.load();
 		dev.flake.features.hud.client.FlakePlayerHud.register();
 		// No inventory in PvP: the kit is used from the hotbar / item panel only.
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
@@ -41,6 +44,7 @@ public final class FlakeClient implements ClientModInitializer {
 		openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.open", InputConstants.KEY_G, category));
 		ability1Key = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.ability_1", InputConstants.KEY_H, category));
 		ability2Key = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.ability_2", InputConstants.KEY_R, category));
+		battleModeKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.battle_mode", InputConstants.KEY_B, category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			dev.flake.render.vfx.VfxRenderState.checkWorld(client.level);
 			while (openKey.consumeClick()) {
@@ -51,6 +55,14 @@ public final class FlakeClient implements ClientModInitializer {
 			}
 			while (ability2Key.consumeClick()) {
 				activate(2);
+			}
+			while (battleModeKey.consumeClick()) {
+				boolean on = BattleModeSettings.toggle();
+				if (client.player != null) {
+					client.player.sendSystemMessage(
+							net.minecraft.network.chat.Component.literal(
+									dev.flake.text.FlakeI18n.tr(on ? "flake.screen.battle_mode.on" : "flake.screen.battle_mode.off")));
+				}
 			}
 		});
 	}
