@@ -209,6 +209,9 @@ public final class FlakeScreen extends Screen {
 		button(right, y + 62 + row++ * 24, bw, 22,
 				FlakeI18n.tr(hud == null || hud.effectsEnabled() ? "flake.screen.vfx.on" : "flake.screen.vfx.off"),
 				() -> command("flake effects"));
+		button(right, y + 62 + row++ * 24, bw, 22,
+				FlakeI18n.tr(dev.flake.client.settings.BattleModeSettings.enabled() ? "flake.screen.battle_mode.on" : "flake.screen.battle_mode.off"),
+				() -> { dev.flake.client.settings.BattleModeSettings.toggle(); rebuildWidgets(); });
 	}
 
 	private List<String> arenaChoices() {

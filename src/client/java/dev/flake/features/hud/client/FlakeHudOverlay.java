@@ -1,6 +1,7 @@
 package dev.flake.features.hud.client;
 
 import dev.flake.client.network.FlakeUiClient;
+import dev.flake.client.settings.BattleModeSettings;
 import dev.flake.client.ui.UiIcons;
 import dev.flake.client.ui.UiTheme;
 
@@ -54,12 +55,16 @@ public final class FlakeHudOverlay {
 		if (!client.options.keyPlayerList.isDown()) {
 			extractDuelBar(g, hud, elapsed, dt, timeSec);
 		}
-		extractBuildHud(g, client, hud, dt);
-		StatusHud.extract(g, client, hud, dt);
-		// Spectators and free-roam players must not see castable ability cards for a fight they are not in.
-		if (hud.participant()) extractSkillHud(g, client, hud, elapsed, dt, timeSec);
-		FlakePlayerHud.extract(g, client);
-		if (hud.participant() && ("COUNTDOWN".equals(hud.phase()) || "FIGHTING".equals(hud.phase()))) FlakeItemHud.extract(g, client, timeSec);
+		if (BattleModeSettings.enabled()) {
+			extractBuildHud(g, client, hud, dt);
+			StatusHud.extract(g, client, hud, dt);
+			// Spectators and free-roam players must not see castable ability cards for a fight they are not in.
+			if (hud.participant()) extractSkillHud(g, client, hud, elapsed, dt, timeSec);
+			FlakePlayerHud.extract(g, client);
+			if (hud.participant() && ("COUNTDOWN".equals(hud.phase()) || "FIGHTING".equals(hud.phase()))) FlakeItemHud.extract(g, client, timeSec);
+		} else {
+			FlakePlayerHud.extract(g, client);
+		}
 	}
 
 	private static void extractDuelBar(GuiGraphicsExtractor g, HudStatePayload hud, float elapsed, float dt, float timeSec) {

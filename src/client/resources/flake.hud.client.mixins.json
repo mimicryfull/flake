@@ -1,0 +1,7 @@
+{
+	"required": true,
+	"package": "dev.flake.features.hud.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": ["EffectIconsMixin"],
+	"injectors": { "defaultRequire": 1 }
+}
