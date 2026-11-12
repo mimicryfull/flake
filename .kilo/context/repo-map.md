@@ -2,7 +2,7 @@
 
 This is a PATH INDEX ONLY. Confirm implementations from live source; paths and identifiers can change.
 
-- Indexed source/resource paths: 286
+- Indexed source/resource paths: 309
 
 ## Abilities and combat
 Matches: 52
@@ -44,7 +44,7 @@ Matches: 52
 - (+17 omitted; use `rg --files` and `rg` for live search)
 
 ## VFX and shaders
-Matches: 52
+Matches: 54
 - `src/client/java/dev/flake/bootstrap/EffectActors.java`
 - `src/client/java/dev/flake/features/concussed/client/GroundLightning.java`
 - `src/client/java/dev/flake/features/hud/client/mixin/EffectIconsMixin.java`
@@ -58,6 +58,7 @@ Matches: 52
 - `src/client/java/dev/flake/render/vfx/TimedBuffActor.java`
 - `src/client/java/dev/flake/render/vfx/VfxBuffer.java`
 - `src/client/java/dev/flake/render/vfx/VfxRenderState.java`
+- `src/client/java/dev/flake/render/vfx/WeaponStreakActor.java`
 - `src/client/java/dev/flake/render/vfx/mixin/PostPassMixin.java`
 - `src/client/resources/assets/flake/post_effect/shockwave.json`
 - `src/client/resources/assets/flake/shaders/include/classes/bastion/bastion_common.glsl`
@@ -74,16 +75,15 @@ Matches: 52
 - `src/client/resources/assets/flake/shaders/include/items/cube_of_darkness.glsl`
 - `src/client/resources/assets/flake/shaders/include/items/matadora.glsl`
 - `src/client/resources/assets/flake/shaders/include/items/screen_overlays.glsl`
+- `src/client/resources/assets/flake/shaders/include/weapons/task8_weapons.glsl`
 - `src/client/resources/assets/flake/shaders/include/weapons/void_paladin_crit.glsl`
 - `src/client/resources/assets/flake/shaders/post/shockwave.fsh`
 - `src/main/java/dev/flake/combat/ability/AbilityEffects.java`
 - `src/main/java/dev/flake/render/vfx/CombatVfxPayload.java`
-- `src/main/java/dev/flake/render/vfx/CombatVisuals.java`
-- `src/main/java/dev/flake/render/vfx/ImpactAnimation.java`
-- (+17 omitted; use `rg --files` and `rg` for live search)
+- (+19 omitted; use `rg --files` and `rg` for live search)
 
 ## Items and builds
-Matches: 55
+Matches: 63
 - `src/client/java/dev/flake/features/hud/client/FlakeItemHud.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildEditorScreen.java`
 - `src/client/java/dev/flake/features/loadout/client/BuildPreview.java`
@@ -112,17 +112,17 @@ Matches: 55
 - `src/main/java/dev/flake/features/loadout/editor/EditorLayout.java`
 - `src/main/java/dev/flake/features/utilities/UtilityEquipment.java`
 - `src/main/resources/assets/flake/items/adrenaline.json`
+- `src/main/resources/assets/flake/items/axe_of_cumshot.json`
+- `src/main/resources/assets/flake/items/chaos_broadsword.json`
 - `src/main/resources/assets/flake/items/control_hammer.json`
 - `src/main/resources/assets/flake/items/crystal_claw.json`
 - `src/main/resources/assets/flake/items/cube_of_darkness.json`
-- `src/main/resources/assets/flake/items/matadora.json`
-- `src/main/resources/assets/flake/items/melting_amethyst.json`
-- `src/main/resources/assets/flake/items/smoke_bomb.json`
-- `src/main/resources/assets/flake/items/void_paladin.json`
-- (+20 omitted; use `rg --files` and `rg` for live search)
+- `src/main/resources/assets/flake/items/deadly_bleed.json`
+- `src/main/resources/assets/flake/items/jungle_spear.json`
+- (+28 omitted; use `rg --files` and `rg` for live search)
 
 ## UI and client
-Matches: 101
+Matches: 104
 - `src/client/java/dev/flake/bootstrap/EffectActors.java`
 - `src/client/java/dev/flake/bootstrap/FlakeClient.java`
 - `src/client/java/dev/flake/client/network/FlakeUiClient.java`
@@ -134,6 +134,7 @@ Matches: 101
 - `src/client/java/dev/flake/client/ui/widgets/UiButton.java`
 - `src/client/java/dev/flake/features/bastion/client/BulwarkActor.java`
 - `src/client/java/dev/flake/features/bastion/client/ShieldRamActor.java`
+- `src/client/java/dev/flake/features/chaosbroadsword/client/BroadswordSweepActor.java`
 - `src/client/java/dev/flake/features/concussed/client/ChargeActor.java`
 - `src/client/java/dev/flake/features/concussed/client/GroundLightning.java`
 - `src/client/java/dev/flake/features/concussed/client/QuakeActor.java`
@@ -157,8 +158,7 @@ Matches: 101
 - `src/client/java/dev/flake/features/vampire/client/GhoulRenderState.java`
 - `src/client/java/dev/flake/features/voidpaladin/client/CritActor.java`
 - `src/client/java/dev/flake/render/vfx/EffectActor.java`
-- `src/client/java/dev/flake/render/vfx/FocusAuraActor.java`
-- (+66 omitted; use `rg --files` and `rg` for live search)
+- (+69 omitted; use `rg --files` and `rg` for live search)
 
 ## Arena and persistence
 Matches: 13
@@ -204,10 +204,10 @@ Matches: 12
 ## Count by extension
 - `(none)`: 1
 - `.fsh`: 4
-- `.glsl`: 15
+- `.glsl`: 16
 - `.gradle`: 4
-- `.java`: 202
-- `.json`: 53
+- `.java`: 216
+- `.json`: 61
 - `.jsonc`: 1
 - `.properties`: 4
 - `.vsh`: 2

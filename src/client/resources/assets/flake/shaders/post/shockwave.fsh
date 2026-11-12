@@ -15,6 +15,7 @@
 #include <flake:items/crystal_claw.glsl>
 #include <flake:items/screen_overlays.glsl>
 #include <flake:weapons/void_paladin_crit.glsl>
+#include <flake:weapons/task8_weapons.glsl>
 
 // ---- Class: Bastion ("Бастіон") ---------------------------------------------
 #include <flake:classes/bastion/bastion_common.glsl>
@@ -69,6 +70,14 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 13.5) {
+            broadswordSweep(ray, sceneDistance, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
+        if (charging > 12.5) {
+            weaponStreak(ray, sceneDistance, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
         if (charging > 11.5) {
             if (WaveStyles[i].w > 0.0) {
                 ghoulStrength = max(ghoulStrength, WaveStyles[i].w);

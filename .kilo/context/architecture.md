@@ -126,7 +126,8 @@ Persistence:
 - `render.vfx.CombatVfxPayload` зберігає wire ID `flake:shockwave`, поля та порядок Phase; package/type rename не змінює протокол. **[П]**
 - Крит Void Paladin: runtime шле `VoidPaladinVisuals.crit` лише після підтвердженої шкоди (`AFTER_DAMAGE`); світовий ефект, не екранна текстура. **[П]**
 - Буф-візуали: `features.matadora.MaskAnimation` і `features.crystalclaw.CrystalClawAnimation` — enter/plateau/exit + activation burst; runtime шле ON/OFF, actor лише відтворює. **[П]**
-- Коди стилю в `WaveStyles[i].z`: 0 shell, 1 charge, 2 quake, 3 bolt, 4/5 Матадора, 6/7 Crystal Claw, 8 крит Void Paladin (`features.voidpaladin.CritAnimation`, 0.42 с). **[П]**
+- Коди стилю в `WaveStyles[i].z`: 0 shell, 1 charge, 2 quake, 3 bolt, 4/5 Матадора, 6/7 Crystal Claw, 8 крит Void Paladin (`features.voidpaladin.CritAnimation`, 0.42 с), 13 weapon streak (Axe of Cumshot / Jungle Spear), 14 Chaos Broadsword sweep. **[П]**
+- Task 8 weapons: `AXE_THROW`/`SPEAR_DASH` використовують `render.vfx.WeaponStreakActor` (камера-відносний сегмент + head glow через `weapons/task8_weapons.glsl`); `BROADSWORD_SWEEP` — `ChaosBroadswordAnimation` + `BroadswordSweepActor` (ground ring + billboard arc). `BLEED_CRIT` перевикористовує `CritActor` з прапорцем `QuakeMaterials[wave*32+1].y`, який перемикає палітру `void_paladin_crit.glsl` на оранжеву без зміни силуету. **[П]**
 - Правило: сервер визначає damage/knockback/cooldown та контакт; клієнтський `DarkBoltActor` не переоцінює цілі. **[П]**
 
 Бастіон (VFX rework): **[П]**

@@ -67,6 +67,8 @@ public final class MatchRuntime {
 
 	public UUID roomId() { return roomId; }
 	public DuelMatch match() { return match; }
+	/** Active arena for this match; null before launch. */
+	public Arena arena() { return arena; }
 	public List<UUID> participants() { return participants; }
 	public String notice() { return notice; }
 	public boolean busy() { return match != null; }

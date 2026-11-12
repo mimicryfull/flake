@@ -8,6 +8,10 @@ import dev.flake.features.darkcube.DarkCubeDefinition;
 import dev.flake.features.utilities.UtilityEquipment;
 import dev.flake.features.matadora.MatadoraDefinition;
 import dev.flake.features.voidpaladin.VoidPaladinDefinition;
+import dev.flake.features.axeofcumshot.AxeOfCumshotDefinition;
+import dev.flake.features.deadlybleed.DeadlyBleedDefinition;
+import dev.flake.features.junglespear.JungleSpearDefinition;
+import dev.flake.features.chaosbroadsword.ChaosBroadswordDefinition;
 import dev.flake.features.passives.PassivesDefinition;
 
 /** The explicit composition root. Only this package needs to know every installed feature. */
@@ -21,6 +25,10 @@ public final class Features {
 	private static final java.util.List<Feature> CONTENT = java.util.List.of(
 			new Feature(ControlHammerDefinition::install, ControlHammerDefinition::registerItems),
 			new Feature(VoidPaladinDefinition::install, VoidPaladinDefinition::registerItems),
+			new Feature(AxeOfCumshotDefinition::install, AxeOfCumshotDefinition::registerItems),
+			new Feature(DeadlyBleedDefinition::install, DeadlyBleedDefinition::registerItems),
+			new Feature(JungleSpearDefinition::install, JungleSpearDefinition::registerItems),
+			new Feature(ChaosBroadswordDefinition::install, ChaosBroadswordDefinition::registerItems),
 			new Feature(MatadoraDefinition::install, MatadoraDefinition::registerItems),
 			new Feature(CrystalClawDefinition::install, CrystalClawDefinition::registerItems),
 			new Feature(DarkCubeDefinition::install, DarkCubeDefinition::registerItems),

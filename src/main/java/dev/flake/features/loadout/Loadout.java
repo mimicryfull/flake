@@ -286,7 +286,13 @@ public record Loadout(
 		/** Тимчасова шкода; база — залізний меч (6.0). */
 		CONTROL_HAMMER("flake.weapon.control_hammer.title", "flake.weapon.control_hammer.cat", 6.0f, "flake.weapon.control_hammer.info"),
 		/** Меч між алмазним і незеритовим; кожен 4-й удар — крит. */
-		VOID_PALADIN("flake.weapon.void_paladin.title", "flake.weapon.void_paladin.cat", 7.5f, "flake.weapon.void_paladin.info");
+		VOID_PALADIN("flake.weapon.void_paladin.title", "flake.weapon.void_paladin.cat", 7.5f, "flake.weapon.void_paladin.info"),
+		/** Смертельна кровотеча: 7 шкоди, ПКМ — крит 200%. */
+		DEADLY_BLEED("flake.weapon.deadly_bleed.title", "flake.weapon.deadly_bleed.cat", 7.0f, "flake.weapon.deadly_bleed.info"),
+		/** Джунглеве спис: 6 шкоди, довший випад, ПКМ — ривок. */
+		JUNGLE_SPEAR("flake.weapon.jungle_spear.title", "flake.weapon.jungle_spear.cat", 6.0f, "flake.weapon.jungle_spear.info"),
+		/** Хаотичний палаш: 9 шкоди, повільна атака, ПКМ — розмах із послабленням. */
+		CHAOS_BROADSWORD("flake.weapon.chaos_broadsword.title", "flake.weapon.chaos_broadsword.cat", 9.0f, "flake.weapon.chaos_broadsword.info");
 
 		private final String titleKey;
 		private final String categoryKey;
@@ -380,7 +386,8 @@ public record Loadout(
 		SMOKE_BOMB("flake.active.smoke_bomb.title", "flake.active.smoke_bomb.desc", "flake.category.control"),
 		ADRENALINE("flake.active.adrenaline.title", "flake.active.adrenaline.desc", "flake.category.buff"),
 		MATADORA("flake.active.matadora.title", "flake.active.matadora.desc", "flake.category.buff"),
-		CRYSTAL_CLAW("flake.active.crystal_claw.title", "flake.active.crystal_claw.desc", "flake.category.buff");
+		CRYSTAL_CLAW("flake.active.crystal_claw.title", "flake.active.crystal_claw.desc", "flake.category.buff"),
+		AXE_OF_CUMSHOT("flake.active.axe_of_cumshot.title", "flake.active.axe_of_cumshot.desc", "flake.category.control");
 
 		private final String titleKey, descriptionKey, categoryKey;
 		ActiveItem(String titleKey, String descriptionKey, String categoryKey) {

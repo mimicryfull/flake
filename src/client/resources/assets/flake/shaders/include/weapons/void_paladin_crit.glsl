@@ -121,7 +121,10 @@ void critBurst(vec3 ray, float sceneDistance, int wave,
     float g = slashGlow(slashSpace(uv, sc, bn), L, S1, S2, 0.0, t);
     float ft = (t - 0.02) / 0.12;
     float flash = (ft > 0.0 && ft < 1.0) ? (1.0 - ft) / (1.0 + dot(uv, uv) * 18.0) : 0.0;
-    light += GLOW * (g * 0.3 * life * (1.0 + 0.5 * bn) + flash * 0.6) * alpha;
+    // Deadly Bleed reuses the exact silhouette through an orange palette.
+    bool orangePalette = QuakeMaterials[wave * 32 + 1].y > 0.5;
+    vec3 glowColor = orangePalette ? vec3(1.0, 0.42, 0.06) : GLOW;
+    light += glowColor * (g * 0.3 * life * (1.0 + 0.5 * bn) + flash * 0.6) * alpha;
 
     vec3 col = vec3(0.0);
     float a = 0.0;
@@ -178,6 +181,10 @@ void critBurst(vec3 ray, float sceneDistance, int wave,
         if (r < rad) { col = r < rad * 0.5 ? P3 : P2; a = 1.0; }
     }
 
+    if (orangePalette && a > 0.0) {
+        float luminance = clamp(dot(col, vec3(0.299, 0.587, 0.114)), 0.0, 1.0);
+        col = mix(vec3(0.32, 0.09, 0.01), vec3(1.0, 0.88, 0.45), luminance);
+    }
     a *= alpha;
     chipColor += col * a;
     chipAlpha += a;

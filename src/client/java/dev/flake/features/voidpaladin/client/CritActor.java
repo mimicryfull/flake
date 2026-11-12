@@ -11,10 +11,15 @@ import net.minecraft.world.phys.Vec3;
 public final class CritActor extends TimedActor {
 	private final Vec3 aim;
 	private final int targetId;
+	private final boolean orange;
 
 	public CritActor(CombatVfxPayload payload) {
+		this(payload, false);
+	}
+
+	public CritActor(CombatVfxPayload payload, boolean orange) {
 		super(payload);
-		aim = payload.aim(); targetId = payload.targetId();
+		aim = payload.aim(); targetId = payload.targetId(); this.orange = orange;
 	}
 
 	@Override public boolean write(RenderFrame frame, SlotWriter slot) {
@@ -42,6 +47,7 @@ public final class CritActor extends TimedActor {
 		var victim = frame.client.level.getEntity(targetId);
 		double groundY = victim != null ? victim.getY() : origin.y - 1.0;
 		values[material + 4] = (float) (groundY - cameraPos.y);
+		values[material + 5] = orange ? 1f : 0f;
 		return false;
 	}
 }
