@@ -45,6 +45,7 @@ public final class LoadoutCommands {
 				return 1;
 			}));
 			root.then(Commands.literal("dummy").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+					.executes(ctx -> spawnDummy(ctx.getSource()))
 					.then(Commands.literal("spawn").executes(ctx -> spawnDummy(ctx.getSource())))
 					.then(Commands.literal("remove").executes(ctx -> removeDummies(ctx.getSource()))));
 			var classes = Commands.literal("class");

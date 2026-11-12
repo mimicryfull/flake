@@ -15,6 +15,7 @@ public class FlakeMod implements ModInitializer {
 		dev.flake.bootstrap.Features.registerItems();
 		dev.flake.features.loadout.LoadoutService.install();
 		dev.flake.features.duel.DuelRuntime.install();
+		dev.flake.features.training.TrainingDummies.install();
 		dev.flake.features.lobby.LobbyManager.install();
 		dev.flake.combat.ability.AbilityInputServer.install();
 		LoadoutCommands.register();

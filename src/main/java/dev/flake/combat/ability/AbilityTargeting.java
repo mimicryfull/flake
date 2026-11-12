@@ -23,12 +23,10 @@ public final class AbilityTargeting {
 			if (other == player || !other.isAlive()) continue;
 			if (!inDuel || DuelRuntime.opponents(player.getUUID(), other.getUUID())) list.add(other);
 		}
-		if (!inDuel) {
-			var box = new AABB(centre.x - radius - 1, centre.y - radius - 1, centre.z - radius - 1,
-					centre.x + radius + 1, centre.y + radius + 1, centre.z + radius + 1);
-			for (Mob mob : level.getEntitiesOfClass(Mob.class, box, m -> m.isAlive() && m.entityTags().contains("flake_test_dummy")))
-				list.add(mob);
-		}
+		var box = new AABB(centre.x - radius - 1, centre.y - radius - 1, centre.z - radius - 1,
+				centre.x + radius + 1, centre.y + radius + 1, centre.z + radius + 1);
+		for (Mob mob : level.getEntitiesOfClass(Mob.class, box, m -> m.isAlive() && m.entityTags().contains("flake_test_dummy")))
+			list.add(mob);
 		return list;
 	}
 
