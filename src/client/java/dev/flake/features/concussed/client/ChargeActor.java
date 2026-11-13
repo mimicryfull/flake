@@ -73,18 +73,18 @@ public final class ChargeActor extends RadialActor {
 		float cy = (float) (center.y - cameraPos.y);
 		float cz = (float) (center.z - cameraPos.z);
 
-		// Two accelerating gyroscopic voxel rings compressing toward the core
+		// Two dense accelerating gyroscopic micro-voxel rings compressing toward the core
 		float spin = ageSec * (2.6f + 9.0f * progress * progress);
-		emitCageRing(poseStack, collector, cx, cy, cz, Math.max(0.28f, r * 0.95f), 14, 0.58f, 0.2f, spin, progress, alpha);
-		emitCageRing(poseStack, collector, cx, cy, cz, Math.max(0.24f, r * 0.88f), 12, -0.64f, 1.7f, -spin * 1.15f, progress, alpha);
+		emitCageRing(poseStack, collector, cx, cy, cz, Math.max(0.28f, r * 0.95f), 32, 0.58f, 0.2f, spin, progress, alpha);
+		emitCageRing(poseStack, collector, cx, cy, cz, Math.max(0.24f, r * 0.88f), 28, -0.64f, 1.7f, -spin * 1.15f, progress, alpha);
 
-		// Compressing rotating voxel core + inward-pulled gravity shards
+		// Compressing rotating voxel core + dense inward-pulled gravity micro-shards
 		poseStack.pushPose();
 		poseStack.translate(cx, cy, cz);
 		poseStack.mulPose(new Matrix4f().rotate(new Quaternionf().rotateY(spin * 1.4f).rotateX(spin * 0.9f)));
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE, (pose, vc) -> {
-			float coreSize = 0.14f + 0.10f * (float) Math.sin(progress * Math.PI);
-			WeaponVoxelRenderer.emitCube(pose, vc, 0f, 0f, 0f, coreSize, coreSize, coreSize, 0.82f, 0.96f, 1.0f, 0.88f * alpha);
+			float coreSize = 0.065f + 0.045f * (float) Math.sin(progress * Math.PI);
+			WeaponVoxelRenderer.emitCube(pose, vc, 0f, 0f, 0f, coreSize, coreSize, coreSize, 0.88f, 0.98f, 1.0f, 0.90f * alpha);
 		});
 		poseStack.popPose();
 
@@ -92,7 +92,7 @@ public final class ChargeActor extends RadialActor {
 				(pose, vc) -> emitInwardShards(pose, vc, cx, cy, cz, progress, alpha));
 
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE, (pose, vc) ->
-				WeaponVoxelRenderer.emitGlowSprite(pose, vc, cx, cy, cz, 0.48f + 0.45f * progress, 0.48f, 0.90f, 1.0f, 0.55f * alpha));
+				WeaponVoxelRenderer.emitGlowSprite(pose, vc, cx, cy, cz, 0.42f + 0.38f * progress, 0.48f, 0.90f, 1.0f, 0.52f * alpha));
 	}
 
 	private void emitCageRing(PoseStack poseStack, SubmitNodeCollector collector,
@@ -106,10 +106,10 @@ public final class ChargeActor extends RadialActor {
 				float ang = (i / (float) count) * (float) (Math.PI * 2.0);
 				float px = (float) Math.cos(ang) * ringRadius;
 				float pz = (float) Math.sin(ang) * ringRadius;
-				float size = (i % 2 == 0 ? 0.075f : 0.052f) * (0.75f + 0.35f * (1.0f - progress * 0.5f));
+				float size = (i % 2 == 0 ? 0.030f : 0.020f) * (0.75f + 0.35f * (1.0f - progress * 0.5f));
 				float rCol = i % 3 == 0 ? 0.88f : 0.34f;
 				float gCol = i % 3 == 0 ? 0.97f : 0.82f;
-				WeaponVoxelRenderer.emitCube(pose, vc, px, 0f, pz, size, size, size, rCol, gCol, 1.0f, 0.86f * alpha);
+				WeaponVoxelRenderer.emitCube(pose, vc, px, 0f, pz, size, size, size, rCol, gCol, 1.0f, 0.88f * alpha);
 			}
 		});
 		poseStack.popPose();
@@ -117,19 +117,19 @@ public final class ChargeActor extends RadialActor {
 
 	private void emitInwardShards(PoseStack.Pose pose, VertexConsumer vc,
 			float cx, float cy, float cz, float progress, float alpha) {
-		for (int i = 0; i < 24; i++) {
-			float phase = (ageSec * 1.45f + i / 24.0f) % 1.0f;
+		for (int i = 0; i < 72; i++) {
+			float phase = (ageSec * 1.6f + i / 72.0f) % 1.0f;
 			float inward = 1.0f - phase * phase;
-			float dist = (0.35f + 3.4f * inward) * (1.0f - 0.35f * progress);
-			float ang = i * 2.39996f + phase * 2.6f;
-			float yOff = (-0.85f + (i % 7) * 0.28f) * inward;
+			float dist = (0.30f + 3.6f * inward) * (1.0f - 0.35f * progress);
+			float ang = i * 2.39996f + phase * 2.9f;
+			float yOff = (-0.95f + (i % 9) * 0.24f) * inward;
 
 			float px = cx + (float) Math.cos(ang) * dist;
 			float pz = cz + (float) Math.sin(ang) * dist;
 			float py = cy + yOff;
-			float s = (0.045f + (i % 3) * 0.018f) * (0.4f + 0.6f * (1.0f - inward));
+			float s = (0.017f + (i % 3) * 0.007f) * (0.45f + 0.55f * (1.0f - inward));
 			float fade = Mth.clamp((float) Math.sin(phase * Math.PI) * 1.3f, 0f, 1f);
-			WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, s, s, s, 0.48f, 0.90f, 1.0f, 0.74f * fade * alpha);
+			WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, s, s, s, 0.50f, 0.91f, 1.0f, 0.78f * fade * alpha);
 		}
 	}
 }

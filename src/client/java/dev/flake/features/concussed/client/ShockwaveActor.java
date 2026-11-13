@@ -23,7 +23,7 @@ import org.joml.Quaternionf;
  * an expanding ground voxel ring, and a 3D spherical burst of 64 tumbling ice-cyan cubes.
  */
 public final class ShockwaveActor extends RadialActor {
-	private static final int BURST_VOXELS = 64;
+	private static final int BURST_VOXELS = 260;
 	private static final int RING_TILT_COUNT = 3;
 	private static final float[] DIR_X = new float[BURST_VOXELS];
 	private static final float[] DIR_Y = new float[BURST_VOXELS];
@@ -33,7 +33,7 @@ public final class ShockwaveActor extends RadialActor {
 	private static final int[] COLOR_TIER = new int[BURST_VOXELS];
 
 	static {
-		// Fibonacci sphere distribution with deterministic speed/size jitter for a rich 3D voxel explosion
+		// Fibonacci sphere distribution with deterministic speed/size jitter for a dense micro-voxel explosion
 		for (int i = 0; i < BURST_VOXELS; i++) {
 			float y = 1.0f - (i + 0.5f) * 2.0f / BURST_VOXELS;
 			float r = (float) Math.sqrt(Math.max(0.0f, 1.0f - y * y));
@@ -42,8 +42,8 @@ public final class ShockwaveActor extends RadialActor {
 			DIR_Y[i] = y;
 			DIR_Z[i] = (float) Math.sin(phi) * r;
 			float var = 0.5f + 0.5f * (float) Math.sin(i * 7.13f + 1.4f);
-			SPEED[i] = 8.5f + 9.0f * var;
-			BASE_SIZE[i] = 0.065f + 0.080f * (0.5f + 0.5f * (float) Math.cos(i * 4.7f));
+			SPEED[i] = 7.5f + 11.5f * var;
+			BASE_SIZE[i] = 0.017f + 0.025f * (0.5f + 0.5f * (float) Math.cos(i * 4.7f));
 			COLOR_TIER[i] = i % 4;
 		}
 	}
@@ -124,65 +124,53 @@ public final class ShockwaveActor extends RadialActor {
 		float cz = (float) (origin.z - cameraPos.z);
 		float floorY = cy - 0.88f;
 
-		// 1. Chronosphere-style geodesic voxel orbital rings expanding cleanly to the 5m sphere edge
+		// 1. Chronosphere-style dense geodesic micro-voxel orbital rings expanding cleanly to the 5m sphere edge
 		float domeFade = 1.0f - smoothstep(0.28f, 0.72f, progress);
 		if (domeFade > 0.02f) {
 			for (int ring = 0; ring < RING_TILT_COUNT; ring++) {
 				float tiltX = ring == 0 ? 0.0f : (ring == 1 ? 0.64f : -0.64f);
 				float tiltY = ring * 1.15f;
 				float spin = (ring % 2 == 0 ? 1.0f : -1.0f) * ageSec * (2.4f - 1.2f * progress);
-				emitDomeRing(poseStack, collector, cx, cy, cz, shellRadius * 0.99f, 16, tiltX, tiltY, spin, domeFade);
+				emitDomeRing(poseStack, collector, cx, cy, cz, shellRadius * 0.99f, 36, tiltX, tiltY, spin, domeFade);
 			}
 		}
 
-		// 2. Massive 3D spherical voxel explosion: 64 tumbling cubes bursting outward with drag + gravity drop
+		// 2. Dense 3D spherical micro-voxel explosion: 260 tiny cubes bursting outward in one batch
 		float travel = (float) (-Math.expm1(-3.4 * ageSec) / 3.4);
-		int clusterCount = 8;
-		int perCluster = BURST_VOXELS / clusterCount;
-		for (int c = 0; c < clusterCount; c++) {
-			final int clusterIdx = c;
-			float clusterRotY = ageSec * (4.2f + c * 0.45f) + c * 0.8f;
-			float clusterRotX = ageSec * (3.1f + (c % 3) * 0.6f) + c * 0.4f;
-			collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE, (pose, vc) -> {
-				for (int j = 0; j < perCluster; j++) {
-					int i = clusterIdx * perCluster + j;
-					float dist = SPEED[i] * travel;
-					float px = cx + DIR_X[i] * dist;
-					float pz = cz + DIR_Z[i] * dist;
-					// Slight gravity sag after initial explosive outward blast
-					float rawY = cy + DIR_Y[i] * dist - 1.85f * ageSec * ageSec;
-					float py = Math.max(floorY + 0.05f, rawY);
+		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE, (pose, vc) -> {
+			for (int i = 0; i < BURST_VOXELS; i++) {
+				float dist = SPEED[i] * travel;
+				float px = cx + DIR_X[i] * dist;
+				float pz = cz + DIR_Z[i] * dist;
+				float rawY = cy + DIR_Y[i] * dist - 1.85f * ageSec * ageSec;
+				float py = Math.max(floorY + 0.03f, rawY);
 
-					float size = BASE_SIZE[i] * (0.35f + 0.65f * fade) * Math.min(1.0f, ageSec / 0.03f);
-					// Asymmetric cuboid aspect + wobble via cluster orientation feel
-					float sx = size * (0.85f + 0.35f * (float) Math.sin(clusterRotY + i));
-					float sy = size * (0.85f + 0.35f * (float) Math.cos(clusterRotX + i));
-					float sz = size;
-					float[] col = voxelColor(COLOR_TIER[i]);
-					WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, sx, sy, sz, col[0], col[1], col[2], 0.94f * fade);
-				}
-			});
-		}
+				float size = BASE_SIZE[i] * (0.35f + 0.65f * fade) * Math.min(1.0f, ageSec / 0.025f);
+				float sx = size * (0.82f + 0.32f * (float) Math.sin(ageSec * 5.0f + i));
+				float sy = size * (0.82f + 0.32f * (float) Math.cos(ageSec * 4.2f + i));
+				float sz = size;
+				float[] col = voxelColor(COLOR_TIER[i]);
+				WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, sx, sy, sz, col[0], col[1], col[2], 0.95f * fade);
+			}
+		});
 
-		// 3. Expanding ground voxel shock-crown + trailing soft plasma ice-mist cubes
+		// 3. Expanding dense ground micro-voxel shock-crown + trailing soft plasma mist cubes
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE, (pose, vc) -> {
-			// Ground ring crown
-			for (int i = 0; i < 24; i++) {
-				float ang = (i / 24.0f) * (float) (Math.PI * 2.0) + ageSec * 0.6f;
+			for (int i = 0; i < 56; i++) {
+				float ang = (i / 56.0f) * (float) (Math.PI * 2.0) + ageSec * 0.6f;
 				float rx = cx + (float) Math.cos(ang) * shellRadius;
 				float rz = cz + (float) Math.sin(ang) * shellRadius;
-				float h = (0.14f + 0.12f * (i % 2)) * (1.0f - 0.55f * progress);
-				WeaponVoxelRenderer.emitCube(pose, vc, rx, floorY + h, rz, 0.08f, h, 0.08f, 0.52f, 0.92f, 1.0f, 0.72f * fade);
+				float h = (0.06f + 0.055f * (i % 2)) * (1.0f - 0.55f * progress);
+				WeaponVoxelRenderer.emitCube(pose, vc, rx, floorY + h, rz, 0.032f, h, 0.032f, 0.52f, 0.92f, 1.0f, 0.78f * fade);
 			}
-			// Soft trailing ice-plasma mist cubes inside the blast
-			for (int i = 0; i < 28; i++) {
+			for (int i = 0; i < 96; i++) {
 				float ang = i * 2.39996f + ageSec * 0.45f;
-				float radial = (0.8f + (i % 5) * 0.85f) * (0.35f + 0.65f * progress);
+				float radial = (0.55f + (i % 7) * 0.62f) * (0.30f + 0.70f * progress);
 				float px = cx + (float) Math.cos(ang) * radial;
 				float pz = cz + (float) Math.sin(ang) * radial;
-				float py = Math.max(floorY + 0.08f, cy + (-0.5f + (i % 6) * 0.38f) * (0.4f + 0.6f * progress) + ageSec * 0.35f);
-				float s = 0.07f + (i % 3) * 0.03f;
-				WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, s, s, s, 0.42f, 0.86f, 1.0f, 0.42f * fade);
+				float py = Math.max(floorY + 0.04f, cy + (-0.65f + (i % 8) * 0.29f) * (0.35f + 0.65f * progress) + ageSec * 0.32f);
+				float s = 0.022f + (i % 3) * 0.011f;
+				WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, s, s, s, 0.45f, 0.88f, 1.0f, 0.46f * fade);
 			}
 		});
 
@@ -217,9 +205,9 @@ public final class ShockwaveActor extends RadialActor {
 				float px = (float) Math.cos(ang) * ringRadius;
 				float pz = (float) Math.sin(ang) * ringRadius;
 				boolean bright = (i % 2 == 0);
-				float s = (bright ? 0.095f : 0.065f) * (0.5f + 0.5f * alpha);
+				float s = (bright ? 0.036f : 0.024f) * (0.5f + 0.5f * alpha);
 				float[] col = voxelColor(bright ? 2 : 0);
-				WeaponVoxelRenderer.emitCube(pose, vc, px, 0f, pz, s, s * 0.8f, s, col[0], col[1], col[2], 0.86f * alpha);
+				WeaponVoxelRenderer.emitCube(pose, vc, px, 0f, pz, s, s * 0.8f, s, col[0], col[1], col[2], 0.88f * alpha);
 			}
 		});
 		poseStack.popPose();
