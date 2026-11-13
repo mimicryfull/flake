@@ -200,9 +200,10 @@ fi
 
 echo "[3/4] Copying $(basename "$JAR") to $MODS_DIR"
 mkdir -p "$MODS_DIR"
-cp -f "$JAR" "$MODS_DIR/$(basename "$JAR")"
-
 DEST="$MODS_DIR/$(basename "$JAR")"
+TMP_DEST="$DEST.tmp.$$"
+cp "$JAR" "$TMP_DEST"
+mv -f "$TMP_DEST" "$DEST"
 echo "Done: $DEST"
 sha256sum "$JAR" "$DEST"
 
