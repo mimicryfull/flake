@@ -1,6 +1,7 @@
 package dev.flake.features.vampire.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.flake.render.vfx.EffectActor;
 import dev.flake.render.vfx.RenderFrame;
 import dev.flake.render.vfx.SlotWriter;
@@ -42,8 +43,10 @@ public final class GhoulRenderState {
 		private final GhoulAnimation.Trail trail = new GhoulAnimation.Trail();
 		private final double[] sampled = new double[4];
 		private final Siphon[] siphons = {new Siphon(), new Siphon()};
-		private static final int MAX_PATHS = 16;
-		private final float[] pathPts = new float[256 * 5];
+		private static final int MAX_PATHS = 32;
+		private static final double G = 1.0 / 16.0;
+		private final double[] wingPos = new double[4 * 21 * 3];
+		private final float[] pathPts = new float[512 * 5];
 		private final int[] pathStart = new int[MAX_PATHS], pathCount = new int[MAX_PATHS];
 		private final float[] pathKind = new float[MAX_PATHS], pathSeed = new float[MAX_PATHS];
 		private int activePaths, nextPt;
@@ -147,6 +150,7 @@ public final class GhoulRenderState {
 			}
 			prevX = bodyX; prevY = bodyY; prevZ = bodyZ; previousAge = age;
 			if (age - lungeAt < 0.36f && entity != null) { trail.update(age, bodyX, bodyY, bodyZ); frozenTrailAt = age; }
+			if (sqDist(bodyX, bodyY, bodyZ, camX, camY, camZ) > 24 * 24) quality = Math.max(0, quality - 1);
 			boolean near = sqDist(bodyX, bodyY, bodyZ, camX, camY, camZ) < 56 * 56
 					|| sqDist(contactX, contactY, contactZ, camX, camY, camZ) < 56 * 56;
 			for (var siphon : siphons) {
@@ -217,67 +221,120 @@ public final class GhoulRenderState {
 			}
 			float attack = (float) Math.sin(Math.PI * Math.clamp(swing, 0, 1));
 			float motionAge = age - Math.max(0, age - offAt) * release * 0.85f;
-			for (int tendon = 0; tendon < (quality == 0 ? 2 : 3); tendon++) {
-				double seed = tendon * 2.17 + sourceId * 0.27, wing = tendon % 2 == 0 ? -1 : 1;
-				float rise = GhoulAnimation.smooth(tendon * 0.026f, 0.26f + tendon * 0.026f, localAge);
-				double breathe = Math.sin(motionAge * 3.4 + seed) * 0.05 + Math.sin(motionAge * 6.8 - seed) * 0.018;
-				double reach = (0.95 + attack * 0.40 + breathe * 2.0 + absorbed * 0.12) * (tendon == 2 ? 0.72 : 1.0) * (1 - release * 0.65);
+			int strips = quality == 0 ? 0 : (quality == 1 ? 2 : 3);
 
-				double rootX = localX(wing * 0.25, -0.14), rootY = bodyY + height * 0.34, rootZ = localZ(wing * 0.25, -0.14);
-				double cAx = localX(wing * (reach + 0.16), -0.24 + Math.sin(seed + age * 2.1) * 0.15) + ix * 0.6;
-				double cAy = bodyY + height * 0.62 + iy * 0.6;
-				double cAz = localZ(wing * (reach + 0.16), -0.24 + Math.sin(seed + age * 2.1) * 0.15) + iz * 0.6;
+			for (int side = 0; side < 2; side++) {
+				double wing = side == 0 ? -1 : 1;
+				for (int layer = 0; layer < 2; layer++) {
+					int id = side * 2 + layer;
+					double seed = id * 1.93 + sourceId * 0.27;
+					// Staggered spring-in: each bone overshoots and settles
+					float rise = GhoulAnimation.smooth(id * 0.022f, 0.30f + id * 0.022f, localAge);
+					float spring = 1f + 0.40f * (float) Math.sin(Math.PI * rise) * (1f - rise);
+					float intensity = Math.max(aura * rise, compression * 0.9f) * (1.15f + absorbed * 0.85f);
+					double breathe = Math.sin(motionAge * 3.4 + seed) * 0.05 + Math.sin(motionAge * 6.8 - seed) * 0.018;
+					double k = layer == 0 ? 1.0 : 0.66;
+					double hs = layer == 0 ? 1.0 : 0.80;
+					double reach = (0.95 + attack * 0.40 + breathe * 2.0 + absorbed * 0.12) * k * spring * (1 - release * 0.65);
 
-				double cBx = localX(wing * (reach + 0.08), 0.15 + attack * 0.22) + ix;
-				double cBy = bodyY + height * (0.98 + breathe) + iy;
-				double cBz = localZ(wing * (reach + 0.08), 0.15 + attack * 0.22) + iz;
+					double zA = -0.24 + Math.sin(seed + age * 2.1) * 0.15;
+					double zB = 0.15 + attack * 0.22;
+					double zT = 0.50 + attack * 0.50;
+					double rootX = localX(wing * 0.25, -0.14), rootY = bodyY + height * 0.34, rootZ = localZ(wing * 0.25, -0.14);
+					double cAx = localX(wing * (reach + 0.16), zA) + ix * 0.6;
+					double cAy = bodyY + height * 0.62 * hs + iy * 0.6;
+					double cAz = localZ(wing * (reach + 0.16), zA) + iz * 0.6;
+					double cBx = localX(wing * (reach + 0.08), zB) + ix;
+					double cBy = bodyY + height * (0.98 + breathe) * hs + iy;
+					double cBz = localZ(wing * (reach + 0.08), zB) + iz;
+					double tipX = localX(wing * (0.60 * k + attack * 0.40), zT) + ix * 1.4;
+					double tipY = bodyY + height * (0.74 + breathe) * hs + iy * 1.4;
+					double tipZ = localZ(wing * (0.60 * k + attack * 0.40), zT) + iz * 1.4;
 
-				double tipX = localX(wing * (0.60 + attack * 0.40), 0.50 + attack * 0.50) + ix * 1.4;
-				double tipY = bodyY + height * (0.74 + breathe) + iy * 1.4;
-				double tipZ = localZ(wing * (0.60 + attack * 0.40), 0.50 + attack * 0.50) + iz * 1.4;
+					if (localAge >= 0 && localAge < 0.38f) {
+						double lowX = localX(wing * 0.25, 0.05), lowY = bodyY + 0.08, lowZ = localZ(wing * 0.25, 0.05);
+						rootX = lerp(lowX, rootX, rise); rootY = lerp(lowY, rootY, rise); rootZ = lerp(lowZ, rootZ, rise);
+						cAx = lerp(lowX, cAx, rise); cAy = lerp(lowY, cAy, rise); cAz = lerp(lowZ, cAz, rise);
+						cBx = lerp(lowX, cBx, rise); cBy = lerp(lowY, cBy, rise); cBz = lerp(lowZ, cBz, rise);
+						tipX = lerp(lowX, tipX, rise); tipY = lerp(lowY, tipY, rise); tipZ = lerp(lowZ, tipZ, rise);
+					}
+					if (compression > 0 && aura < 0.01) {
+						double collapse = 1 - GhoulAnimation.smooth(0, 0.085f, age - lungeAt) * 0.52;
+						double cx = bodyX, cy = bodyY + height * 0.55, cz = bodyZ;
+						rootX = lerp(cx, rootX, collapse); rootY = lerp(cy, rootY, collapse); rootZ = lerp(cz, rootZ, collapse);
+						cAx = lerp(cx, cAx, collapse); cAy = lerp(cy, cAy, collapse); cAz = lerp(cz, cAz, collapse);
+						cBx = lerp(cx, cBx, collapse); cBy = lerp(cy, cBy, collapse); cBz = lerp(cz, cBz, collapse);
+						tipX = lerp(cx, tipX, collapse) + Math.cos(lungeYaw) * 0.22;
+						tipY = lerp(cy, tipY, collapse);
+						tipZ = lerp(cz, tipZ, collapse) + Math.sin(lungeYaw) * 0.22;
+					}
 
-				float intensity = Math.max(aura * rise, compression * 0.9f) * (1.15f + absorbed * 0.85f);
-				if (localAge >= 0 && localAge < 0.38f) {
-					double lowX = localX(wing * 0.25, 0.05), lowY = bodyY + 0.08, lowZ = localZ(wing * 0.25, 0.05);
-					rootX = lerp(lowX, rootX, rise); rootY = lerp(lowY, rootY, rise); rootZ = lerp(lowZ, rootZ, rise);
-					cAx = lerp(lowX, cAx, rise); cAy = lerp(lowY, cAy, rise); cAz = lerp(lowZ, cAz, rise);
-					cBx = lerp(lowX, cBx, rise); cBy = lerp(lowY, cBy, rise); cBz = lerp(lowZ, cBz, rise);
-					tipX = lerp(lowX, tipX, rise); tipY = lerp(lowY, tipY, rise); tipZ = lerp(lowZ, tipZ, rise);
+					beginPath(layer == 0 ? 0.15f : 0.18f, (float) (id * 0.37));
+					for (int j = 0; j <= 20; j++) {
+						double t = j / 20.0;
+						double waveOff = Math.sin(t * 8 + seed - motionAge * 2.4) * Math.sin(t * Math.PI) * 0.042;
+						double px = bezier(rootX, cAx, cBx, tipX, t) + rightX * waveOff;
+						double py = bezier(rootY, cAy, cBy, tipY, t);
+						double pz = bezier(rootZ, cAz, cBz, tipZ, t) + rightZ * waveOff;
+						int wi = (id * 21 + j) * 3;
+						wingPos[wi] = px; wingPos[wi + 1] = py; wingPos[wi + 2] = pz;
+						float taper = (float) Math.sin(t * Math.PI);
+						float width = (float) ((0.11 + 0.11 * taper) * (1 - t * 0.45) * (1 - release * 0.6));
+						pushPoint(px, py, pz, width * (1 + attack * 0.30f), intensity * Math.min(1f, 0.35f + taper * 0.85f));
+					}
+
+					if (layer == 0) {
+						double crX = localX(wing * 0.40, -0.05) + ix * 0.45, crY = bodyY + height * 0.74 + iy * 0.45, crZ = localZ(wing * 0.40, -0.05) + iz * 0.45;
+						double caX = localX(wing * (1.25 + breathe), 0.10) + ix * 0.8, caY = bodyY + height * 0.93 + iy * 0.8, caZ = localZ(wing * (1.25 + breathe), 0.10) + iz * 0.8;
+						double cbX = localX(wing * (1.30 + attack * 0.20), 0.50) + ix, cbY = bodyY + height * (0.75 + breathe) + iy, cbZ = localZ(wing * (1.30 + attack * 0.20), 0.50) + iz;
+						double ctX = localX(wing * 0.70, 0.34 + attack * 0.34) + ix * 1.3, ctY = bodyY + height * 0.55 + iy * 1.3, ctZ = localZ(wing * 0.70, 0.34 + attack * 0.34) + iz * 1.3;
+						beginPath(0.45f, (float) (id * 0.51 + 0.2));
+						for (int j = 0; j <= 10; j++) {
+							double t = j / 10.0;
+							double px = bezier(crX, caX, cbX, ctX, t);
+							double py = bezier(crY, caY, cbY, ctY, t);
+							double pz = bezier(crZ, caZ, cbZ, ctZ, t);
+							float width = (float) ((0.088 - t * 0.055) * (0.4 + 0.6 * Math.sin(t * Math.PI)) * (1 - release * 0.7f));
+							pushPoint(px, py, pz, width, intensity * 0.78f);
+						}
+					}
 				}
-				if (compression > 0 && aura < 0.01) {
-					double collapse = 1 - GhoulAnimation.smooth(0, 0.085f, age - lungeAt) * 0.52;
-					double cx = bodyX, cy = bodyY + height * 0.55, cz = bodyZ;
-					rootX = lerp(cx, rootX, collapse); rootY = lerp(cy, rootY, collapse); rootZ = lerp(cz, rootZ, collapse);
-					cAx = lerp(cx, cAx, collapse); cAy = lerp(cy, cAy, collapse); cAz = lerp(cz, cAz, collapse);
-					cBx = lerp(cx, cBx, collapse); cBy = lerp(cy, cBy, collapse); cBz = lerp(cz, cBz, collapse);
-					tipX = lerp(cx, tipX, collapse) + Math.cos(lungeYaw) * 0.22;
-					tipY = lerp(cy, tipY, collapse);
-					tipZ = lerp(cz, tipZ, collapse) + Math.sin(lungeYaw) * 0.22;
+
+				// Membrane: sparse voxel webbing between the outer and inner bone of this wing
+				if (strips > 0) {
+					float mRise = GhoulAnimation.smooth(0.05f, 0.34f, localAge);
+					float mInt = Math.max(aura * mRise, compression * 0.9f);
+					int a0 = (side * 2) * 21 * 3, a1 = (side * 2 + 1) * 21 * 3;
+					for (int m = 1; m <= strips; m++) {
+						double s = m / (double) (strips + 1);
+						beginPath(0.72f, (float) s);
+						for (int j = 0; j <= 20; j++) {
+							double t = j / 20.0;
+							double px = lerp(wingPos[a0 + j * 3], wingPos[a1 + j * 3], s);
+							double py = lerp(wingPos[a0 + j * 3 + 1], wingPos[a1 + j * 3 + 1], s);
+							double pz = lerp(wingPos[a0 + j * 3 + 2], wingPos[a1 + j * 3 + 2], s);
+							py += Math.sin(t * 9 - motionAge * 3.0 + s * 4.0) * 0.035 * Math.sin(t * Math.PI) - Math.sin(Math.PI * s) * 0.05 * t;
+							float a = mInt * 0.95f * GhoulAnimation.smooth(0.02f, 0.18f, (float) t) * (1f - GhoulAnimation.smooth(0.72f, 1f, (float) t));
+							pushPoint(px, py, pz, 0.1f, a);
+						}
+					}
 				}
-				beginPath(0.15f, (float) (tendon * 0.37));
-				for (int j = 0; j <= 20; j++) {
-					double t = j / 20.0;
-					double waveOff = Math.sin(t * 8 + seed - motionAge * 2.4) * Math.sin(t * Math.PI) * 0.042;
-					double px = bezier(rootX, cAx, cBx, tipX, t) + rightX * waveOff;
-					double py = bezier(rootY, cAy, cBy, tipY, t);
-					double pz = bezier(rootZ, cAz, cBz, tipZ, t) + rightZ * waveOff;
-					float taper = (float) Math.sin(t * Math.PI);
-					float width = (float) ((0.11 + 0.11 * taper) * (1 - t * 0.45) * (1 - release * 0.6));
-					pushPoint(px, py, pz, width * (1 + attack * 0.30f), intensity * Math.min(1f, 0.35f + taper * 0.85f));
-				}
-				// Secondary predatory blood-claws curling forward from the upper ribs
-				double crX = localX(wing * 0.40, -0.05) + ix * 0.45, crY = bodyY + height * 0.74 + iy * 0.45, crZ = localZ(wing * 0.40, -0.05) + iz * 0.45;
-				double caX = localX(wing * (1.25 + breathe), 0.10) + ix * 0.8, caY = bodyY + height * 0.93 + iy * 0.8, caZ = localZ(wing * (1.25 + breathe), 0.10) + iz * 0.8;
-				double cbX = localX(wing * (1.30 + attack * 0.20), 0.50) + ix, cbY = bodyY + height * (0.75 + breathe) + iy, cbZ = localZ(wing * (1.30 + attack * 0.20), 0.50) + iz;
-				double ctX = localX(wing * 0.70, 0.34 + attack * 0.34) + ix * 1.3, ctY = bodyY + height * 0.55 + iy * 1.3, ctZ = localZ(wing * 0.70, 0.34 + attack * 0.34) + iz * 1.3;
-				beginPath(0.45f, (float) (tendon * 0.51 + 0.2));
-				for (int j = 0; j <= 10; j++) {
-					double t = j / 10.0;
-					double px = bezier(crX, caX, cbX, ctX, t);
-					double py = bezier(crY, caY, cbY, ctY, t);
-					double pz = bezier(crZ, caZ, cbZ, ctZ, t);
-					float width = (float) ((0.088 - t * 0.055) * (0.4 + 0.6 * Math.sin(t * Math.PI)) * (1 - release * 0.7f));
-					pushPoint(px, py, pz, width, intensity * 0.78f);
+			}
+
+			// Blood vortex: spiral streams rising around the body
+			int streams = quality == 0 ? 1 : 2;
+			float vInt = Math.max(aura, compression * 0.8f) * (1f + absorbed * 0.6f) * GhoulAnimation.smooth(0f, 0.30f, localAge);
+			for (int s = 0; s < streams; s++) {
+				beginPath(0.82f, s * 0.5f + 0.1f);
+				for (int j = 0; j <= 26; j++) {
+					double f = j / 26.0;
+					double ang = s * Math.PI + motionAge * 2.8 - f * 5.4;
+					double rad = 0.62 + 0.22 * Math.sin(f * 6.0 + s * 1.7 + motionAge) + f * 0.18;
+					double px = bodyX + Math.cos(ang) * rad + ix * f * 1.4;
+					double py = bodyY + 0.08 + f * height * 1.18;
+					double pz = bodyZ + Math.sin(ang) * rad + iz * f * 1.4;
+					float a = vInt * (float) Math.sin(Math.PI * f) * 0.9f;
+					pushPoint(px, py, pz, (float) (0.07 * (1 - f * 0.4)), a);
 				}
 			}
 		}
@@ -430,147 +487,206 @@ public final class GhoulRenderState {
 		@Override
 		public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
 			if (!meshVisible) return;
-			collector.submitCustomGeometry(poseStack, GhoulMeshRenderer.GHOUL_RENDER_TYPE, (pose, vc) -> {
-				final double cX = cameraPos.x, cY = cameraPos.y, cZ = cameraPos.z;
-				final double G = 1.0 / 16.0;
-				float bx = (float) (bodyX - cameraPos.x);
-				float by = (float) (bodyY - cameraPos.y);
-				float bz = (float) (bodyZ - cameraPos.z);
+			collector.submitCustomGeometry(poseStack, GhoulMeshRenderer.GHOUL_RENDER_TYPE, (pose, vc) -> emitFog(pose, vc, cameraPos));
+			collector.submitCustomGeometry(poseStack, GhoulMeshRenderer.GHOUL_CORE_RENDER_TYPE, (pose, vc) -> emitCore(pose, vc, cameraPos));
+			collector.submitCustomGeometry(poseStack, GhoulMeshRenderer.GHOUL_GLOW_RENDER_TYPE, (pose, vc) -> emitGlow(pose, vc, cameraPos));
+		}
 
-				// 1. Subtle dark-crimson fog glow behind silhouette (3rd person only)
-				float mistAlpha = Math.max(meshAura, meshLungeCompression * 0.65f);
-				if (mistAlpha > 0.005f && !meshInside) {
+		private static float snap(float rel, double cam) {
+			return (float) (Math.round((rel + cam) / G) * G - cam);
+		}
+
+		private float mist() { return Math.max(meshAura, meshLungeCompression * 0.65f); }
+
+		/** Layer 1: translucent mist behind the silhouette + low ground haze. */
+		private void emitFog(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam) {
+			float bx = (float) (bodyX - cam.x), by = (float) (bodyY - cam.y), bz = (float) (bodyZ - cam.z);
+			float m = mist();
+			if (m > 0.005f && !meshInside) {
+				GhoulMeshRenderer.emitGlowHalo(pose, vc, bx, by + height * 0.48f, bz, 1.9f, height * 0.85f, 0.15f, meshHeartbeat, m * 0.45f);
+				GhoulMeshRenderer.emitGlowHalo(pose, vc, bx, by + height * 0.34f, bz, 1.2f, height * 0.55f, 0.62f, meshHeartbeat, m * 0.32f);
+				int haze = quality == 0 ? 2 : 4;
+				for (int k = 0; k < haze; k++) {
+					double ang = k * 2.39996 + age * 0.35;
 					GhoulMeshRenderer.emitGlowHalo(pose, vc,
-							bx, by + height * 0.48f, bz,
-							1.9f, height * 0.85f, 0.15f, meshHeartbeat, mistAlpha * 0.45f);
-					GhoulMeshRenderer.emitGlowHalo(pose, vc,
-							bx, by + height * 0.34f, bz,
-							1.2f, height * 0.55f, 0.62f, meshHeartbeat, mistAlpha * 0.32f);
+							bx + (float) Math.cos(ang) * 0.55f, by + 0.20f, bz + (float) Math.sin(ang) * 0.55f,
+							1.6f, 0.34f, 0.2f + k * 0.2f, meshHeartbeat, m * 0.26f);
 				}
-
-				// 2. 3-tier voxel splines: razor-thin dark spine + staggered shard barbs + rising ember motes
+			}
+			if (!meshInside) {
 				for (int p = 0; p < activePaths; p++) {
-					int start = pathStart[p] * 5;
-					int count = pathCount[p];
-					if (count <= 0) continue;
-					float kind = pathKind[p];
-					float seed = pathSeed[p];
-					boolean isWing = kind < 0.25f;
-					// In 1st person, suppress central wings so they don't clutter the crosshair
-					if (meshInside && isWing) continue;
+					if (pathKind[p] >= 0.25f || pathCount[p] <= 0) continue;
+					int idx = (pathStart[p] + pathCount[p] / 2) * 5;
+					float a = pathPts[idx + 4];
+					if (a > 0.02f) GhoulMeshRenderer.emitGlowHalo(pose, vc, pathPts[idx], pathPts[idx + 1], pathPts[idx + 2], 0.62f, 0.62f, pathSeed[p], meshHeartbeat, a * 0.22f);
+				}
+			}
+		}
 
-					int midIdx = count / 2;
-					for (int i = 0; i < count; i++) {
+		/** Layer 2: opaque voxel mass — spines, membranes, vortex, shards, embers, ring, drops. */
+		private void emitCore(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam) {
+			final double cX = cam.x, cY = cam.y, cZ = cam.z;
+			float bx = (float) (bodyX - cX), by = (float) (bodyY - cY), bz = (float) (bodyZ - cZ);
+			float hb = meshHeartbeat;
+			float half = (float) (G * 0.5);
+
+			for (int p = 0; p < activePaths; p++) {
+				int start = pathStart[p] * 5, count = pathCount[p];
+				if (count <= 0) continue;
+				float kind = pathKind[p], seed = pathSeed[p];
+				boolean spine = kind < 0.25f;
+				boolean membrane = kind > 0.70f && kind < 0.78f;
+				boolean stream = kind > 0.80f && kind < 0.90f;
+				if (meshInside && (spine || membrane)) continue;
+				float mul = meshInside && stream ? 0.35f : 1f;
+
+				for (int i = 0; i < count; i++) {
+					int idx = start + i * 5;
+					float px = pathPts[idx], py = pathPts[idx + 1], pz = pathPts[idx + 2];
+					float w = pathPts[idx + 3];
+					float a = pathPts[idx + 4] * mul;
+					if (w <= 0.004f || a <= 0.01f) continue;
+
+					float u = count > 1 ? (float) i / (count - 1) : 0f;
+					float h1 = ((i * 0.618034f + seed * 3.17f) % 1.0f);
+					float h2 = ((i * 0.381966f + seed * 5.41f) % 1.0f);
+
+					if (membrane) {
+						float hv = ((i * 0.754877f + seed * 7.31f) % 1.0f);
+						if (hv < 0.25f) continue;
+						float mh = half * 0.85f;
+						GhoulMeshRenderer.emitVoxelCube(pose, vc, snap(px, cX), snap(py, cY), snap(pz, cZ),
+								mh, mh * 0.7f, mh, 0.10f + 0.12f * h2, h1, hb, a);
+						continue;
+					}
+
+					float size = half * (spine ? 2.4f - 1.4f * u : (stream ? 1.1f - 0.4f * u : 1.8f - 0.8f * u)) * (0.9f + 0.2f * h1);
+					float tone = stream ? 0.50f + 0.30f * h2 : (u > 0.78f ? 0.72f : 0.14f + 0.16f * h2);
+					GhoulMeshRenderer.emitVoxelCube(pose, vc, snap(px, cX), snap(py, cY), snap(pz, cZ),
+							size, size, size, tone, h1, hb, a);
+
+					if ((i + p) % 2 == 0 && u > 0.08f && u < 0.94f) {
+						double ang = seed * 12.0 + i * 2.39996 + age * 0.35;
+						float dist = 0.08f + 0.14f * h2;
+						float sh = half * (h1 > 0.6f ? 1f : 0.75f);
+						GhoulMeshRenderer.emitVoxelCube(pose, vc,
+								snap(px + (float) Math.cos(ang) * dist, cX), snap(py + (h1 - 0.35f) * 0.10f, cY), snap(pz + (float) Math.sin(ang) * dist, cZ),
+								sh, sh * 1.3f, sh, h2 > 0.78f ? 0.68f : 0.32f + 0.20f * h1, h2, hb, a * 0.88f);
+					}
+					if ((i + p) % 3 == 0 && quality > 0) {
+						float ph = (age * 0.55f + h1 + seed) % 1.0f;
+						float fade = (float) Math.sin(ph * Math.PI);
+						float es = (0.020f + 0.020f * h1) * (1.0f - ph * 0.4f);
+						float rr = 0.06f + ph * 0.16f;
+						GhoulMeshRenderer.emitVoxelCube(pose, vc,
+								px + (float) Math.cos(h2 * 6.28318 + age * 1.1f) * rr, py + ph * 0.28f, pz + (float) Math.sin(h2 * 6.28318 + age * 1.1f) * rr,
+								es, es, es, 0.78f, h1, hb, a * fade * 0.85f);
+					}
+				}
+			}
+
+			float envScale = mist() * (meshInside ? 0.35f : 1.0f);
+			if (envScale > 0.005f) {
+				if (meshAuraAge >= 0f && meshAuraAge < 0.45f) {
+					float ringEnv = (1f - GhoulAnimation.smooth(0.08f, 0.45f, meshAuraAge)) * envScale;
+					float rMid = 0.30f + meshAuraAge * 2.8f;
+					int ringVoxels = 28;
+					for (int v = 0; v < ringVoxels; v++) {
+						double ang = v * (Math.PI * 2.0 / ringVoxels) + meshAuraAge * 1.8;
+						float h1 = (v * 0.618034f) % 1.0f;
+						float vs = (0.040f + 0.020f * h1) * (1f - meshAuraAge * 1.3f);
+						if (vs <= 0.004f) continue;
+						GhoulMeshRenderer.emitVoxelCube(pose, vc,
+								snap(bx + (float) Math.cos(ang) * rMid, cX), by + 0.03f + meshAuraAge * 0.12f * h1, snap(bz + (float) Math.sin(ang) * rMid, cZ),
+								vs, vs * 0.8f, vs, 0.45f + 0.35f * h1, h1, hb, ringEnv * 0.9f);
+					}
+				}
+				int dropCount = quality == 0 ? 8 : (quality == 1 ? 14 : 18);
+				for (int k = 0; k < dropCount; k++) {
+					float h1 = (k * 0.618034f + 0.17f) % 1.0f;
+					float h2 = (k * 0.381966f + 0.53f) % 1.0f;
+					float speed = 0.48f + 0.32f * h1 + meshFeeding * 0.25f;
+					float phase = (age * speed + k / (float) dropCount) % 1.0f;
+					float env = (float) Math.sin(phase * Math.PI);
+					float ang = k * 2.39996f + age * (0.95f + 0.5f * (h2 - 0.5f) + meshSwing * 0.8f) + phase * 1.1f;
+					float rad = (meshInside ? 0.78f : 0.45f) + 0.34f * h2;
+					float dy = 0.04f + 0.18f * h1 + phase * (height * 0.92f + 0.25f);
+					float sz = (0.030f + 0.025f * h1) * (0.55f + 0.45f * env);
+					GhoulMeshRenderer.emitVoxelCube(pose, vc,
+							bx + (float) Math.cos(ang) * rad, by + dy, bz + (float) Math.sin(ang) * rad,
+							sz, sz * (1.0f + 0.4f * h2), sz, h2 > 0.75f ? 0.74f : 0.28f + 0.25f * h1, h1, hb, envScale * env * 0.9f);
+				}
+			}
+
+			for (int i = 0; i < 2; i++) {
+				int k = i * 4;
+				if (knotExt[k + 3] > 0.005f) {
+					GhoulMeshRenderer.emitVoxelCube(pose, vc, knotExt[k], knotExt[k + 1], knotExt[k + 2], 0.07f, 0.085f, 0.07f, 0.74f, 0.45f, hb, Math.min(1f, knotExt[k + 3]));
+				}
+				if (knotIng[k + 3] > 0.005f) {
+					GhoulMeshRenderer.emitVoxelCube(pose, vc, knotIng[k], knotIng[k + 1], knotIng[k + 2], 0.085f, 0.105f, 0.085f, 0.76f, 0.35f, hb, Math.min(1f, knotIng[k + 3]));
+				}
+			}
+		}
+
+		/** Layer 3: additive hot glow — ground light pool, tips, hot bone nodes, siphon knots, near-camera sparks. */
+		private void emitGlow(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam) {
+			float bx = (float) (bodyX - cam.x), by = (float) (bodyY - cam.y), bz = (float) (bodyZ - cam.z);
+			float hb = meshHeartbeat;
+			float m = mist();
+
+			if (m > 0.005f) {
+				float grow = meshAuraAge >= 0f && meshAuraAge < 0.45f ? meshAuraAge * 2.5f : 0f;
+				GhoulMeshRenderer.emitGroundGlow(pose, vc, bx, by + 0.03f, bz, 1.5f + hb * 0.2f + grow, 0.3f, hb, m * (meshInside ? 0.35f : 0.75f));
+			}
+
+			for (int p = 0; p < activePaths; p++) {
+				int start = pathStart[p] * 5, count = pathCount[p];
+				if (count <= 0) continue;
+				float kind = pathKind[p], seed = pathSeed[p];
+				boolean spine = kind < 0.25f;
+				boolean claw = kind > 0.40f && kind < 0.50f;
+				boolean stream = kind > 0.80f && kind < 0.90f;
+				boolean membrane = kind > 0.70f && kind < 0.78f;
+				if (membrane || (meshInside && spine)) continue;
+				float mul = meshInside && stream ? 0.35f : 1f;
+
+				if (spine || claw || stream) {
+					int ti = start + (count - 1) * 5;
+					float ta = pathPts[ti + 4] * mul;
+					if (ta > 0.02f) GhoulMeshRenderer.emitGlowSprite(pose, vc, pathPts[ti], pathPts[ti + 1], pathPts[ti + 2], stream ? 0.16f : 0.24f, seed, hb, Math.min(1f, ta * 1.6f));
+				}
+				if (spine || stream) {
+					int stride = quality == 0 ? 7 : 5;
+					for (int i = stride; i < count - 1; i += stride) {
 						int idx = start + i * 5;
-						float px = pathPts[idx], py = pathPts[idx + 1], pz = pathPts[idx + 2];
-						float w = pathPts[idx + 3];
-						float a = pathPts[idx + 4];
-						if (w <= 0.004f || a <= 0.01f) continue;
-
-						float u = count > 1 ? (float) i / (count - 1) : 0f;
-						float h1 = ((i * 0.618034f + seed * 3.17f) % 1.0f);
-						float h2 = ((i * 0.381966f + seed * 5.41f) % 1.0f);
-
-						// Tier 1: Razor-thin spline spine (0.025..0.045 blocks, tapering to 0.012 at tips)
-						float spineBase = isWing ? (0.042f * (1f - u * 0.68f)) : (0.032f * (1f - u * 0.55f));
-						float spineHalf = (float) (G * 0.5) * (isWing ? 2.4f - 1.4f * u : 1.8f - 0.8f * u) * (0.9f + 0.2f * h1);
-						float spineTone = u > 0.78f ? 0.72f : 0.14f + 0.16f * h2;
-						// True voxel look: snap centers to a world-space 1/32 grid
-						float sPx = (float) (Math.round((px + cX) / G) * G - cX);
-						float sPy = (float) (Math.round((py + cY) / G) * G - cY);
-						float sPz = (float) (Math.round((pz + cZ) / G) * G - cZ);
-						GhoulMeshRenderer.emitVoxelCube(pose, vc,
-								sPx, sPy, sPz, spineHalf, spineHalf, spineHalf,
-								spineTone, h1, meshHeartbeat, a);
-
-						// Subtle fog halo on wing midpoint
-						if (i == midIdx && isWing && !meshInside) {
-							GhoulMeshRenderer.emitGlowHalo(pose, vc,
-									px, py, pz, 0.52f, 0.52f, seed, meshHeartbeat, a * 0.18f);
-						}
-
-						// Tier 2: Fragmented shard barbs staggered outward with gaps (every 2nd/3rd point)
-						if ((i + p) % 2 == 0 && u > 0.08f && u < 0.94f) {
-							double ang = seed * 12.0 + i * 2.39996 + age * 0.35;
-							float dist = 0.08f + 0.14f * h2;
-							float sx = (float) (Math.round((px + (float) Math.cos(ang) * dist + cX) / G) * G - cX);
-							float sy = (float) (Math.round((py + (h1 - 0.35f) * 0.08f + cY) / G) * G - cY);
-							float sz = (float) (Math.round((pz + (float) Math.sin(ang) * dist + cZ) / G) * G - cZ);
-							float shardSize = (float) (G * 0.5) * (h1 > 0.6f ? 1f : 0.75f);
-							float shardTone = h2 > 0.78f ? 0.68f : 0.32f + 0.20f * h1;
-							GhoulMeshRenderer.emitVoxelCube(pose, vc,
-									sx, sy, sz, shardSize, shardSize * (1.1f + 0.6f * h2), shardSize,
-									shardTone, h2, meshHeartbeat, a * 0.88f);
-						}
-
-						// Tier 3: Tiny blood-ash ember motes detaching and drifting upward
-						if ((i + p) % 3 == 0 && quality > 0) {
-							float driftPhase = (age * 0.55f + h1 + seed) % 1.0f;
-							float driftFade = (float) Math.sin(driftPhase * Math.PI);
-							float ex = px + (float) Math.cos(h2 * 6.28318 + age * 1.1f) * (0.06f + driftPhase * 0.16f);
-							float ey = py + driftPhase * 0.28f;
-							float ez = pz + (float) Math.sin(h2 * 6.28318 + age * 1.1f) * (0.06f + driftPhase * 0.16f);
-							float emberSize = (0.020f + 0.020f * h1) * (1.0f - driftPhase * 0.4f);
-							GhoulMeshRenderer.emitVoxelCube(pose, vc,
-									ex, ey, ez, emberSize, emberSize, emberSize,
-									0.74f, h1, meshHeartbeat, a * driftFade * 0.82f);
-						}
+						float a = pathPts[idx + 4] * mul;
+						if (a > 0.05f) GhoulMeshRenderer.emitGlowSprite(pose, vc, pathPts[idx], pathPts[idx + 1], pathPts[idx + 2], 0.10f, seed + i * 0.07f, hb, a * 0.5f);
 					}
 				}
+			}
 
-				// 3. Grounded thin voxel floor pulse ring + rising peripheral ember voxels
-				float envScale = mistAlpha * (meshInside ? 0.35f : 1.0f);
-				if (envScale > 0.005f) {
-					if (meshAuraAge >= 0f && meshAuraAge < 0.45f) {
-						float ringEnv = (1f - GhoulAnimation.smooth(0.08f, 0.45f, meshAuraAge)) * envScale;
-						float rMid = 0.30f + meshAuraAge * 2.8f;
-						int ringVoxels = 24;
-						for (int v = 0; v < ringVoxels; v++) {
-							double ang = v * (Math.PI * 2.0 / ringVoxels) + meshAuraAge * 1.8;
-							float h1 = (v * 0.618034f) % 1.0f;
-							float vs = (0.040f + 0.020f * h1) * (1f - meshAuraAge * 1.3f);
-							if (vs <= 0.004f) continue;
-							GhoulMeshRenderer.emitVoxelCube(pose, vc,
-									bx + (float) Math.cos(ang) * rMid,
-									by + 0.025f + meshAuraAge * 0.12f * h1,
-									bz + (float) Math.sin(ang) * rMid,
-									vs, vs * 0.8f, vs, 0.45f + 0.35f * h1, h1, meshHeartbeat, ringEnv * 0.88f);
-						}
-					}
-					int dropCount = quality == 0 ? 8 : (quality == 1 ? 14 : 18);
-					for (int k = 0; k < dropCount; k++) {
-						float fk = k;
-						float h1 = (fk * 0.618034f + 0.17f) % 1.0f;
-						float h2 = (fk * 0.381966f + 0.53f) % 1.0f;
-						float speed = 0.48f + 0.32f * h1 + meshFeeding * 0.25f;
-						float phase = (age * speed + fk / (float) dropCount) % 1.0f;
-						float env = (float) Math.sin(phase * Math.PI);
-						float ang = fk * 2.39996f + age * (0.95f + 0.5f * (h2 - 0.5f) + meshSwing * 0.8f) + phase * 1.1f;
-						float rad = (meshInside ? 0.78f : 0.45f) + 0.34f * h2;
-						float dy = 0.04f + 0.18f * h1 + phase * (height * 0.92f + 0.25f);
-						float sz = (0.030f + 0.025f * h1) * (0.55f + 0.45f * env);
-						GhoulMeshRenderer.emitVoxelCube(pose, vc,
-								bx + (float) Math.cos(ang) * rad, by + dy, bz + (float) Math.sin(ang) * rad,
-								sz, sz * (1.0f + 0.4f * h2), sz,
-								h2 > 0.75f ? 0.74f : 0.28f + 0.25f * h1, h1, meshHeartbeat, envScale * env * 0.90f);
-					}
-				}
+			for (int i = 0; i < 2; i++) {
+				int k = i * 4;
+				if (knotExt[k + 3] > 0.005f) GhoulMeshRenderer.emitGlowSprite(pose, vc, knotExt[k], knotExt[k + 1], knotExt[k + 2], 0.30f, 0.45f, hb, Math.min(1f, knotExt[k + 3]));
+				if (knotIng[k + 3] > 0.005f) GhoulMeshRenderer.emitGlowSprite(pose, vc, knotIng[k], knotIng[k + 1], knotIng[k + 2], 0.36f, 0.35f, hb, Math.min(1f, knotIng[k + 3]));
+			}
 
-				// 4. Fine-grained Blood Siphon extraction & ingestion clusters
-				for (int i = 0; i < 2; i++) {
-					int kIdx = i * 4;
-					if (knotExt[kIdx + 3] > 0.005f) {
-						float a = Math.min(1f, knotExt[kIdx + 3]);
-						GhoulMeshRenderer.emitGlowHalo(pose, vc, knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2], 0.28f, 0.28f, 0.45f, 0f, a * 0.24f);
-						GhoulMeshRenderer.emitVoxelCube(pose, vc, knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2], 0.045f, 0.055f, 0.045f, 0.72f, 0.45f, meshHeartbeat, a);
-					}
-					if (knotIng[kIdx + 3] > 0.005f) {
-						float a = Math.min(1f, knotIng[kIdx + 3]);
-						GhoulMeshRenderer.emitGlowHalo(pose, vc, knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2], 0.32f, 0.32f, 0.35f, 0f, a * 0.24f);
-						GhoulMeshRenderer.emitVoxelCube(pose, vc, knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2], 0.055f, 0.070f, 0.055f, 0.75f, 0.35f, meshHeartbeat, a);
-					}
+			// Near-field soft sparks: sparse, large, drifting past the camera for parallax depth
+			int sparks = quality == 0 ? 0 : (quality == 1 ? 5 : 9);
+			if (m > 0.02f) {
+				for (int k = 0; k < sparks; k++) {
+					float h1 = (k * 0.618034f + 0.31f) % 1.0f;
+					float h2 = (k * 0.381966f + 0.67f) % 1.0f;
+					float ph = (age * (0.18f + 0.12f * h1) + k / (float) sparks) % 1.0f;
+					float env = (float) Math.sin(ph * Math.PI);
+					double ang = k * 2.39996 + age * (0.25 + 0.2 * h2);
+					float rad = 1.3f + 1.5f * h2;
+					GhoulMeshRenderer.emitGlowSprite(pose, vc,
+							bx + (float) Math.cos(ang) * rad, by + 0.2f + ph * height * 1.1f + h1 * 0.6f, bz + (float) Math.sin(ang) * rad,
+							0.06f + 0.10f * h1, h1, hb, m * env * 0.55f);
 				}
-			});
+			}
 		}
 	}
 

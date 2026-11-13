@@ -16,29 +16,57 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 
 /**
- * Animated voxel + glow renderer for Vampire ("Упир").
- * Renders articulated glowing red voxel cubes along moving splines plus soft atmospheric glow halos.
+ * Three-layer blood renderer for Vampire ("Упир"):
+ *  - CORE: opaque voxels with depth write (mass, occlusion, dissolve-in/out via alpha stipple)
+ *  - FOG:  translucent soft mist behind/around the body (kind 0.92)
+ *  - GLOW: additive hot sprites and ground light pool (kind 0.98)
+ * All three share the ghoul_blood shader pair; the vertex color encodes (kind, seed, pulse, alpha).
  */
 public final class GhoulMeshRenderer {
+	public static final float KIND_FOG = 0.92f;
+	public static final float KIND_GLOW = 0.98f;
+
+	private static RenderPipeline.Builder baseBuilder(String name) {
+		return RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+				.withLocation(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "pipeline/" + name))
+				.withVertexShader(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "core/ghoul_blood"))
+				.withFragmentShader(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "core/ghoul_blood"))
+				.withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+				.withPrimitiveTopology(PrimitiveTopology.QUADS)
+				.withCull(false);
+	}
+
+	/** Translucent mist, no depth write. */
 	public static final RenderPipeline GHOUL_PIPELINE = RenderPipelines.register(
-			RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
-					.withLocation(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "pipeline/ghoul_blood"))
-					.withVertexShader(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "core/ghoul_blood"))
-					.withFragmentShader(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "core/ghoul_blood"))
-					.withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
-					.withPrimitiveTopology(PrimitiveTopology.QUADS)
-					.withCull(false)
+			baseBuilder("ghoul_blood")
 					.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 					.withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
 					.build());
 
+	/** Opaque voxels, depth write ON. */
+	public static final RenderPipeline GHOUL_CORE_PIPELINE = RenderPipelines.register(
+			baseBuilder("ghoul_core")
+					.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+					.withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
+					.build());
+
+	/** Additive glow sprites. NOTE: verify BlendFunction.ADDITIVE exists in your renderpearl version (ONE, ONE). */
+	public static final RenderPipeline GHOUL_GLOW_PIPELINE = RenderPipelines.register(
+			baseBuilder("ghoul_glow")
+					.withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+					.withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+					.build());
+
 	public static final RenderType GHOUL_RENDER_TYPE = RenderType.create(
-			"flake_ghoul_blood",
-			RenderSetup.builder(GHOUL_PIPELINE).createRenderSetup());
+			"flake_ghoul_blood", RenderSetup.builder(GHOUL_PIPELINE).createRenderSetup());
+	public static final RenderType GHOUL_CORE_RENDER_TYPE = RenderType.create(
+			"flake_ghoul_core", RenderSetup.builder(GHOUL_CORE_PIPELINE).createRenderSetup());
+	public static final RenderType GHOUL_GLOW_RENDER_TYPE = RenderType.create(
+			"flake_ghoul_glow", RenderSetup.builder(GHOUL_GLOW_PIPELINE).createRenderSetup());
 
 	private GhoulMeshRenderer() {}
 
-	/** Emits a 3D glowing voxel cube centered at (cx, cy, cz) with half-extents (hx, hy, hz). */
+	/** Emits an opaque voxel cube. alpha < 1 dissolves it texel-by-texel with a hot burn edge. */
 	public static void emitVoxelCube(PoseStack.Pose pose, VertexConsumer vc,
 			float cx, float cy, float cz, float hx, float hy, float hz,
 			float kind, float seed, float pulse, float alpha) {
@@ -47,24 +75,40 @@ public final class GhoulMeshRenderer {
 		float y0 = cy - hy, y1 = cy + hy;
 		float z0 = cz - hz, z1 = cz + hz;
 
-		// +Y (top)
 		quad(pose, vc, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, kind, seed, pulse, alpha);
-		// -Y (bottom)
 		quad(pose, vc, x0, y0, z1, x0, y0, z0, x1, y0, z0, x1, y0, z1, kind, seed, pulse, alpha);
-		// +Z (south)
 		quad(pose, vc, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, kind, seed, pulse, alpha);
-		// -Z (north)
 		quad(pose, vc, x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0, kind, seed, pulse, alpha);
-		// +X (east)
 		quad(pose, vc, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1, kind, seed, pulse, alpha);
-		// -X (west)
 		quad(pose, vc, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, kind, seed, pulse, alpha);
 	}
 
-	/** Emits a camera-facing soft red glow halo behind/around voxel clusters (kind >= 0.90). */
+	/** Camera-facing soft mist (FOG type). */
 	public static void emitGlowHalo(PoseStack.Pose pose, VertexConsumer vc,
 			float cx, float cy, float cz, float radiusX, float radiusY,
 			float seed, float pulse, float alpha) {
+		emitBillboard(pose, vc, cx, cy, cz, radiusX, radiusY, KIND_FOG, seed, pulse, alpha);
+	}
+
+	/** Camera-facing additive hot sprite (GLOW type). */
+	public static void emitGlowSprite(PoseStack.Pose pose, VertexConsumer vc,
+			float cx, float cy, float cz, float radius, float seed, float pulse, float alpha) {
+		emitBillboard(pose, vc, cx, cy, cz, radius, radius, KIND_GLOW, seed, pulse, alpha);
+	}
+
+	/** Horizontal additive light pool on the ground (GLOW type). */
+	public static void emitGroundGlow(PoseStack.Pose pose, VertexConsumer vc,
+			float cx, float cy, float cz, float r, float seed, float pulse, float alpha) {
+		if (alpha <= 0.005f || r <= 0.05f) return;
+		vertex(pose, vc, cx - r, cy, cz - r, 0f, 0f, KIND_GLOW, seed, pulse, alpha);
+		vertex(pose, vc, cx + r, cy, cz - r, 1f, 0f, KIND_GLOW, seed, pulse, alpha);
+		vertex(pose, vc, cx + r, cy, cz + r, 1f, 1f, KIND_GLOW, seed, pulse, alpha);
+		vertex(pose, vc, cx - r, cy, cz + r, 0f, 1f, KIND_GLOW, seed, pulse, alpha);
+	}
+
+	private static void emitBillboard(PoseStack.Pose pose, VertexConsumer vc,
+			float cx, float cy, float cz, float radiusX, float radiusY,
+			float kind, float seed, float pulse, float alpha) {
 		if (alpha <= 0.005f || radiusX <= 0.01f) return;
 		float distSq = cx * cx + cy * cy + cz * cz;
 		if (distSq < 1e-6f) return;
@@ -91,10 +135,10 @@ public final class GhoulMeshRenderer {
 		float rvx = rx * radiusX, rvz = rz * radiusX;
 		float uvx = ux * radiusY, uvy = uy * radiusY, uvz = uz * radiusY;
 
-		vertex(pose, vc, cx - rvx - uvx, cy - uvy, cz - rvz - uvz, 0f, 0f, 0.95f, seed, pulse, alpha);
-		vertex(pose, vc, cx + rvx - uvx, cy - uvy, cz + rvz - uvz, 1f, 0f, 0.95f, seed, pulse, alpha);
-		vertex(pose, vc, cx + rvx + uvx, cy + uvy, cz + rvz + uvz, 1f, 1f, 0.95f, seed, pulse, alpha);
-		vertex(pose, vc, cx - rvx + uvx, cy + uvy, cz - rvz + uvz, 0f, 1f, 0.95f, seed, pulse, alpha);
+		vertex(pose, vc, cx - rvx - uvx, cy - uvy, cz - rvz - uvz, 0f, 0f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx + rvx - uvx, cy - uvy, cz + rvz - uvz, 1f, 0f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx + rvx + uvx, cy + uvy, cz + rvz + uvz, 1f, 1f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx - rvx + uvx, cy + uvy, cz - rvz + uvz, 0f, 1f, kind, seed, pulse, alpha);
 	}
 
 	private static void quad(PoseStack.Pose pose, VertexConsumer vc,
