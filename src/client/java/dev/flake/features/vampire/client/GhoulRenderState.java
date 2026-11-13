@@ -43,10 +43,10 @@ public final class GhoulRenderState {
 		private final GhoulAnimation.Trail trail = new GhoulAnimation.Trail();
 		private final double[] sampled = new double[4];
 		private final Siphon[] siphons = {new Siphon(), new Siphon()};
-		private static final int MAX_PATHS = 32;
+		private static final int MAX_PATHS = 64;
 		private static final double G = 1.0 / 16.0;
 		private final double[] wingPos = new double[4 * 21 * 3];
-		private final float[] pathPts = new float[512 * 5];
+		private final float[] pathPts = new float[1024 * 5];
 		private final int[] pathStart = new int[MAX_PATHS], pathCount = new int[MAX_PATHS];
 		private final float[] pathKind = new float[MAX_PATHS], pathSeed = new float[MAX_PATHS];
 		private int activePaths, nextPt;
@@ -237,19 +237,19 @@ public final class GhoulRenderState {
 					double hs = layer == 0 ? 1.0 : 0.80;
 					double reach = (0.95 + attack * 0.40 + breathe * 2.0 + absorbed * 0.12) * k * spring * (1 - release * 0.65);
 
-					double zA = -0.24 + Math.sin(seed + age * 2.1) * 0.15;
-					double zB = 0.15 + attack * 0.22;
-					double zT = 0.50 + attack * 0.50;
-					double rootX = localX(wing * 0.25, -0.14), rootY = bodyY + height * 0.34, rootZ = localZ(wing * 0.25, -0.14);
-					double cAx = localX(wing * (reach + 0.16), zA) + ix * 0.6;
-					double cAy = bodyY + height * 0.62 * hs + iy * 0.6;
-					double cAz = localZ(wing * (reach + 0.16), zA) + iz * 0.6;
-					double cBx = localX(wing * (reach + 0.08), zB) + ix;
-					double cBy = bodyY + height * (0.98 + breathe) * hs + iy;
-					double cBz = localZ(wing * (reach + 0.08), zB) + iz;
-					double tipX = localX(wing * (0.60 * k + attack * 0.40), zT) + ix * 1.4;
-					double tipY = bodyY + height * (0.74 + breathe) * hs + iy * 1.4;
-					double tipZ = localZ(wing * (0.60 * k + attack * 0.40), zT) + iz * 1.4;
+					double zA = -0.45 - Math.sin(seed + age * 2.1) * 0.14;
+					double zB = -0.88 - layer * 0.18;
+					double zT = -1.28 - attack * 0.30 + Math.cos(seed + age * 1.9) * 0.14;
+					double rootX = localX(wing * 0.22, -0.22), rootY = bodyY + height * (0.44 + layer * 0.08), rootZ = localZ(wing * 0.22, -0.22);
+					double cAx = localX(wing * (reach * 0.72 + 0.16), zA) + ix * 0.7;
+					double cAy = bodyY + height * (0.50 + layer * 0.06) * hs + iy * 0.6;
+					double cAz = localZ(wing * (reach * 0.72 + 0.16), zA) + iz * 0.7;
+					double cBx = localX(wing * (reach * 0.85 + 0.12), zB) + ix * 1.1;
+					double cBy = bodyY + height * (0.68 + breathe + layer * 0.06) * hs + iy;
+					double cBz = localZ(wing * (reach * 0.85 + 0.12), zB) + iz * 1.1;
+					double tipX = localX(wing * (0.55 * k + attack * 0.32), zT) + ix * 1.5;
+					double tipY = bodyY + height * (0.56 + breathe * 1.2) * hs + iy * 1.4;
+					double tipZ = localZ(wing * (0.55 * k + attack * 0.32), zT) + iz * 1.5;
 
 					if (localAge >= 0 && localAge < 0.38f) {
 						double lowX = localX(wing * 0.25, 0.05), lowY = bodyY + 0.08, lowZ = localZ(wing * 0.25, 0.05);
@@ -284,18 +284,18 @@ public final class GhoulRenderState {
 					}
 
 					if (layer == 0) {
-						double crX = localX(wing * 0.40, -0.05) + ix * 0.45, crY = bodyY + height * 0.74 + iy * 0.45, crZ = localZ(wing * 0.40, -0.05) + iz * 0.45;
-						double caX = localX(wing * (1.25 + breathe), 0.10) + ix * 0.8, caY = bodyY + height * 0.93 + iy * 0.8, caZ = localZ(wing * (1.25 + breathe), 0.10) + iz * 0.8;
-						double cbX = localX(wing * (1.30 + attack * 0.20), 0.50) + ix, cbY = bodyY + height * (0.75 + breathe) + iy, cbZ = localZ(wing * (1.30 + attack * 0.20), 0.50) + iz;
-						double ctX = localX(wing * 0.70, 0.34 + attack * 0.34) + ix * 1.3, ctY = bodyY + height * 0.55 + iy * 1.3, ctZ = localZ(wing * 0.70, 0.34 + attack * 0.34) + iz * 1.3;
-						beginPath(0.45f, (float) (id * 0.51 + 0.2));
+						double crX = localX(wing * 0.26, -0.24) + ix * 0.45, crY = bodyY + height * 0.52 + iy * 0.45, crZ = localZ(wing * 0.26, -0.24) + iz * 0.45;
+						double caX = localX(wing * (0.85 + breathe), -0.58) + ix * 0.8, caY = bodyY + height * 0.66 + iy * 0.8, caZ = localZ(wing * (0.85 + breathe), -0.58) + iz * 0.8;
+						double cbX = localX(wing * (0.95 + attack * 0.20), -0.96) + ix * 1.1, cbY = bodyY + height * (0.58 + breathe) + iy, cbZ = localZ(wing * (0.95 + attack * 0.20), -0.96) + iz * 1.1;
+						double ctX = localX(wing * 0.60, -1.24 - attack * 0.28) + ix * 1.4, ctY = bodyY + height * 0.42 + iy * 1.3, ctZ = localZ(wing * 0.60, -1.24 - attack * 0.28) + iz * 1.4;
+						beginPath(0.55f, (float) (id * 0.51 + 0.2));
 						for (int j = 0; j <= 10; j++) {
 							double t = j / 10.0;
 							double px = bezier(crX, caX, cbX, ctX, t);
 							double py = bezier(crY, caY, cbY, ctY, t);
 							double pz = bezier(crZ, caZ, cbZ, ctZ, t);
 							float width = (float) ((0.088 - t * 0.055) * (0.4 + 0.6 * Math.sin(t * Math.PI)) * (1 - release * 0.7f));
-							pushPoint(px, py, pz, width, intensity * 0.78f);
+							pushPoint(px, py, pz, width, intensity * 0.85f);
 						}
 					}
 				}
@@ -318,6 +318,43 @@ public final class GhoulRenderState {
 							pushPoint(px, py, pz, 0.1f, a);
 						}
 					}
+				}
+			}
+
+			// Dense snappy back-trail tendrils: appear and vanish sharply behind the back
+			int trailCount = quality == 0 ? 8 : 16;
+			float trailBaseInt = Math.max(aura, compression * 0.9f) * (1.1f + absorbed * 0.7f) * (1f - release * 0.6f);
+			for (int k = 0; k < trailCount; k++) {
+				float freq = 2.6f + (k % 5) * 0.48f;
+				float ph = (age * freq + k * 0.371f) % 1.0f;
+				if (ph > 0.62f) continue;
+				float snapIn = Math.min(1f, ph / 0.06f);
+				float snapOut = ph > 0.45f ? Math.max(0f, 1f - (ph - 0.45f) / 0.11f) : 1f;
+				float flickAlpha = trailBaseInt * snapIn * snapOut;
+				if (flickAlpha <= 0.02f) continue;
+
+				double hA = ((k * 0.618034) % 1.0);
+				double hB = ((k * 0.381966 + 0.27) % 1.0);
+				double side = (k % 2 == 0 ? 1.0 : -1.0) * (0.14 + hA * 0.78);
+				double backY = bodyY + height * (0.34 + hB * 0.40);
+				double len = 0.95 + hA * 0.85 + attack * 0.30;
+
+				double rx = localX(side * 0.30, -0.24) + ix * 0.35;
+				double ry = backY + iy * 0.35;
+				double rz = localZ(side * 0.30, -0.24) + iz * 0.35;
+				double tx = localX(side * (0.85 + Math.sin(age * 4.5 + k) * 0.18), -0.35 - len) + ix * 1.65;
+				double ty = backY + (hA - 0.45) * 0.32 + iy * 1.65;
+				double tz = localZ(side * (0.85 + Math.sin(age * 4.5 + k) * 0.18), -0.35 - len) + iz * 1.65;
+
+				beginPath(0.22f, (float) (k * 0.17 + 0.05));
+				for (int j = 0; j <= 6; j++) {
+					double t = j / 6.0;
+					double curve = Math.sin(t * Math.PI) * (0.12 * (k % 2 == 0 ? 1 : -1));
+					double px = lerp(rx, tx, t) + rightX * curve;
+					double py = lerp(ry, ty, t) + Math.sin(t * Math.PI) * 0.10;
+					double pz = lerp(rz, tz, t) + rightZ * curve;
+					float w = (float) ((0.095 - 0.055 * t) * snapIn);
+					pushPoint(px, py, pz, w, flickAlpha);
 				}
 			}
 
@@ -561,7 +598,7 @@ public final class GhoulRenderState {
 					}
 
 					float size = half * (spine ? 2.4f - 1.4f * u : (stream ? 1.1f - 0.4f * u : 1.8f - 0.8f * u)) * (0.9f + 0.2f * h1);
-					float tone = stream ? 0.50f + 0.30f * h2 : (u > 0.78f ? 0.72f : 0.14f + 0.16f * h2);
+					float tone = stream ? 0.58f + 0.32f * h2 : (u > 0.68f ? 0.80f : 0.28f + 0.28f * h2);
 					GhoulMeshRenderer.emitVoxelCube(pose, vc, snap(px, cX), snap(py, cY), snap(pz, cZ),
 							size, size, size, tone, h1, hb, a);
 
@@ -661,7 +698,7 @@ public final class GhoulRenderState {
 					for (int i = stride; i < count - 1; i += stride) {
 						int idx = start + i * 5;
 						float a = pathPts[idx + 4] * mul;
-						if (a > 0.05f) GhoulMeshRenderer.emitGlowSprite(pose, vc, pathPts[idx], pathPts[idx + 1], pathPts[idx + 2], 0.10f, seed + i * 0.07f, hb, a * 0.5f);
+						if (a > 0.05f) GhoulMeshRenderer.emitGlowSprite(pose, vc, pathPts[idx], pathPts[idx + 1], pathPts[idx + 2], 0.16f, seed + i * 0.07f, hb, a * 0.78f);
 					}
 				}
 			}
