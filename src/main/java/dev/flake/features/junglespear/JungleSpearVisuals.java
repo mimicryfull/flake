@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 public final class JungleSpearVisuals {
-	private static final int DURATION = 8;
+	private static final int DURATION = 26;
 
 	private JungleSpearVisuals() {}
 

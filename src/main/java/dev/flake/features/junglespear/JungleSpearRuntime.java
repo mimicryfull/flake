@@ -33,10 +33,10 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class JungleSpearRuntime {
 	public static final int COOLDOWN_TICKS = 200;
-	public static final double DASH_DISTANCE = 3.0;
+	public static final double DASH_DISTANCE = 4.5;
 	public static final double REACH_BONUS = 0.5;
 	public static final double HIT_RADIUS = 1.35;
-	private static final int DASH_TICKS = 6;
+	private static final int DASH_TICKS = 12;
 
 	public static final Identifier ID = Identifier.fromNamespaceAndPath("flake", "jungle_spear");
 	public static final Identifier SOUND_ID = Identifier.fromNamespaceAndPath("flake", "jungle_spear_dash");
@@ -46,11 +46,13 @@ public final class JungleSpearRuntime {
 
 	private static final class ActiveDash {
 		int ticksLeft;
+		final Vec3 direction;
 		final float damage;
 		final Set<UUID> hitIds = new HashSet<>();
 
-		ActiveDash(int ticksLeft, float damage) {
+		ActiveDash(int ticksLeft, Vec3 direction, float damage) {
 			this.ticksLeft = ticksLeft;
+			this.direction = direction;
 			this.damage = damage;
 		}
 	}
@@ -100,8 +102,8 @@ public final class JungleSpearRuntime {
 		end = clampToArena(player, start, end, direction);
 
 		float damage = Math.max(1.0f, (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE));
-		AbilityMovement.launch(player, direction.scale(1.12).add(0, 0.16, 0));
-		STATES.of(level.getServer()).dashes.put(player.getUUID(), new ActiveDash(DASH_TICKS, damage));
+		AbilityMovement.launch(player, direction.scale(0.92).add(0, 0.14, 0));
+		STATES.of(level.getServer()).dashes.put(player.getUUID(), new ActiveDash(DASH_TICKS, direction, damage));
 
 		player.getCooldowns().addCooldown(ID, Cooldowns.ticks(player, COOLDOWN_TICKS));
 		JungleSpearVisuals.dash(player, start, end);
@@ -133,6 +135,12 @@ public final class JungleSpearRuntime {
 					it.remove();
 					continue;
 				}
+			}
+
+			// Sustain smooth forward momentum during the first part of the dash so it feels longer
+			if (dash.ticksLeft > 4) {
+				double sustain = 0.52 + 0.28 * ((dash.ticksLeft - 4) / (double) (DASH_TICKS - 4));
+				AbilityMovement.launch(player, dash.direction.scale(sustain).add(0, player.getDeltaMovement().y * 0.5, 0));
 			}
 
 			Vec3 centre = player.position().add(0, player.getBbHeight() * 0.5, 0);
