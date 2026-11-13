@@ -29,7 +29,7 @@ public final class GhoulMeshRenderer {
 					.withPrimitiveTopology(PrimitiveTopology.QUADS)
 					.withCull(false)
 					.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-					.withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+					.withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
 					.build());
 
 	public static final RenderType GHOUL_RENDER_TYPE = RenderType.create(
