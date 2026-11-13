@@ -9,6 +9,7 @@ import dev.flake.features.utilities.UtilityEquipment;
 import dev.flake.features.matadora.MatadoraDefinition;
 import dev.flake.features.voidpaladin.VoidPaladinDefinition;
 import dev.flake.features.axeofcumshot.AxeOfCumshotDefinition;
+import dev.flake.features.chronotrident.ChronoTridentDefinition;
 import dev.flake.features.deadlybleed.DeadlyBleedDefinition;
 import dev.flake.features.junglespear.JungleSpearDefinition;
 import dev.flake.features.chaosbroadsword.ChaosBroadswordDefinition;
@@ -26,6 +27,7 @@ public final class Features {
 			new Feature(ControlHammerDefinition::install, ControlHammerDefinition::registerItems),
 			new Feature(VoidPaladinDefinition::install, VoidPaladinDefinition::registerItems),
 			new Feature(AxeOfCumshotDefinition::install, AxeOfCumshotDefinition::registerItems),
+			new Feature(ChronoTridentDefinition::install, ChronoTridentDefinition::registerItems),
 			new Feature(DeadlyBleedDefinition::install, DeadlyBleedDefinition::registerItems),
 			new Feature(JungleSpearDefinition::install, JungleSpearDefinition::registerItems),
 			new Feature(ChaosBroadswordDefinition::install, ChaosBroadswordDefinition::registerItems),

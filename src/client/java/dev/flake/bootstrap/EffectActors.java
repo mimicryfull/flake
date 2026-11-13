@@ -6,6 +6,7 @@ import dev.flake.render.vfx.VfxRenderState.Admission;
 
 import dev.flake.render.vfx.CombatVfxPayload;
 import dev.flake.features.axeofcumshot.client.AxeThrowActor;
+import dev.flake.features.chronotrident.client.ChronosphereActor;
 import dev.flake.features.bastion.client.BulwarkActor;
 import dev.flake.features.bastion.client.ShieldRamActor;
 import dev.flake.features.concussed.client.ChargeActor;
@@ -50,6 +51,7 @@ public final class EffectActors {
 			case AXE_THROW -> new AxeThrowActor(payload);
 			case SPEAR_DASH -> new SpearDashActor(payload);
 			case BROADSWORD_SWEEP -> new BroadswordSweepActor(payload);
+			case CHRONOSPHERE -> new ChronosphereActor(payload);
 			case HAMMER_STUN -> new HammerStunActor(payload);
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOOD_SIPHON -> new GhoulRenderState.Actor(payload);
 			default -> new ShockwaveActor(payload);

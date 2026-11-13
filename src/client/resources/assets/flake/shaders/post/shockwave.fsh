@@ -14,6 +14,7 @@
 #include <flake:items/matadora.glsl>
 #include <flake:items/crystal_claw.glsl>
 #include <flake:items/screen_overlays.glsl>
+#include <flake:items/chronosphere.glsl>
 #include <flake:weapons/void_paladin_crit.glsl>
 #include <flake:weapons/task8_weapons.glsl>
 
@@ -70,6 +71,10 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 14.5) {
+            chronosphereWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
+            continue;
+        }
         if (charging > 13.5) {
             broadswordSweep(ray, sceneDistance, i, light, chipAlpha, chipColor, distortion);
             continue;

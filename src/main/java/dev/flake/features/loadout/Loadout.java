@@ -387,7 +387,8 @@ public record Loadout(
 		ADRENALINE("flake.active.adrenaline.title", "flake.active.adrenaline.desc", "flake.category.buff"),
 		MATADORA("flake.active.matadora.title", "flake.active.matadora.desc", "flake.category.buff"),
 		CRYSTAL_CLAW("flake.active.crystal_claw.title", "flake.active.crystal_claw.desc", "flake.category.buff"),
-		AXE_OF_CUMSHOT("flake.active.axe_of_cumshot.title", "flake.active.axe_of_cumshot.desc", "flake.category.control");
+		AXE_OF_CUMSHOT("flake.active.axe_of_cumshot.title", "flake.active.axe_of_cumshot.desc", "flake.category.control"),
+		CHRONO_TRIDENT("flake.active.chrono_trident.title", "flake.active.chrono_trident.desc", "flake.category.control");
 
 		private final String titleKey, descriptionKey, categoryKey;
 		ActiveItem(String titleKey, String descriptionKey, String categoryKey) {

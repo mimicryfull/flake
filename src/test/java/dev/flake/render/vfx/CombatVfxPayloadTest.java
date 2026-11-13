@@ -25,7 +25,7 @@ class CombatVfxPayloadTest {
 		assertEquals(List.of("CHARGE", "BURST", "CANCEL", "CLEAR", "QUAKE", "IMPACT", "BOLT", "MASK_ON", "MASK_OFF",
 				"CRYSTAL_ON", "CRYSTAL_OFF", "CRIT", "SHIELD_RAM", "SHIELD_RAM_SHIELD", "BULWARK_ON", "BULWARK_OFF",
 				"BULWARK_HIT", "BLOOD_LUNGE", "BLOODLUST_ON", "BLOODLUST_OFF", "BLOOD_SIPHON", "HAMMER_STUN",
-				"AXE_THROW", "BLEED_CRIT", "SPEAR_DASH", "BROADSWORD_SWEEP"),
+				"AXE_THROW", "BLEED_CRIT", "SPEAR_DASH", "BROADSWORD_SWEEP", "CHRONOSPHERE"),
 				java.util.Arrays.stream(CombatVfxPayload.Phase.values()).map(Enum::name).toList());
 	}
 }
