@@ -30,16 +30,13 @@ public final class AxeOfCumshotDefinition implements Lifecycle {
 	public static void registerItems() {
 		AxeOfCumshotRuntime.bind(dev.flake.content.ItemRegistration.register(AxeOfCumshotRuntime.ID, key ->
 				new ActiveCombatItem(new net.minecraft.world.item.Item.Properties().setId(key).stacksTo(1), AxeOfCumshotRuntime.ID) {
-					@Override protected boolean canConsumeOnClient(net.minecraft.world.entity.player.Player player) {
-						return AxeOfCumshotRuntime.hasClientTarget(player);
-					}
 					@Override protected boolean activateServer(ServerPlayer player, net.minecraft.world.entity.Entity target) {
-						return AxeOfCumshotRuntime.throwAxe(player, target);
+						return AxeOfCumshotRuntime.throwAxe(player);
 					}
 				}));
 		AxeOfCumshotRuntime.bindSound(dev.flake.content.ItemRegistration.sound(AxeOfCumshotRuntime.SOUND_ID));
 	}
 
-	@Override public void register() { }
+	@Override public void register() { AxeOfCumshotRuntime.register(); }
 	@Override public void reset(ServerPlayer player) { AxeOfCumshotRuntime.reset(player); }
 }

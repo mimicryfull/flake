@@ -14,11 +14,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.SwingAnimation;
 
 /**
  * «Хаотичний палаш»: 9 базової шкоди та повільна атака. ПКМ — круговий розмах,
@@ -55,6 +57,7 @@ public final class ChaosBroadswordRuntime {
 	public static boolean sweep(ServerPlayer player) {
 		if (DuelRuntime.blocksAbility(player.getUUID()) || !(player.level() instanceof ServerLevel level)) return false;
 		int now = level.getServer().getTickCount();
+		player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
 		player.getCooldowns().addCooldown(ID, Cooldowns.ticks(player, COOLDOWN_TICKS));
 		for (LivingEntity target : AbilityTargeting.candidates(player, level, player.position(), SWEEP_RADIUS)) {
 			if (target.distanceToSqr(player) > SWEEP_RADIUS * SWEEP_RADIUS) continue;

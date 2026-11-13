@@ -5,10 +5,16 @@ import dev.flake.combat.ability.AbilityMovement;
 import dev.flake.combat.ability.AbilityTargeting;
 import dev.flake.features.arena.Arena;
 import dev.flake.features.duel.DuelRuntime;
-import java.util.List;
+import dev.flake.runtime.ServerState;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -23,20 +29,37 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * «Джунглеве спис»: 6 базової шкоди з пасивно збільшеною дальністю удару.
- * ПКМ — ривок на 3 блоки, що завдає шкоди звичайної атаки всім на шляху.
+ * «Джунглеве спис»: зброя з подовженою дистанцією удару та плавним ривком уперед (ПКМ).
  */
 public final class JungleSpearRuntime {
 	public static final int COOLDOWN_TICKS = 200;
 	public static final double DASH_DISTANCE = 3.0;
-	public static final double REACH_BONUS = 1.5;
-	public static final double HIT_RADIUS = 1.25;
+	public static final double REACH_BONUS = 0.5;
+	public static final double HIT_RADIUS = 1.35;
+	private static final int DASH_TICKS = 6;
 
 	public static final Identifier ID = Identifier.fromNamespaceAndPath("flake", "jungle_spear");
 	public static final Identifier SOUND_ID = Identifier.fromNamespaceAndPath("flake", "jungle_spear_dash");
 	private static final Identifier REACH_MODIFIER = Identifier.fromNamespaceAndPath("flake", "jungle_spear_reach");
 
 	private static SoundEvent sound;
+
+	private static final class ActiveDash {
+		int ticksLeft;
+		final float damage;
+		final Set<UUID> hitIds = new HashSet<>();
+
+		ActiveDash(int ticksLeft, float damage) {
+			this.ticksLeft = ticksLeft;
+			this.damage = damage;
+		}
+	}
+
+	private static final class State {
+		final Map<UUID, ActiveDash> dashes = new HashMap<>();
+	}
+
+	private static final ServerState<State> STATES = new ServerState<>(State::new);
 
 	private JungleSpearRuntime() {}
 
@@ -63,6 +86,7 @@ public final class JungleSpearRuntime {
 
 	public static boolean dash(ServerPlayer player) {
 		if (DuelRuntime.blocksAbility(player.getUUID()) || !(player.level() instanceof ServerLevel level)) return false;
+
 		Vec3 direction = AbilityMovement.flat(player);
 		Vec3 start = player.position();
 		Vec3 eye = player.getEyePosition();
@@ -76,32 +100,49 @@ public final class JungleSpearRuntime {
 		end = clampToArena(player, start, end, direction);
 
 		float damage = Math.max(1.0f, (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE));
-		Vec3 centre = start.add(end).scale(0.5);
-		for (LivingEntity target : targets(player, level, centre)) {
-			if (distanceToSegment(target.position().add(0, target.getBbHeight() * 0.5, 0), start, end) > HIT_RADIUS) continue;
-			target.hurtServer(level, player.damageSources().playerAttack(player), damage);
-		}
+		AbilityMovement.launch(player, direction.scale(1.12).add(0, 0.16, 0));
+		STATES.of(level.getServer()).dashes.put(player.getUUID(), new ActiveDash(DASH_TICKS, damage));
 
-		player.connection.teleport(end.x, end.y, end.z, player.getYRot(), player.getXRot());
 		player.getCooldowns().addCooldown(ID, Cooldowns.ticks(player, COOLDOWN_TICKS));
 		JungleSpearVisuals.dash(player, start, end);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, 1.0f, 1.1f);
 		return true;
 	}
 
-	private static List<LivingEntity> targets(ServerPlayer player, ServerLevel level, Vec3 centre) {
-		double radius = DASH_DISTANCE * 0.5 + HIT_RADIUS + 0.5;
-		return AbilityTargeting.candidates(player, level, centre, radius).stream()
-				.filter(entity -> entity.distanceToSqr(player) <= (DASH_DISTANCE + HIT_RADIUS) * (DASH_DISTANCE + HIT_RADIUS))
-				.toList();
-	}
+	private static void tickDashes(MinecraftServer server) {
+		var dashes = STATES.of(server).dashes;
+		if (dashes.isEmpty()) return;
 
-	private static double distanceToSegment(Vec3 point, Vec3 start, Vec3 end) {
-		Vec3 segment = end.subtract(start);
-		double lengthSqr = segment.lengthSqr();
-		if (lengthSqr < 1e-6) return point.distanceTo(start);
-		double t = Math.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
-		return point.distanceTo(start.add(segment.scale(t)));
+		var it = dashes.entrySet().iterator();
+		while (it.hasNext()) {
+			var entry = it.next();
+			ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+			ActiveDash dash = entry.getValue();
+			if (player == null || !player.isAlive() || !(player.level() instanceof ServerLevel level) || dash.ticksLeft <= 0) {
+				it.remove();
+				continue;
+			}
+
+			// Keep smooth dash inside duel arena bounds
+			var match = DuelRuntime.of(player.getUUID());
+			if (match != null && match.arena() != null) {
+				var bounds = match.arena().bounds();
+				Vec3 next = player.position().add(player.getDeltaMovement());
+				if (!bounds.contains(new Arena.Position(next.x, next.y, next.z, 0f, 0f))) {
+					AbilityMovement.launch(player, Vec3.ZERO);
+					it.remove();
+					continue;
+				}
+			}
+
+			Vec3 centre = player.position().add(0, player.getBbHeight() * 0.5, 0);
+			for (LivingEntity target : AbilityTargeting.candidates(player, level, centre, HIT_RADIUS + 0.6)) {
+				if (!dash.hitIds.add(target.getUUID())) continue;
+				target.hurtServer(level, player.damageSources().playerAttack(player), dash.damage);
+			}
+			dash.ticksLeft--;
+			if (dash.ticksLeft <= 0) it.remove();
+		}
 	}
 
 	/** A dash must never step outside a live arena: MatchRuntime cancels a duel the moment a fighter leaves. */
@@ -121,6 +162,9 @@ public final class JungleSpearRuntime {
 	public static void reset(ServerPlayer player) {
 		removeReach(player);
 		player.getCooldowns().removeCooldown(ID);
+		if (player.level() instanceof ServerLevel level) {
+			STATES.of(level.getServer()).dashes.remove(player.getUUID());
+		}
 	}
 
 	/** The extra reach belongs to the held spear only; switching slots drops the modifier. */
@@ -134,7 +178,11 @@ public final class JungleSpearRuntime {
 				if (held && !has) applyReach(player);
 				else if (!held && has) removeReach(player);
 			}
+			tickDashes(server);
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> removeReach(handler.player));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			removeReach(handler.player);
+			STATES.of(server).dashes.remove(handler.player.getUUID());
+		});
 	}
 }
