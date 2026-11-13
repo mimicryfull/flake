@@ -14,6 +14,8 @@ public interface EffectActor {
 	default boolean charging() { return false; }
 	/** True after all animation tails have expired. */
 	boolean write(RenderFrame frame, SlotWriter slot);
+	/** True when this actor can be removed even if post-effect uniforms() isn't ticking. */
+	default boolean expired() { return false; }
 	/** Optional world-space mesh submission during level rendering. */
 	default void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {}
 }

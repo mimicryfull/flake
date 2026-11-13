@@ -43,6 +43,8 @@ public final class SpearDashActor implements EffectActor {
 
 	@Override public int sourceId() { return sourceId; }
 
+	@Override public boolean expired() { return startNanos >= 0L && ageTicks >= DURATION_TICKS; }
+
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
 		if (startNanos < 0L) startNanos = frame.nanos;
@@ -52,6 +54,8 @@ public final class SpearDashActor implements EffectActor {
 
 	@Override
 	public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
+		if (startNanos < 0L) startNanos = System.nanoTime();
+		ageTicks = (System.nanoTime() - startNanos) * 20.0f / 1_000_000_000.0f;
 		if (ageTicks >= DURATION_TICKS) return;
 
 		poseStack.pushPose();

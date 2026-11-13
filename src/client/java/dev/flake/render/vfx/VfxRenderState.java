@@ -89,8 +89,18 @@ public final class VfxRenderState {
 			net.minecraft.client.renderer.SubmitNodeCollector collector,
 			net.minecraft.world.phys.Vec3 cameraPos) {
 		if (actors.isEmpty()) return;
-		for (int i = 0; i < actors.size(); i++) {
-			actors.get(i).submitGeometry(poseStack, collector, cameraPos);
+		for (int i = 0; i < actors.size();) {
+			EffectActor actor = actors.get(i);
+			if (actor.expired()) {
+				actors.remove(i);
+				continue;
+			}
+			actor.submitGeometry(poseStack, collector, cameraPos);
+			if (actor.expired()) {
+				actors.remove(i);
+				continue;
+			}
+			i++;
 		}
 	}
 
