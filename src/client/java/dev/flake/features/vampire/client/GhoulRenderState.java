@@ -29,7 +29,11 @@ public final class GhoulRenderState {
 		private final GhoulAnimation.Trail trail = new GhoulAnimation.Trail();
 		private final double[] sampled = new double[4];
 		private final Siphon[] siphons = {new Siphon(), new Siphon()};
-		private final float[] segA = new float[64 * 4], segB = new float[64 * 4];
+		private static final int MAX_PATHS = 16;
+		private final float[] pathPts = new float[256 * 5];
+		private final int[] pathStart = new int[MAX_PATHS], pathCount = new int[MAX_PATHS];
+		private final float[] pathKind = new float[MAX_PATHS], pathSeed = new float[MAX_PATHS];
+		private int activePaths, nextPt;
 		private final float[] knotExt = new float[2 * 4], knotIng = new float[2 * 4];
 		private double bodyX, bodyY, bodyZ;
 		private double prevX, prevY, prevZ;
@@ -138,7 +142,7 @@ public final class GhoulRenderState {
 			if (!near) { meshVisible = false; return false; }
 			rightX = Math.cos(yaw); rightZ = Math.sin(yaw);
 			forwardX = -rightZ; forwardZ = rightX;
-			Arrays.fill(segA, 0); Arrays.fill(segB, 0);
+			activePaths = 0; nextPt = 0;
 			Arrays.fill(knotExt, 0); Arrays.fill(knotIng, 0);
 
 			float auraAge = age - auraAt, lungeAge = age - lungeAt;
@@ -230,30 +234,30 @@ public final class GhoulRenderState {
 					tipY = lerp(cy, tipY, collapse);
 					tipZ = lerp(cz, tipZ, collapse) + Math.sin(lungeYaw) * 0.22;
 				}
-				double lastX = rootX, lastY = rootY, lastZ = rootZ;
-				for (int j = 1; j <= 8; j++) {
-					double t = j / 8.0;
+				beginPath(0.15f, (float) (tendon * 0.37));
+				for (int j = 0; j <= 20; j++) {
+					double t = j / 20.0;
 					double waveOff = Math.sin(t * 8 + seed - motionAge * 2.4) * Math.sin(t * Math.PI) * 0.042;
 					double px = bezier(rootX, cAx, cBx, tipX, t) + rightX * waveOff;
 					double py = bezier(rootY, cAy, cBy, tipY, t);
 					double pz = bezier(rootZ, cAz, cBz, tipZ, t) + rightZ * waveOff;
-					float width = (float) ((0.145 + 0.085 * Math.sin(t * Math.PI)) * (1 - t * 0.62) * (1 - release * 0.6));
-					segment(tendon * 8 + j - 1, lastX, lastY, lastZ, px, py, pz, width * (1 + attack * 0.30f), intensity);
-					lastX = px; lastY = py; lastZ = pz;
+					float taper = (float) Math.sin(t * Math.PI);
+					float width = (float) ((0.11 + 0.11 * taper) * (1 - t * 0.45) * (1 - release * 0.6));
+					pushPoint(px, py, pz, width * (1 + attack * 0.30f), intensity * Math.min(1f, 0.35f + taper * 0.85f));
 				}
 				// Secondary predatory blood-claws curling forward from the upper ribs
 				double crX = localX(wing * 0.40, -0.05) + ix * 0.45, crY = bodyY + height * 0.74 + iy * 0.45, crZ = localZ(wing * 0.40, -0.05) + iz * 0.45;
 				double caX = localX(wing * (0.78 + breathe), 0.10) + ix * 0.8, caY = bodyY + height * 0.93 + iy * 0.8, caZ = localZ(wing * (0.78 + breathe), 0.10) + iz * 0.8;
 				double cbX = localX(wing * (0.84 + attack * 0.16), 0.50) + ix, cbY = bodyY + height * (0.75 + breathe) + iy, cbZ = localZ(wing * (0.84 + attack * 0.16), 0.50) + iz;
 				double ctX = localX(wing * 0.46, 0.34 + attack * 0.34) + ix * 1.3, ctY = bodyY + height * 0.55 + iy * 1.3, ctZ = localZ(wing * 0.46, 0.34 + attack * 0.34) + iz * 1.3;
-				lastX = crX; lastY = crY; lastZ = crZ;
-				for (int j = 1; j <= 4; j++) {
-					double t = j / 4.0;
+				beginPath(0.45f, (float) (tendon * 0.51 + 0.2));
+				for (int j = 0; j <= 10; j++) {
+					double t = j / 10.0;
 					double px = bezier(crX, caX, cbX, ctX, t);
 					double py = bezier(crY, caY, cbY, ctY, t);
 					double pz = bezier(crZ, caZ, cbZ, ctZ, t);
-					segment(56 + tendon * 4 + j - 1, lastX, lastY, lastZ, px, py, pz, (0.088f - j * 0.013f) * (1 - release * 0.7f), intensity * 0.75f);
-					lastX = px; lastY = py; lastZ = pz;
+					float width = (float) ((0.088 - t * 0.055) * (0.4 + 0.6 * Math.sin(t * Math.PI)) * (1 - release * 0.7f));
+					pushPoint(px, py, pz, width, intensity * 0.78f);
 				}
 			}
 		}
@@ -264,30 +268,26 @@ public final class GhoulRenderState {
 			double sideX = -dirZ, sideZ = dirX;
 			int ribbons = quality == 0 ? 2 : 3;
 			for (int ribbon = 0; ribbon < ribbons; ribbon++) {
-				double lastX = 0, lastY = 0, lastZ = 0;
+				beginPath(0.35f, (float) (ribbon * 0.33));
 				double lastRawX = 0, lastRawY = 0, lastRawZ = 0;
-				boolean hasLast = false;
-				for (int j = 0; j <= 8; j++) {
-					double at = headTime - j * 0.035;
+				for (int j = 0; j <= 15; j++) {
+					double frac = j / 15.0;
+					double at = headTime - frac * 0.28;
 					trail.sample(at, sampled);
-					double angle = ribbon * 2.0944 + j * 0.31 + phase + Math.sin(sampled[3] * 15 + ribbon) * 0.20;
-					double radius = (0.24 + ribbon * 0.07) * (1 - j / 11.5) * (1 - GhoulAnimation.smooth(0.38f, 0.82f, localAge) * 0.7);
+					double angle = ribbon * 2.0944 + frac * 2.48 + phase + Math.sin(sampled[3] * 15 + ribbon) * 0.20;
+					double radius = (0.24 + ribbon * 0.07) * (1 - frac * 0.69) * (1 - GhoulAnimation.smooth(0.38f, 0.82f, localAge) * 0.7);
 					double rawX = sampled[0], rawY = sampled[1], rawZ = sampled[2];
 					double cosA = Math.cos(angle) * radius;
 					double px = rawX + sideX * cosA;
 					double py = rawY + height * (0.46 + ribbon * 0.08) + Math.sin(angle) * radius * 0.85;
 					double pz = rawZ + sideZ * cosA;
-					if (hasLast) {
-						double dRx = rawX - lastRawX, dRy = rawY - lastRawY, dRz = rawZ - lastRawZ;
-						float movement = (float) Math.clamp(Math.sqrt(dRx * dRx + dRy * dRy + dRz * dRz) * 3.8, 0, 1);
-						float alpha = (1 - GhoulAnimation.smooth(0.08f, 0.52f, (float) (age - sampled[3])))
-								* (1 - GhoulAnimation.smooth(0.42f, 0.82f, localAge)) * movement * 1.15f;
-						float width = (float) ((0.155 + ribbon * 0.016) * Math.pow(1 - (j - 0.5) / 9.0, 0.62));
-						segment(16 + ribbon * 8 + j - 1, lastX, lastY, lastZ, px, py, pz, width, alpha);
-					}
-					lastX = px; lastY = py; lastZ = pz;
+					float movement = j == 0 ? 1f : (float) Math.clamp(Math.sqrt(
+							(rawX - lastRawX) * (rawX - lastRawX) + (rawY - lastRawY) * (rawY - lastRawY) + (rawZ - lastRawZ) * (rawZ - lastRawZ)) * 6.5, 0, 1);
+					float alpha = (1 - GhoulAnimation.smooth(0.08f, 0.52f, (float) (age - sampled[3])))
+							* (1 - GhoulAnimation.smooth(0.42f, 0.82f, localAge)) * movement * 1.15f;
+					float width = (float) ((0.145 + ribbon * 0.015) * Math.pow(1 - frac * 0.88, 0.62));
+					pushPoint(px, py, pz, width, alpha);
 					lastRawX = rawX; lastRawY = rawY; lastRawZ = rawZ;
-					hasLast = true;
 				}
 			}
 		}
@@ -299,21 +299,18 @@ public final class GhoulRenderState {
 			double sideX = -dirZ, sideZ = dirX;
 			double open = 1 - Math.exp(-t * 25), r = 0.22 + open * 0.62;
 			for (int cut = 0; cut < 2; cut++) {
-				double lastX = 0, lastY = 0, lastZ = 0;
-				boolean hasLast = false;
-				for (int j = 0; j <= 4; j++) {
-					double arc = -1.25 + j * 0.70 * Math.min(1, t / 0.045) + cut * 2.6 + t * (cut == 0 ? 4.2 : -3.2);
+				beginPath(0.60f, cut * 0.5f);
+				for (int j = 0; j <= 9; j++) {
+					double frac = j / 9.0;
+					double arc = -1.25 + frac * 2.80 * Math.min(1, t / 0.045) + cut * 2.6 + t * (cut == 0 ? 4.2 : -3.2);
 					double cosA = Math.cos(arc) * r;
 					double fwdOff = Math.sin(arc * 1.5 + cut) * 0.16 + t * 0.72;
 					double px = contactX + sideX * cosA + dirX * fwdOff;
 					double py = contactY + Math.sin(arc) * r * (cut == 0 ? 0.82 : 1.18);
 					double pz = contactZ + sideZ * cosA + dirZ * fwdOff;
-					if (hasLast) {
-						segment(56 + cut * 4 + j - 1, lastX, lastY, lastZ, px, py, pz, 0.095f * (1 - j / 6.2f),
-								(1 - GhoulAnimation.smooth(0.10f, 0.38f, t)) * (cut == 0 ? 1.15f : 0.88f));
-					}
-					lastX = px; lastY = py; lastZ = pz;
-					hasLast = true;
+					float width = (float) (0.095f * (1 - frac * 0.65) * Math.sin(frac * Math.PI));
+					float alpha = (1 - GhoulAnimation.smooth(0.10f, 0.38f, t)) * (cut == 0 ? 1.15f : 0.88f);
+					pushPoint(px, py, pz, width, alpha);
 				}
 			}
 		}
@@ -360,21 +357,17 @@ public final class GhoulRenderState {
 				double c2x = recX - dx * 0.27 + bendX * b2;
 				double c2y = recY - dy * 0.27 + 0.14;
 				double c2z = recZ - dz * 0.27 + bendZ * b2;
-				double lastX = 0, lastY = 0, lastZ = 0;
-				boolean hasLast = false;
-				for (int j = 0; j <= 4; j++) {
-					double t = tail + (head - tail) * j / 4.0;
+				beginPath(0.50f, (slot * 2 + strand) * 0.23f);
+				for (int j = 0; j <= 10; j++) {
+					double frac = j / 10.0;
+					double t = tail + (head - tail) * frac;
 					double wobble = Math.sin(t * 10 + strand * 2 + age * 9.5) * Math.sin(t * Math.PI) * 0.05;
 					double px = bezier(siphon.ox, c1x, c2x, recX, t) + bendX * wobble;
 					double py = bezier(siphon.oy, c1y, c2y, recY, t);
 					double pz = bezier(siphon.oz, c1z, c2z, recZ, t) + bendZ * wobble;
-					if (hasLast) {
-						segment(40 + slot * 8 + strand * 4 + j - 1, lastX, lastY, lastZ, px, py, pz,
-								(0.082f + strand * 0.026f) * (0.65f + j / 8f),
-								siphon.strength * 1.15f * (1 - GhoulAnimation.smooth(duration, duration + 0.12f, strandAge)));
-					}
-					lastX = px; lastY = py; lastZ = pz;
-					hasLast = true;
+					float width = (float) ((0.082f + strand * 0.026f) * (0.55f + frac * 0.55f) * Math.sin(frac * Math.PI));
+					float alpha = siphon.strength * 1.15f * (1 - GhoulAnimation.smooth(duration, duration + 0.12f, strandAge));
+					pushPoint(px, py, pz, width, alpha);
 				}
 			}
 		}
@@ -393,18 +386,25 @@ public final class GhoulRenderState {
 		private void point(int offset, double px, double py, double pz, float w) {
 			u[offset] = (float) (px - camX); u[offset + 1] = (float) (py - camY); u[offset + 2] = (float) (pz - camZ); u[offset + 3] = w;
 		}
-		private void segment(int local, double ax, double ay, double az, double bx, double by, double bz, float width, float alpha) {
-			double dx = ax - bx, dy = ay - by, dz = az - bz;
-			if (alpha < 0.001 || width < 0.001 || dx * dx + dy * dy + dz * dz < 0.00002) return;
-			int offset = local * 4;
-			segA[offset] = (float) (ax - camX);
-			segA[offset + 1] = (float) (ay - camY);
-			segA[offset + 2] = (float) (az - camZ);
-			segA[offset + 3] = width;
-			segB[offset] = (float) (bx - camX);
-			segB[offset + 1] = (float) (by - camY);
-			segB[offset + 2] = (float) (bz - camZ);
-			segB[offset + 3] = alpha;
+		private void beginPath(float kind, float seed) {
+			if (activePaths >= MAX_PATHS) return;
+			pathStart[activePaths] = nextPt;
+			pathCount[activePaths] = 0;
+			pathKind[activePaths] = kind;
+			pathSeed[activePaths] = seed;
+			activePaths++;
+		}
+
+		private void pushPoint(double px, double py, double pz, float width, float alpha) {
+			if (activePaths <= 0 || nextPt * 5 + 5 > pathPts.length) return;
+			int idx = nextPt * 5;
+			pathPts[idx] = (float) (px - camX);
+			pathPts[idx + 1] = (float) (py - camY);
+			pathPts[idx + 2] = (float) (pz - camZ);
+			pathPts[idx + 3] = Math.max(0f, width);
+			pathPts[idx + 4] = Math.clamp(alpha, 0f, 1f);
+			nextPt++;
+			pathCount[activePaths - 1]++;
 		}
 
 		@Override
@@ -415,39 +415,35 @@ public final class GhoulRenderState {
 				float by = (float) (bodyY - cameraPos.y);
 				float bz = (float) (bodyZ - cameraPos.z);
 
-				// 1. Living blood ribbons, predatory claws, lunge wake, and siphon strands
-				for (int group = 0; group < 8; group++) {
-					int kindIdx = group < 2 ? 0 : (group < 5 ? 1 : (group < 7 ? 2 : 3));
-					if (group == 7 && !(confirmed && meshLungeAge >= 0.055f && meshLungeAge < 0.435f)) kindIdx = 0;
-					float viewScale = kindIdx == 0 && meshInside ? 0.38f : 1.0f;
-					float kind = kindIdx / 3.0f;
-					int pathCount = group >= 5 ? 4 : 8;
-					for (int j = 0; j < 8; j++) {
-						int idx = (group * 8 + j) * 4;
-						float wa = segA[idx + 3] * viewScale;
-						float alpha = segB[idx + 3];
-						if (wa <= 0.001f || alpha <= 0.001f) continue;
-						float wb = wa * 0.88f;
-						int node = j % pathCount;
-						float u0 = (float) node / pathCount;
-						float u1 = (float) (node + 1) / pathCount;
-						float seed = ((group * 0.13f) % 1.0f);
-						GhoulMeshRenderer.emitCrossRibbonSegment(pose, vc,
-								segA[idx], segA[idx + 1], segA[idx + 2],
-								segB[idx], segB[idx + 1], segB[idx + 2],
-								wa, wb, u0, u1, kind, seed, meshHeartbeat, Math.min(1f, alpha));
-					}
+				// 1. Soft atmospheric crimson aura around torso (3rd person only, grounded)
+				float mistAlpha = Math.max(meshAura, meshLungeCompression * 0.65f);
+				if (mistAlpha > 0.005f && !meshInside) {
+					GhoulMeshRenderer.emitBillboardOrb(pose, vc,
+							bx, by + height * 0.42f, bz,
+							1.05f, height * 0.65f, 0.95f, 0.15f, meshHeartbeat, mistAlpha * 0.42f);
+					GhoulMeshRenderer.emitBillboardOrb(pose, vc,
+							bx, by + height * 0.25f, bz,
+							0.78f, 0.55f, 0.95f, 0.62f, meshHeartbeat, mistAlpha * (0.28f + meshFeeding * 0.25f));
 				}
 
-				// 2. Arterial floor pulse ring + orbiting 3D blood droplets during Bloodlust
-				float mistAlpha = Math.max(meshAura, meshLungeCompression * 0.65f) * (meshInside ? 0.35f : 1.0f);
-				if (mistAlpha > 0.005f) {
+				// 2. Smooth continuous blood ribbons, claws, lunge wake, and siphon strands
+				for (int p = 0; p < activePaths; p++) {
+					float kind = pathKind[p];
+					float widthScale = kind < 0.25f && meshInside ? 0.38f : 1.0f;
+					GhoulMeshRenderer.emitSmoothPolyline(pose, vc,
+							pathPts, pathStart[p] * 5, pathCount[p], widthScale,
+							kind, pathSeed[p], meshHeartbeat);
+				}
+
+				// 3. Grounded arterial floor pulse ring + smooth-SDF orbiting blood droplets
+				float envScale = mistAlpha * (meshInside ? 0.35f : 1.0f);
+				if (envScale > 0.005f) {
 					if (meshAuraAge >= 0f && meshAuraAge < 0.45f) {
-						float ringEnv = (1f - GhoulAnimation.smooth(0.08f, 0.45f, meshAuraAge)) * mistAlpha;
+						float ringEnv = (1f - GhoulAnimation.smooth(0.08f, 0.45f, meshAuraAge)) * envScale;
 						float rMid = 0.25f + meshAuraAge * 2.8f;
-						GhoulMeshRenderer.emitFloorRing(pose, vc, bx, by + 0.04f, bz,
-								Math.max(0.05f, rMid - 0.08f), rMid + 0.08f, 28,
-								0.85f, 0.2f, meshHeartbeat, ringEnv * 0.85f);
+						GhoulMeshRenderer.emitFloorRing(pose, vc, bx, by + 0.02f, bz,
+								Math.max(0.05f, rMid - 0.10f), rMid + 0.10f, 36,
+								0.92f, 0.2f, meshHeartbeat, ringEnv * 0.80f);
 					}
 					int dropCount = quality == 0 ? 5 : (quality == 1 ? 8 : 10);
 					for (int k = 0; k < dropCount; k++) {
@@ -458,27 +454,27 @@ public final class GhoulRenderState {
 						float phase = (age * speed + fk / 10.0f) % 1.0f;
 						float env = (float) Math.sin(phase * Math.PI);
 						float ang = fk * 2.39996f + age * (1.35f + 0.8f * (h2 - 0.5f) + meshSwing * 1.2f) + phase * 1.5f;
-						float rad = (meshInside ? 0.62f : 0.36f) + 0.24f * h2 + 0.06f * (float) Math.sin(phase * 6.28318 + fk);
-						float dy = 0.10f + 0.25f * h1 + phase * (height * 0.90f + 0.25f);
-						float sz = (0.028f + 0.018f * h1) * (0.45f + 0.55f * env) * (1.0f + meshFeeding * 0.25f);
-						GhoulMeshRenderer.emitOctahedron(pose, vc,
+						float rad = (meshInside ? 0.68f : 0.38f) + 0.24f * h2 + 0.06f * (float) Math.sin(phase * 6.28318 + fk);
+						float dy = 0.04f + 0.22f * h1 + phase * (height * 0.85f + 0.20f);
+						float sz = (0.042f + 0.024f * h1) * (0.45f + 0.55f * env) * (1.0f + meshFeeding * 0.25f);
+						GhoulMeshRenderer.emitBillboardOrb(pose, vc,
 								bx + (float) Math.cos(ang) * rad, by + dy, bz + (float) Math.sin(ang) * rad,
-								sz, sz * 1.55f, sz, 0.9f, h1, meshHeartbeat, mistAlpha * env * 0.95f);
+								sz, sz * 1.45f, 0.75f, h1, meshHeartbeat, envScale * env * 0.95f);
 					}
 				}
 
-				// 3. Blood Siphon extraction & ingestion knots
+				// 4. Smooth-SDF Blood Siphon extraction & ingestion knots
 				for (int i = 0; i < 2; i++) {
 					int kIdx = i * 4;
 					if (knotExt[kIdx + 3] > 0.005f) {
-						GhoulMeshRenderer.emitOctahedron(pose, vc,
+						GhoulMeshRenderer.emitBillboardOrb(pose, vc,
 								knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2],
-								0.12f, 0.16f, 0.11f, 0.75f, 0.45f, meshHeartbeat, Math.min(1f, knotExt[kIdx + 3]));
+								0.18f, 0.22f, 0.80f, 0.45f, meshHeartbeat, Math.min(1f, knotExt[kIdx + 3]));
 					}
 					if (knotIng[kIdx + 3] > 0.005f) {
-						GhoulMeshRenderer.emitOctahedron(pose, vc,
+						GhoulMeshRenderer.emitBillboardOrb(pose, vc,
 								knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2],
-								0.16f, 0.25f, 0.15f, 0.75f, 0.35f, meshHeartbeat, Math.min(1f, knotIng[kIdx + 3]));
+								0.22f, 0.30f, 0.80f, 0.35f, meshHeartbeat, Math.min(1f, knotIng[kIdx + 3]));
 					}
 				}
 			});

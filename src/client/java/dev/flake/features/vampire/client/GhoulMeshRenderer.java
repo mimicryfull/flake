@@ -16,8 +16,8 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 
 /**
- * Hardware-rasterized 3D blood mesh renderer for Vampire ("Упир").
- * Replaces per-pixel fullscreen raymarching with crossed 3D ribbons, octahedron droplets, and floor rings.
+ * Smooth hardware-rasterized 3D blood mesh renderer for Vampire ("Упир").
+ * Uses continuous camera-aligned mitered ribbon strips and smooth-SDF billboard orbs/auras.
  */
 public final class GhoulMeshRenderer {
 	public static final RenderPipeline GHOUL_PIPELINE = RenderPipelines.register(
@@ -38,77 +38,110 @@ public final class GhoulMeshRenderer {
 
 	private GhoulMeshRenderer() {}
 
-	/** Emits two orthogonal crossed quads along segment A->B so the ribbon has 3D volume from all viewing angles. */
-	public static void emitCrossRibbonSegment(PoseStack.Pose pose, VertexConsumer vc,
-			float ax, float ay, float az, float bx, float by, float bz,
-			float widthA, float widthB, float u0, float u1,
-			float kind, float seed, float pulse, float alpha) {
-		float dx = bx - ax, dy = by - ay, dz = bz - az;
-		float lenSq = dx * dx + dy * dy + dz * dz;
-		if (lenSq < 1e-6f || alpha <= 0.005f) return;
-		float invLen = (float) (1.0 / Math.sqrt(lenSq));
-		float tx = dx * invLen, ty = dy * invLen, tz = dz * invLen;
+	/**
+	 * Emits a continuous, gap-free camera-aligned ribbon strip from packed points (x, y, z, width, alpha).
+	 * Adjacent quads share exact edge vertices so curved tendrils have zero kinks or seams.
+	 */
+	public static void emitSmoothPolyline(PoseStack.Pose pose, VertexConsumer vc,
+			float[] pts, int startOffset, int count, float widthScale,
+			float kind, float seed, float pulse) {
+		if (count < 2) return;
+		float prevLx = 0, prevLy = 0, prevLz = 0;
+		float prevRx = 0, prevRy = 0, prevRz = 0;
+		float prevU = 0, prevA = 0;
+		boolean hasPrev = false;
 
-		// Build orthonormal basis (n1, n2) perpendicular to segment tangent t
-		float ux = Math.abs(ty) < 0.92f ? 0f : 1f;
-		float uy = Math.abs(ty) < 0.92f ? 1f : 0f;
-		float uz = 0f;
-		float n1x = ty * uz - tz * uy;
-		float n1y = tz * ux - tx * uz;
-		float n1z = tx * uy - ty * ux;
-		float n1Len = (float) Math.sqrt(n1x * n1x + n1y * n1y + n1z * n1z);
-		if (n1Len < 1e-5f) return;
-		n1x /= n1Len; n1y /= n1Len; n1z /= n1Len;
+		for (int i = 0; i < count; i++) {
+			int cur = startOffset + i * 5;
+			float px = pts[cur], py = pts[cur + 1], pz = pts[cur + 2];
+			float w = pts[cur + 3] * widthScale;
+			float a = pts[cur + 4];
 
-		float n2x = ty * n1z - tz * n1y;
-		float n2y = tz * n1x - tx * n1z;
-		float n2z = tx * n1y - ty * n1x;
+			int prevIdx = startOffset + Math.max(0, i - 1) * 5;
+			int nextIdx = startOffset + Math.min(count - 1, i + 1) * 5;
+			float tx = pts[nextIdx] - pts[prevIdx];
+			float ty = pts[nextIdx + 1] - pts[prevIdx + 1];
+			float tz = pts[nextIdx + 2] - pts[prevIdx + 2];
+			float tLenSq = tx * tx + ty * ty + tz * tz;
+			if (tLenSq < 1e-8f) {
+				hasPrev = false;
+				continue;
+			}
 
-		emitQuadStrip(pose, vc, ax, ay, az, bx, by, bz, n1x, n1y, n1z, widthA, widthB, u0, u1, kind, seed, pulse, alpha);
-		emitQuadStrip(pose, vc, ax, ay, az, bx, by, bz, n2x, n2y, n2z, widthA * 0.85f, widthB * 0.85f, u0, u1, kind, seed, pulse, alpha * 0.85f);
+			// Camera-relative position is (px, py, pz), so vector toward camera is (-px, -py, -pz)
+			float cx = -px, cy = -py, cz = -pz;
+			float sx = ty * cz - tz * cy;
+			float sy = tz * cx - tx * cz;
+			float sz = tx * cy - ty * cx;
+			float sLenSq = sx * sx + sy * sy + sz * sz;
+			if (sLenSq < 1e-8f) {
+				// Fallback if tangent points straight at camera
+				sx = -tz; sy = 0f; sz = tx;
+				sLenSq = sx * sx + sz * sz;
+				if (sLenSq < 1e-8f) { sx = 1f; sy = 0f; sz = 0f; sLenSq = 1f; }
+			}
+			float invS = (float) (1.0 / Math.sqrt(sLenSq));
+			sx *= invS * w;
+			sy *= invS * w;
+			sz *= invS * w;
+
+			float lx = px - sx, ly = py - sy, lz = pz - sz;
+			float rx = px + sx, ry = py + sy, rz = pz + sz;
+			float u = (float) i / (count - 1);
+
+			if (hasPrev && (prevA > 0.005f || a > 0.005f)) {
+				vertex(pose, vc, prevLx, prevLy, prevLz, prevU, 0f, kind, seed, pulse, prevA);
+				vertex(pose, vc, prevRx, prevRy, prevRz, prevU, 1f, kind, seed, pulse, prevA);
+				vertex(pose, vc, rx, ry, rz, u, 1f, kind, seed, pulse, a);
+				vertex(pose, vc, lx, ly, lz, u, 0f, kind, seed, pulse, a);
+			}
+
+			prevLx = lx; prevLy = ly; prevLz = lz;
+			prevRx = rx; prevRy = ry; prevRz = rz;
+			prevU = u; prevA = a;
+			hasPrev = true;
+		}
 	}
 
-	private static void emitQuadStrip(PoseStack.Pose pose, VertexConsumer vc,
-			float ax, float ay, float az, float bx, float by, float bz,
-			float nx, float ny, float nz, float wa, float wb,
-			float u0, float u1, float kind, float seed, float pulse, float alpha) {
-		float a0x = ax - nx * wa, a0y = ay - ny * wa, a0z = az - nz * wa;
-		float a1x = ax + nx * wa, a1y = ay + ny * wa, a1z = az + nz * wa;
-		float b0x = bx - nx * wb, b0y = by - ny * wb, b0z = bz - nz * wb;
-		float b1x = bx + nx * wb, b1y = by + ny * wb, b1z = bz + nz * wb;
-
-		vertex(pose, vc, a0x, a0y, a0z, u0, 0f, kind, seed, pulse, alpha);
-		vertex(pose, vc, a1x, a1y, a1z, u0, 1f, kind, seed, pulse, alpha);
-		vertex(pose, vc, b1x, b1y, b1z, u1, 1f, kind, seed, pulse, alpha);
-		vertex(pose, vc, b0x, b0y, b0z, u1, 0f, kind, seed, pulse, alpha);
-	}
-
-	/** Emits a 3D octahedron (blood droplet or siphon knot) using 8 degenerate-quad triangles. */
-	public static void emitOctahedron(PoseStack.Pose pose, VertexConsumer vc,
-			float cx, float cy, float cz, float rx, float ry, float rz,
+	/**
+	 * Emits a camera-facing billboard quad for smooth-SDF blood droplets (kind ~ 0.75)
+	 * or soft atmospheric aura mist (kind >= 0.90).
+	 */
+	public static void emitBillboardOrb(PoseStack.Pose pose, VertexConsumer vc,
+			float cx, float cy, float cz, float radiusX, float radiusY,
 			float kind, float seed, float pulse, float alpha) {
-		if (alpha <= 0.005f) return;
-		float topY = cy + ry, botY = cy - ry;
-		float px = cx + rx, nx = cx - rx, pz = cz + rz, nz = cz - rz;
-		// Top 4 faces
-		emitTriQuad(pose, vc, cx, topY, cz, px, cy, cz, cx, cy, pz, kind, seed, pulse, alpha);
-		emitTriQuad(pose, vc, cx, topY, cz, cx, cy, pz, nx, cy, cz, kind, seed, pulse, alpha);
-		emitTriQuad(pose, vc, cx, topY, cz, nx, cy, cz, cx, cy, nz, kind, seed, pulse, alpha);
-		emitTriQuad(pose, vc, cx, topY, cz, cx, cy, nz, px, cy, cz, kind, seed, pulse, alpha);
-		// Bottom 4 faces
-		emitTriQuad(pose, vc, cx, botY, cz, cx, cy, pz, px, cy, cz, kind, seed, pulse, alpha);
-		emitTriQuad(pose, vc, cx, botY, cz, nx, cy, cz, cx, cy, pz, kind, seed, pulse, alpha);
-		emitTriQuad(pose, vc, cx, botY, cz, cx, cy, nz, nx, cy, cz, kind, seed, pulse, alpha);
-		emitTriQuad(pose, vc, cx, botY, cz, px, cy, cz, cx, cy, nz, kind, seed, pulse, alpha);
-	}
+		if (alpha <= 0.005f || radiusX <= 0.0005f) return;
+		float distSq = cx * cx + cy * cy + cz * cz;
+		if (distSq < 1e-6f) return;
 
-	private static void emitTriQuad(PoseStack.Pose pose, VertexConsumer vc,
-			float ax, float ay, float az, float bx, float by, float bz, float cx, float cy, float cz,
-			float kind, float seed, float pulse, float alpha) {
-		vertex(pose, vc, ax, ay, az, 0.5f, 0.5f, kind, seed, pulse, alpha);
-		vertex(pose, vc, bx, by, bz, 0.0f, 0.25f, kind, seed, pulse, alpha);
-		vertex(pose, vc, cx, cy, cz, 1.0f, 0.75f, kind, seed, pulse, alpha);
-		vertex(pose, vc, cx, cy, cz, 1.0f, 0.75f, kind, seed, pulse, alpha);
+		// Right vector = normalize(cross(toCam, worldUp))
+		float toCamX = -cx, toCamY = -cy, toCamZ = -cz;
+		float rx = -toCamZ, rz = toCamX;
+		float rLenSq = rx * rx + rz * rz;
+		float ux, uy, uz;
+		if (rLenSq < 1e-6f) {
+			rx = 1f; rz = 0f;
+			ux = 0f; uy = 0f; uz = 1f;
+		} else {
+			float invR = (float) (1.0 / Math.sqrt(rLenSq));
+			rx *= invR; rz *= invR;
+			// Up vector = normalize(cross(right, toCam))
+			ux = -(rz * toCamY);
+			uy = rz * toCamX - rx * toCamZ;
+			uz = rx * toCamY;
+			float uLen = (float) Math.sqrt(ux * ux + uy * uy + uz * uz);
+			if (uLen > 1e-5f) {
+				ux /= uLen; uy /= uLen; uz /= uLen;
+			}
+		}
+
+		float rvx = rx * radiusX, rvz = rz * radiusX;
+		float uvx = ux * radiusY, uvy = uy * radiusY, uvz = uz * radiusY;
+
+		vertex(pose, vc, cx - rvx - uvx, cy - uvy, cz - rvz - uvz, 0f, 0f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx + rvx - uvx, cy - uvy, cz + rvz - uvz, 1f, 0f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx + rvx + uvx, cy + uvy, cz + rvz + uvz, 1f, 1f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx - rvx + uvx, cy + uvy, cz - rvz + uvz, 0f, 1f, kind, seed, pulse, alpha);
 	}
 
 	/** Emits a horizontal arterial floor pulse ring. */
