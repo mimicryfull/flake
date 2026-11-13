@@ -58,7 +58,7 @@ class VfxInfrastructureTest {
 			includeCount++;
 		}
 		assembled.append(fsh.substring(lastEnd));
-		assertEquals(17, includeCount, "Expected 17 modular shader includes in shockwave.fsh");
+		assertEquals(18, includeCount, "Expected 18 modular shader includes in shockwave.fsh");
 
 		String full = assembled.toString();
 		for (String requiredSymbol : new String[] {
@@ -80,7 +80,8 @@ class VfxInfrastructureTest {
 				"void applyMaskAndCrystalOverlay(",
 				"void weaponStreak(",
 				"void broadswordSweep(",
-				"void chronosphereWave("
+				"void chronosphereWave(",
+				"void demolitionBlast("
 		}) {
 			assertTrue(full.contains(requiredSymbol), "Missing GLSL symbol in assembled shader: " + requiredSymbol);
 		}

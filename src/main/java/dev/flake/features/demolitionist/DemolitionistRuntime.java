@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +34,7 @@ public final class DemolitionistRuntime implements ClassAbilityRuntime {
 	private final MinecraftServer server;
 	private final Map<UUID, Mine> mines = new HashMap<>();
 
-	private record Mine(ServerLevel level, Vec3 pos, int armedAt, int expiresAt) {}
+	private record Mine(ServerLevel level, Vec3 pos, int ownerId, int armedAt, int expiresAt) {}
 
 	public DemolitionistRuntime(MinecraftServer server) { this.server = server; }
 
@@ -59,15 +58,17 @@ public final class DemolitionistRuntime implements ClassAbilityRuntime {
 	}
 
 	private boolean mine(ServerPlayer player, ServerLevel level, int now) {
-		mines.put(player.getUUID(), new Mine(level, player.position(), now + MINE_ARM_TICKS, now + MINE_LIFE_TICKS));
-		level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 0.1, player.getZ(), 10, 0.2, 0.05, 0.2, 0.01);
+		Vec3 pos = player.position();
+		mines.put(player.getUUID(), new Mine(level, pos, player.getId(), now + MINE_ARM_TICKS, now + MINE_LIFE_TICKS));
+		DemolitionistVisuals.placeMine(player, pos);
 		AbilityEffects.sound(level, player, SoundEvents.ANVIL_LAND, 0.4f, 1.6f);
 		return true;
 	}
 
 	private boolean blastJump(ServerPlayer player, ServerLevel level) {
 		Vec3 origin = player.position();
-		AbilityMovement.launch(player, AbilityMovement.flat(player).scale(1.1).add(0, 1.0, 0));
+		Vec3 launch = AbilityMovement.flat(player).scale(1.1).add(0, 1.0, 0);
+		AbilityMovement.launch(player, launch);
 		player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, false, false, true));
 		player.fallDistance = 0;
 		for (var other : AbilityTargeting.candidates(player, level, origin, 3.5)) {
@@ -75,8 +76,7 @@ public final class DemolitionistRuntime implements ClassAbilityRuntime {
 			other.hurtServer(level, player.damageSources().explosion(player, player), CombatModifiers.skillDamage(player, other, 3.0f));
 			AbilityMovement.launch(other, AbilityMovement.horizontalDir(origin, other.position(), player).scale(1.2).add(0, 0.5, 0));
 		}
-		level.sendParticles(ParticleTypes.EXPLOSION, origin.x, origin.y + 0.2, origin.z, 2, 0.3, 0.1, 0.3, 0);
-		level.sendParticles(ParticleTypes.LARGE_SMOKE, origin.x, origin.y + 0.2, origin.z, 14, 0.5, 0.1, 0.5, 0.05);
+		DemolitionistVisuals.blastJump(player, origin, launch);
 		AbilityEffects.sound(level, player, SoundEvents.GENERIC_EXPLODE.value(), 0.5f, 1.3f);
 		return true;
 	}
@@ -86,18 +86,17 @@ public final class DemolitionistRuntime implements ClassAbilityRuntime {
 			var mine = entry.getValue();
 			var owner = server.getPlayerList().getPlayer(entry.getKey());
 			if (owner == null || now >= mine.expiresAt || DuelRuntime.blocksAbility(entry.getKey())) {
+				DemolitionistVisuals.disarmMine(mine.level, owner, mine.ownerId, mine.pos);
 				mines.remove(entry.getKey());
 				continue;
 			}
-			if (now % 20 == 0) mine.level.sendParticles(ParticleTypes.ASH, mine.pos.x, mine.pos.y + 0.1, mine.pos.z, 2, 0.2, 0.02, 0.2, 0);
 			if (now < mine.armedAt) continue;
 			for (var victim : AbilityTargeting.candidates(owner, mine.level, mine.pos, 2.0)) {
 				if (victim.position().distanceToSqr(mine.pos) > MINE_TRIGGER_RADIUS * MINE_TRIGGER_RADIUS) continue;
 				victim.hurtServer(mine.level, owner.damageSources().explosion(owner, owner), CombatModifiers.skillDamage(owner, victim, 6.0f));
 				AbilityMovement.launch(victim, AbilityMovement.horizontalDir(mine.pos, victim.position(), owner).scale(0.9).add(0, 0.7, 0));
 				victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 30, 1, false, true, true));
-				mine.level.sendParticles(ParticleTypes.EXPLOSION, mine.pos.x, mine.pos.y + 0.3, mine.pos.z, 2, 0.3, 0.1, 0.3, 0);
-				mine.level.sendParticles(ParticleTypes.LARGE_SMOKE, mine.pos.x, mine.pos.y + 0.3, mine.pos.z, 16, 0.5, 0.2, 0.5, 0.05);
+				DemolitionistVisuals.detonateMine(owner, mine.pos, victim.getId());
 				mine.level.playSound(null, mine.pos.x, mine.pos.y, mine.pos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 0.8f, 1.2f);
 				mines.remove(entry.getKey());
 				break;
@@ -105,6 +104,16 @@ public final class DemolitionistRuntime implements ClassAbilityRuntime {
 		}
 	}
 
-	@Override public void reset(ServerPlayer player) { mines.remove(player.getUUID()); }
-	@Override public void clear() { mines.clear(); }
+	@Override public void reset(ServerPlayer player) {
+		var removed = mines.remove(player.getUUID());
+		if (removed != null) DemolitionistVisuals.disarmMine(removed.level, player, removed.ownerId, removed.pos);
+	}
+
+	@Override public void clear() {
+		for (var entry : mines.entrySet()) {
+			var mine = entry.getValue();
+			DemolitionistVisuals.disarmMine(mine.level, server.getPlayerList().getPlayer(entry.getKey()), mine.ownerId, mine.pos);
+		}
+		mines.clear();
+	}
 }

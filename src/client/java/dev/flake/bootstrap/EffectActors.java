@@ -16,6 +16,8 @@ import dev.flake.features.controlhammer.client.HammerStunActor;
 import dev.flake.features.chaosbroadsword.client.BroadswordSweepActor;
 import dev.flake.features.crystalclaw.client.CrystalClawActor;
 import dev.flake.features.darkcube.client.DarkBoltActor;
+import dev.flake.features.demolitionist.client.DemolitionExplosionActor;
+import dev.flake.features.demolitionist.client.ProximityMineActor;
 import dev.flake.features.junglespear.client.SpearDashActor;
 import dev.flake.features.matadora.client.MatadoraActor;
 import dev.flake.features.vampire.client.GhoulRenderState;
@@ -32,7 +34,7 @@ public final class EffectActors {
 		return switch (phase) {
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON -> Admission.COALESCE;
 			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF -> Admission.UPDATE_ALL;
-			case BULWARK_HIT -> Admission.UPDATE_FIRST;
+			case BULWARK_HIT, MINE_DISARM -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
 	}
@@ -52,6 +54,8 @@ public final class EffectActors {
 			case SPEAR_DASH -> new SpearDashActor(payload);
 			case BROADSWORD_SWEEP -> new BroadswordSweepActor(payload);
 			case CHRONOSPHERE -> new ChronosphereActor(payload);
+			case MINE_PLACE -> new ProximityMineActor(payload);
+			case MINE_DETONATE, BLAST_JUMP -> new DemolitionExplosionActor(payload);
 			case HAMMER_STUN -> new HammerStunActor(payload);
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOOD_SIPHON -> new GhoulRenderState.Actor(payload);
 			default -> new ShockwaveActor(payload);
