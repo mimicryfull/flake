@@ -41,13 +41,13 @@ float fbm(vec2 p) {
     return s;
 }
 
-// black-violet shadow -> deep blood -> arterial red -> orange -> white-gold core
+// black -> dried maroon -> deep crimson -> arterial red -> wet carmine highlight (no orange, no pale tones)
 vec3 bloodRamp(float x) {
-    const vec3 c0 = vec3(0.045, 0.000, 0.075);
-    const vec3 c1 = vec3(0.30, 0.008, 0.110);
-    const vec3 c2 = vec3(0.82, 0.035, 0.100);
-    const vec3 c3 = vec3(1.00, 0.300, 0.120);
-    const vec3 c4 = vec3(1.00, 0.820, 0.560);
+    const vec3 c0 = vec3(0.020, 0.000, 0.012);
+    const vec3 c1 = vec3(0.150, 0.003, 0.018);
+    const vec3 c2 = vec3(0.400, 0.008, 0.030);
+    const vec3 c3 = vec3(0.680, 0.018, 0.050);
+    const vec3 c4 = vec3(0.880, 0.060, 0.100);
     x = clamp(x, 0.0, 1.0) * 4.0;
     if (x < 1.0) return mix(c0, c1, x);
     if (x < 2.0) return mix(c1, c2, x - 1.0);
@@ -77,7 +77,7 @@ void main() {
         float soft = (1.0 - r) * (1.0 - r);
         float flick = 0.88 + 0.12 * sin(sec * 9.0 + seed * 40.0);
         float a = alpha * (core * 1.25 + soft * 0.50) * (0.75 + 0.55 * pulse) * flick;
-        vec3 c = mix(vec3(1.0, 0.09, 0.07), vec3(1.0, 0.66, 0.40), core);
+        vec3 c = mix(vec3(0.62, 0.015, 0.04), vec3(0.92, 0.07, 0.11), core);
         float fade = (1.0 - smoothstep(FogRenderDistanceStart, FogRenderDistanceEnd, cylindricalVertexDistance))
                    * (1.0 - smoothstep(FogEnvironmentalStart, FogEnvironmentalEnd, sphericalVertexDistance));
         fragColor = vec4(c * a * fade, 1.0);
@@ -138,12 +138,12 @@ void main() {
         float edgeDark = smoothstep(0.90, 1.0, b);
         float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
 
-        rgb = base * (0.45 + light * 1.1) * 1.35;
-        rgb += vec3(1.00, 0.28, 0.10) * rimHi * (0.28 + tier * 0.65 + beat * 0.30);
-        rgb += vec3(0.85, 0.06, 0.16) * fres * (0.25 + tier * 0.55);
-        rgb += vec3(1.00, 0.50, 0.22) * core * hot * (0.55 + 0.60 * beat);
-        rgb += vec3(1.00, 0.80, 0.60) * step(0.88, flick) * hot * 0.60;
-        rgb += vec3(1.00, 0.45, 0.14) * burn * 2.2;
+        rgb = base * (0.40 + light * 1.0) * 1.15;
+        rgb += vec3(0.62, 0.02, 0.05) * rimHi * (0.30 + tier * 0.60 + beat * 0.30);
+        rgb += vec3(0.45, 0.01, 0.06) * fres * (0.25 + tier * 0.55);
+        rgb += vec3(0.70, 0.03, 0.07) * core * hot * (0.45 + 0.55 * beat);
+        rgb += vec3(0.75, 0.07, 0.10) * step(0.88, flick) * hot * 0.55;
+        rgb += vec3(0.70, 0.02, 0.06) * burn * 1.8;
         rgb *= 1.0 - edgeDark * 0.50;
 
         outAlpha = 1.0;
