@@ -5,6 +5,7 @@ import dev.flake.features.loadout.LoadoutService;
 import dev.flake.features.duel.DuelRuntime;
 import dev.flake.content.ContentSpec.Lifecycle;
 import dev.flake.content.ContentCatalog;
+import dev.flake.content.ItemRegistration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -15,10 +16,12 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -26,7 +29,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.ArmorMaterials;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -56,6 +64,34 @@ public final class ObsidianArmor implements Lifecycle {
 	public static final double PULSE_KNOCKBACK = 0.55;
 
 	private static final Identifier WEIGHT_MOD = Identifier.fromNamespaceAndPath("flake", "obsidian_armor_weight");
+	public static Item HELMET;
+	public static Item CHESTPLATE;
+	public static Item LEGGINGS;
+	public static Item BOOTS;
+
+	public static void registerItems() {
+		var asset = ResourceKey.create(EquipmentAssets.ROOT_ID, Identifier.fromNamespaceAndPath("flake", "obsidian"));
+		var material = new ArmorMaterial(37, ArmorMaterials.makeDefense(3, 6, 8, 3, 19), 15,
+				SoundEvents.ARMOR_EQUIP_NETHERITE, 3.0f, 0.1f, ItemTags.REPAIRS_NETHERITE_ARMOR, asset);
+		HELMET = registerPiece("obsidian_helmet", material, ArmorType.HELMET);
+		CHESTPLATE = registerPiece("obsidian_chestplate", material, ArmorType.CHESTPLATE);
+		LEGGINGS = registerPiece("obsidian_leggings", material, ArmorType.LEGGINGS);
+		BOOTS = registerPiece("obsidian_boots", material, ArmorType.BOOTS);
+	}
+
+	private static Item registerPiece(String path, ArmorMaterial material, ArmorType type) {
+		return ItemRegistration.register(Identifier.fromNamespaceAndPath("flake", path),
+				key -> new Item(new Item.Properties().setId(key).humanoidArmor(material, type)));
+	}
+
+	public static Item itemFor(Loadout.ArmorSlot slot) {
+		return switch (slot) {
+			case HELMET -> HELMET != null ? HELMET : Items.NETHERITE_HELMET;
+			case CHESTPLATE -> CHESTPLATE != null ? CHESTPLATE : Items.NETHERITE_CHESTPLATE;
+			case LEGGINGS -> LEGGINGS != null ? LEGGINGS : Items.NETHERITE_LEGGINGS;
+			case BOOTS -> BOOTS != null ? BOOTS : Items.NETHERITE_BOOTS;
+		};
+	}
 	private static final class State {
 		final Set<UUID> fullSets = new HashSet<>();
 		final Map<UUID, Float> damage = new HashMap<>();
@@ -104,16 +140,16 @@ public final class ObsidianArmor implements Lifecycle {
 		if (STATES.of(player).fullSets.contains(id)) return true;
 		if (!DuelRuntime.fighting(id)) {
 			var build = LoadoutService.of(player.level().getServer()).get(id);
-			return build != null && build.hasFullObsidianSet() && wearingFullNetherite(player);
+			return build != null && build.hasFullObsidianSet() && wearingFullObsidian(player);
 		}
 		return false;
 	}
 
-	private static boolean wearingFullNetherite(ServerPlayer player) {
-		return player.getItemBySlot(EquipmentSlot.HEAD).is(Items.NETHERITE_HELMET)
-				&& player.getItemBySlot(EquipmentSlot.CHEST).is(Items.NETHERITE_CHESTPLATE)
-				&& player.getItemBySlot(EquipmentSlot.LEGS).is(Items.NETHERITE_LEGGINGS)
-				&& player.getItemBySlot(EquipmentSlot.FEET).is(Items.NETHERITE_BOOTS);
+	private static boolean wearingFullObsidian(ServerPlayer player) {
+		return player.getItemBySlot(EquipmentSlot.HEAD).is(itemFor(Loadout.ArmorSlot.HELMET))
+				&& player.getItemBySlot(EquipmentSlot.CHEST).is(itemFor(Loadout.ArmorSlot.CHESTPLATE))
+				&& player.getItemBySlot(EquipmentSlot.LEGS).is(itemFor(Loadout.ArmorSlot.LEGGINGS))
+				&& player.getItemBySlot(EquipmentSlot.FEET).is(itemFor(Loadout.ArmorSlot.BOOTS));
 	}
 
 	/** Applies per-piece weight modifiers and initializes 4/4 set tracking at duel kit preparation. */

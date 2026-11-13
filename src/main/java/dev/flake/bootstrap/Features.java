@@ -40,7 +40,7 @@ public final class Features {
 			new Feature(dev.flake.features.bastion.BastionRuntime::install),
 			new Feature(dev.flake.features.vampire.VampireRuntime::install),
 			new Feature(dev.flake.features.demolitionist.DemolitionistRuntime::install),
-			new Feature(ObsidianArmor::install));
+			new Feature(ObsidianArmor::install, ObsidianArmor::registerItems));
 
 	private Features() {}
 

@@ -2,6 +2,7 @@ package dev.flake.features.armor;
 
 import dev.flake.features.loadout.Loadout.ArmorMaterial;
 import dev.flake.features.loadout.Loadout.ArmorSlot;
+import dev.flake.features.obsidianarmor.ObsidianArmor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -28,10 +29,7 @@ public final class ArmorItems {
 				case HELMET -> Items.DIAMOND_HELMET; case CHESTPLATE -> Items.DIAMOND_CHESTPLATE;
 				case LEGGINGS -> Items.DIAMOND_LEGGINGS; case BOOTS -> Items.DIAMOND_BOOTS;
 			};
-			case OBSIDIAN -> switch (slot) {
-				case HELMET -> Items.NETHERITE_HELMET; case CHESTPLATE -> Items.NETHERITE_CHESTPLATE;
-				case LEGGINGS -> Items.NETHERITE_LEGGINGS; case BOOTS -> Items.NETHERITE_BOOTS;
-			};
+			case OBSIDIAN -> ObsidianArmor.itemFor(slot);
 		};
 		return item == null ? ItemStack.EMPTY : new ItemStack(item);
 	}
