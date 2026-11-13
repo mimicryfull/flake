@@ -19,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Shared action-blocking state. A weapon may cause a stun, but does not own the game's stun rules. */
 public final class Stuns {
-	private record Stun(int until, Vec3 anchor, int totalTicks) {}
+	private record Stun(int until, Vec3 anchor, int totalTicks, boolean anchorMovement) {}
 	private static final ServerState<Map<UUID, Stun>> STATES = new ServerState<>(HashMap::new);
 	private static final List<Consumer<ServerPlayer>> INTERRUPTS = new ArrayList<>();
 	private static boolean installed;
@@ -29,13 +29,32 @@ public final class Stuns {
 	public static void onInterrupt(Consumer<ServerPlayer> interrupt) { INTERRUPTS.add(interrupt); }
 
 	public static void apply(LivingEntity target, int ticks) {
+		applyInternal(target, ticks, true);
+	}
+
+	/** Stuns actions, items, and skills while allowing smooth creeping movement without teleport snap-back. */
+	public static void applySlowStun(LivingEntity target, int ticks) {
+		applyInternal(target, ticks, false);
+	}
+
+	private static void applyInternal(LivingEntity target, int ticks, boolean anchorMovement) {
 		if (target instanceof ServerPlayer player) for (var interrupt : INTERRUPTS) interrupt.accept(player);
 		int now = target.level().getServer().getTickCount();
-		STATES.of(target.level().getServer()).put(target.getUUID(), new Stun(now + ticks, target.position(), ticks));
-		target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks, 6, false, false, false));
+		STATES.of(target.level().getServer()).put(target.getUUID(), new Stun(now + ticks, target.position(), ticks, anchorMovement));
 		target.stopUsingItem();
-		target.setDeltaMovement(Vec3.ZERO);
-		target.syncVelocity = true;
+		if (anchorMovement) {
+			target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks, 6, false, false, false));
+			target.setDeltaMovement(Vec3.ZERO);
+			target.syncVelocity = true;
+		}
+	}
+
+	public static void clearSlowStun(LivingEntity target) {
+		var server = target.level().getServer();
+		if (server == null) return;
+		var states = STATES.of(server);
+		var stun = states.get(target.getUUID());
+		if (stun != null && !stun.anchorMovement()) states.remove(target.getUUID());
 	}
 
 	public static boolean blocked(Player player) {
@@ -89,6 +108,7 @@ public final class Stuns {
 				return true;
 			});
 			for (var entry : states.entrySet()) {
+				if (!entry.getValue().anchorMovement()) continue;
 				var entity = server.overworld().getEntityInAnyDimension(entry.getKey());
 				if (entity == null) continue;
 				var anchor = entry.getValue().anchor();

@@ -38,6 +38,8 @@ public final class ChronosphereActor extends RadialActor {
 
 	private long startNanos = -1L;
 	private float ageSec;
+	private float lastAgeSec;
+	private float victimOverlay;
 
 	public ChronosphereActor(CombatVfxPayload payload) {
 		super(payload);
@@ -61,6 +63,21 @@ public final class ChronosphereActor extends RadialActor {
 
 		float currentRadius = radius(age);
 		float alpha = opacity(age);
+		float dt = Math.max(0.0f, age - lastAgeSec);
+		lastAgeSec = age;
+
+		boolean stunnedVictim = false;
+		if (frame.client.player != null && frame.client.player.getId() != sourceId) {
+			var p = frame.client.player;
+			double distSq = p.position().add(0.0, p.getBbHeight() * 0.5, 0.0).distanceToSqr(origin);
+			double rCheck = currentRadius + 0.25;
+			stunnedVictim = distSq <= rCheck * rCheck;
+		}
+		float targetOverlay = stunnedVictim ? 1.0f : 0.0f;
+		float blendRate = Math.min(1.0f, dt * 10.0f);
+		victimOverlay = victimOverlay + (targetOverlay - victimOverlay) * blendRate;
+		slot.values[slot.material] = victimOverlay * alpha;
+
 		float[] values = slot.values;
 		int count = Math.min(MOTE_COUNT, (int) values[35]);
 		for (int p = 0; p < count; p++) {

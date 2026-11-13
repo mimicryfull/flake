@@ -238,3 +238,57 @@ void chronosphereWave(vec3 ray, float sceneDistance, vec3 scenePoint, float dept
 
     chronoSingularity(ray, sceneDistance, origin, collapse, alpha, light, distortion);
 }
+
+void computeChronoStunWarp(float chronoStunStrength, float chronoStunAge, vec2 maskUv,
+                           inout vec2 pressure, inout vec2 split) {
+    if (chronoStunStrength <= 0.001) return;
+    float s = clamp(chronoStunStrength, 0.0, 1.0);
+    float r = length(maskUv);
+    vec2 radial = r > 0.0001 ? maskUv / r : vec2(0.0);
+    vec2 tangent = vec2(-radial.y, radial.x);
+    float edge = smoothstep(0.16, 0.95, r);
+    float w1 = softNoise(maskUv * 3.4 + vec2(chronoStunAge * 0.25, -chronoStunAge * 0.18)) - 0.5;
+    float w2 = softNoise(maskUv * 7.2 + vec2(-chronoStunAge * 0.42, chronoStunAge * 0.31)) - 0.5;
+    float beat = pow(0.5 + 0.5 * sin(chronoStunAge * 5.2), 2.0);
+    pressure += (radial * (0.008 + 0.007 * beat) + tangent * 0.009 + vec2(w1, w2) * 0.014) * edge * s;
+    split += (radial * 0.0042 + tangent * 0.0020) * edge * s;
+}
+
+void applyChronoStunOverlay(float chronoStunStrength, float chronoStunAge, vec2 maskUv, inout vec3 color) {
+    if (chronoStunStrength <= 0.001) return;
+    float s = clamp(chronoStunStrength, 0.0, 1.0);
+    float r = length(maskUv);
+    float ang = atan(maskUv.y, maskUv.x);
+
+    // Swirling arcane purple tendrils & deep noise mist crawling inward from screen edges
+    float nBroad = softNoise(vec2(ang * 2.4 + chronoStunAge * 0.35, r * 3.8 - chronoStunAge * 0.55));
+    float nFine = softNoise(maskUv * 8.5 + vec2(-chronoStunAge * 0.45, chronoStunAge * 0.38));
+    float tendrils = clamp((nBroad * 0.65 + nFine * 0.35), 0.0, 1.0);
+    float radialVeins = pow(max(0.0, sin(ang * 7.0 + nBroad * 5.2 - chronoStunAge * 1.15)), 4.0);
+
+    float outerVignette = smoothstep(0.20, 0.96, r + (tendrils - 0.5) * 0.24);
+    float deepEdge = smoothstep(0.42, 1.12, r + (tendrils - 0.5) * 0.16);
+    float pulse = 0.80 + 0.20 * sin(chronoStunAge * 4.8);
+    float surge = exp(-chronoStunAge * 5.5) * 0.65;
+
+    // 12-hour arcane time-lock ring & ticks framing the stunned victim's vision
+    float clockRing = exp(-pow((r - 0.52 - 0.012 * sin(chronoStunAge * 3.2)) / 0.014, 2.0));
+    float clockTicks = pow(max(0.0, cos(ang * 12.0 + chronoStunAge * 0.22)), 20.0)
+                     * exp(-pow((r - 0.52) / 0.042, 2.0));
+    float innerHalo = exp(-pow((r - 0.38) / 0.028, 2.0)) * 0.32;
+
+    // Wash world in stopped cosmic purple + abyssal edge darkening + bright neon arcane tendrils
+    float luma = dot(color, vec3(0.299, 0.587, 0.114));
+    vec3 mutedWorld = mix(color, vec3(luma), 0.52 * s);
+    vec3 purpleTintWorld = mutedWorld * vec3(0.62, 0.32, 1.02) + vec3(0.05, 0.005, 0.11);
+    color = mix(color, purpleTintWorld, (0.42 + 0.40 * outerVignette) * s);
+
+    // Abyssal dark-violet corners so the borders feel closed off by stopped time
+    color = mix(color, vec3(0.06, 0.008, 0.15), clamp(deepEdge * 0.72 * s, 0.0, 0.82));
+
+    // Luminous purple-magenta magic arcs, tendrils, and time-lock clock ring
+    vec3 magicGlow = CHRONO_PURPLE * (outerVignette * 0.55 + radialVeins * outerVignette * 0.75)
+                   + CHRONO_NEON * ((clockRing * 0.65 + clockTicks * 0.95 + innerHalo) * pulse + tendrils * deepEdge * 0.48)
+                   + CHRONO_CORE * (clockTicks * 0.45 + surge * (0.30 + 0.70 * outerVignette));
+    color += magicGlow * s;
+}

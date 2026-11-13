@@ -66,6 +66,8 @@ void main() {
     vec2 distortion = vec2(0.0);
     vec3 skyOverride = vec3(0.0);
     float skyOverrideAlpha = 0.0;
+    float chronoStunStrength = 0.0;
+    float chronoStunAge = 0.0;
 
     for (int i = 0; i < 4; i++) {
         float alpha = WaveStyles[i].x;
@@ -74,6 +76,11 @@ void main() {
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
         if (charging > 14.5) {
+            float victimEnv = QuakeMaterials[i * 32].x;
+            if (victimEnv > chronoStunStrength) {
+                chronoStunStrength = victimEnv;
+                chronoStunAge = age;
+            }
             chronosphereWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion, skyOverride, skyOverrideAlpha);
             continue;
         }
@@ -176,6 +183,7 @@ void main() {
     vec2 maskUv = (texCoord - 0.5) * vec2(aspectRatio, 1.0);
     float maskField = 0.0;
     computeMaskWarpAndField(maskStrength, maskScale, maskAge, maskParams, maskUv, pressure, maskField);
+    computeChronoStunWarp(chronoStunStrength, chronoStunAge, maskUv, pressure, split);
 
     if (maskBurst > 0.001) {
         vec2 radialBurst = texCoord - 0.5;
@@ -211,6 +219,7 @@ void main() {
     applyMaskAndCrystalOverlay(maskStrength, maskScale, maskAge, maskCrystal, maskField, maskParams, maskUv, color);
     applyBulwarkScreenOverlay(bulwarkStrength, bulwarkScale, bulwarkAge, bulwarkPulse, bulwarkAbsorb, aspectRatio, color);
     applyBloodlustScreenOverlay(ghoulStrength, ghoulScale, ghoulAge, ghoulHeartbeat, ghoulBurst, aspectRatio, color);
+    applyChronoStunOverlay(chronoStunStrength, chronoStunAge, maskUv, color);
 
     fragColor = vec4(color, original.a);
 }

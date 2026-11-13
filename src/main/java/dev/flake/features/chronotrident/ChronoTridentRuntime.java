@@ -1,6 +1,7 @@
 package dev.flake.features.chronotrident;
 
 import dev.flake.combat.Cooldowns;
+import dev.flake.combat.Stuns;
 import dev.flake.features.duel.DuelRuntime;
 import dev.flake.runtime.ServerState;
 import java.util.ArrayList;
@@ -203,8 +204,12 @@ public final class ChronoTridentRuntime {
 				UUID tid = target.getUUID();
 				insideNow.add(tid);
 				stillSlowedAnywhere.add(tid);
-				if (zone.slowedIds.add(tid)) {
+				boolean newlyEntered = zone.slowedIds.add(tid);
+				if (newlyEntered) {
 					applyTimeDilation(target);
+					Stuns.applySlowStun(target, remainingTicks);
+				} else if (Stuns.remaining(tid, now) <= 1) {
+					Stuns.applySlowStun(target, remainingTicks);
 				}
 			}
 
@@ -233,6 +238,7 @@ public final class ChronoTridentRuntime {
 		removeModifier(target, Attributes.MOVEMENT_SPEED, CHRONO_MOVE_MOD);
 		removeModifier(target, Attributes.JUMP_STRENGTH, CHRONO_JUMP_MOD);
 		removeModifier(target, Attributes.ATTACK_SPEED, CHRONO_ATTACK_MOD);
+		Stuns.clearSlowStun(target);
 	}
 
 	private static void setModifier(LivingEntity target, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attrHolder,
