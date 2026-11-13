@@ -415,15 +415,18 @@ public final class GhoulRenderState {
 				float by = (float) (bodyY - cameraPos.y);
 				float bz = (float) (bodyZ - cameraPos.z);
 
-				// 1. Soft atmospheric crimson glow halo behind the voxel rig (3rd person)
+				// 1. Soft fog-like crimson glow behind the voxel rig (3rd person)
 				float mistAlpha = Math.max(meshAura, meshLungeCompression * 0.65f);
 				if (mistAlpha > 0.005f && !meshInside) {
 					GhoulMeshRenderer.emitGlowHalo(pose, vc,
 							bx, by + height * 0.48f, bz,
-							1.15f, height * 0.70f, 0.15f, meshHeartbeat, mistAlpha * 0.34f);
+							1.45f, height * 0.85f, 0.15f, meshHeartbeat, mistAlpha * 0.42f);
+					GhoulMeshRenderer.emitGlowHalo(pose, vc,
+							bx, by + height * 0.34f, bz,
+							0.95f, height * 0.55f, 0.62f, meshHeartbeat, mistAlpha * 0.30f);
 				}
 
-				// 2. Animated spline voxels + swirling red micro-voxels around every spline
+				// 2. Animated spline voxels + swirling red micro-voxels + fog glow along splines
 				for (int p = 0; p < activePaths; p++) {
 					int start = pathStart[p] * 5;
 					int count = pathCount[p];
@@ -431,8 +434,9 @@ public final class GhoulRenderState {
 					float kind = pathKind[p];
 					float seed = pathSeed[p];
 					float viewScale = kind < 0.25f && meshInside ? 0.45f : 1.0f;
-					float coreKind = kind < 0.25f ? 0.78f : 0.85f;
+					float coreKind = kind < 0.25f ? 0.62f : 0.72f;
 					int swirlStep = quality == 0 ? 3 : 2;
+					int midIdx = count / 2;
 
 					for (int i = 0; i < count; i++) {
 						int idx = start + i * 5;
@@ -442,23 +446,29 @@ public final class GhoulRenderState {
 						if (w <= 0.004f || a <= 0.01f) continue;
 
 						float u = count > 1 ? (float) i / (count - 1) : 0f;
-						float pulseWave = 0.82f + 0.24f * (float) Math.sin(u * 10.0 - age * 9.5 + seed * 6.28318);
+						float pulseWave = 0.94f + 0.06f * (float) Math.sin(u * 6.0 - age * 3.2 + seed * 6.28318);
 						float h = w * 0.78f * pulseWave;
 						GhoulMeshRenderer.emitVoxelCube(pose, vc,
 								px, py, pz, h, h, h,
 								coreKind, (seed + u * 0.5f) % 1.0f, meshHeartbeat, a);
 
+						// Fog-like glow halo around spline midpoints
+						if (i == midIdx && !meshInside) {
+							GhoulMeshRenderer.emitGlowHalo(pose, vc,
+									px, py, pz, w * 3.4f, w * 3.4f, seed, meshHeartbeat, a * 0.28f);
+						}
+
 						// Surrounding animated red micro-voxels orbiting/shedding around the spline
 						if (i % swirlStep == 0) {
-							float ang = age * 4.8f + u * 11.0f + seed * 17.0f + i * 1.7f;
-							float orbitR = w * (1.35f + 0.55f * (float) Math.sin(age * 6.0f + i));
+							float ang = age * 2.6f + u * 9.0f + seed * 17.0f + i * 1.7f;
+							float orbitR = w * (1.35f + 0.30f * (float) Math.sin(age * 2.8f + i));
 							float ox = px + (float) Math.cos(ang) * orbitR;
-							float oy = py + (float) Math.sin(ang * 1.3f + u * 4.0f) * orbitR * 0.75f;
+							float oy = py + (float) Math.sin(ang * 1.1f + u * 4.0f) * orbitR * 0.75f;
 							float oz = pz + (float) Math.sin(ang) * orbitR;
-							float ms = Math.max(0.018f, w * 0.34f * (0.65f + 0.35f * (float) Math.sin(age * 8.0f + i * 2.1f)));
+							float ms = Math.max(0.018f, w * 0.34f * (0.88f + 0.12f * (float) Math.sin(age * 3.2f + i * 2.1f)));
 							GhoulMeshRenderer.emitVoxelCube(pose, vc,
 									ox, oy, oz, ms, ms, ms,
-									0.32f, (seed + i * 0.13f) % 1.0f, meshHeartbeat, a * 0.85f);
+									0.18f, (seed + i * 0.13f) % 1.0f, meshHeartbeat, a * 0.85f);
 						}
 					}
 				}
