@@ -531,5 +531,10 @@
   "flake.active.storm_harpoon.desc": "ПКМ: кидок на 14 м, притягує ціль і завдає 3.0 HP (цільовий КД 10 с)",
   "flake.active.phase_crystal.title": "Фазовий кристал",
   "flake.active.phase_crystal.short": "Фаза",
-  "flake.active.phase_crystal.desc": "ПКМ: 2 с без ударів в обидва боки, потім телепорт на 3 м вперед (цільовий КД 20 с)"
+  "flake.active.phase_crystal.desc": "ПКМ: 2 с без ударів в обидва боки, потім телепорт на 3 м вперед (цільовий КД 20 с)",
+  "itemGroup.flake.items": "Flake PvP",
+  "flake.armor.storm_berserker.helmet": "Шолом Грозового Берсерка",
+  "flake.armor.storm_berserker.chestplate": "Нагрудник Грозового Берсерка",
+  "flake.armor.storm_berserker.leggings": "Поножі Грозового Берсерка",
+  "flake.armor.storm_berserker.boots": "Черевики Грозового Берсерка"
 }

@@ -85,6 +85,15 @@ public final class StormBerserkerArmor implements Lifecycle {
 			case BOOTS -> Items.COPPER_BOOTS;
 		};
 		var stack = new ItemStack(item);
+		String slotKey = switch (slot) {
+			case HELMET -> "helmet";
+			case CHESTPLATE -> "chestplate";
+			case LEGGINGS -> "leggings";
+			case BOOTS -> "boots";
+		};
+		stack.set(DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component
+				.translatable("flake.armor.storm_berserker." + slotKey)
+				.withStyle(style -> style.withItalic(false)));
 		var tag = new CompoundTag();
 		tag.putBoolean(CUSTOM_DATA_KEY, true);
 		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));

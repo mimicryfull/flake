@@ -531,5 +531,10 @@
   "flake.active.storm_harpoon.desc": "RMB: 14m throw, pulls target in and deals 3.0 HP (target CD 10s)",
   "flake.active.phase_crystal.title": "Phase Crystal",
   "flake.active.phase_crystal.short": "Phase",
-  "flake.active.phase_crystal.desc": "RMB: 2s untargetable & unable to attack, then teleports 3m forward (target CD 20s)"
+  "flake.active.phase_crystal.desc": "RMB: 2s untargetable & unable to attack, then teleports 3m forward (target CD 20s)",
+  "itemGroup.flake.items": "Flake PvP",
+  "flake.armor.storm_berserker.helmet": "Storm Berserker Helmet",
+  "flake.armor.storm_berserker.chestplate": "Storm Berserker Chestplate",
+  "flake.armor.storm_berserker.leggings": "Storm Berserker Leggings",
+  "flake.armor.storm_berserker.boots": "Storm Berserker Boots"
 }

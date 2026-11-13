@@ -76,6 +76,7 @@ public final class Features {
 		if (itemsRegistered) return;
 		itemsRegistered = true;
 		for (var feature : CONTENT) feature.items().run();
+		FlakeCreativeTab.register();
 	}
 
 	public static synchronized void registerServerHooks() {
