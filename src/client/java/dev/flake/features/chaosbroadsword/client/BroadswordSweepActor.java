@@ -26,6 +26,7 @@ public final class BroadswordSweepActor implements EffectActor {
 
 	public BroadswordSweepActor(CombatVfxPayload payload) {
 		this.sourceId = payload.sourceId();
+		BroadswordSpinPose.start(this.sourceId);
 		this.origin = payload.origin();
 		this.startYaw = payload.yaw();
 	}

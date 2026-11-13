@@ -1,5 +1,6 @@
 package dev.flake.render.vfx.mixin;
 
+import dev.flake.features.chaosbroadsword.client.BroadswordSpinPose;
 import dev.flake.features.junglespear.client.SpearLungePose;
 import dev.flake.features.vampire.client.GhoulRenderState;
 import net.minecraft.client.Minecraft;
@@ -14,7 +15,9 @@ abstract class GhoulFovMixin {
 	@Inject(method = "getFieldOfViewModifier", at = @At("RETURN"), cancellable = true)
 	private void flake$addBloodlustFov(boolean firstPerson, float fovEffectScale, CallbackInfoReturnable<Float> cir) {
 		if ((Object) this != Minecraft.getInstance().player) return;
-		float boost = GhoulRenderState.localBloodlustFovBoost() + SpearLungePose.localFovBoost();
+		float boost = GhoulRenderState.localBloodlustFovBoost()
+				+ SpearLungePose.localFovBoost()
+				+ BroadswordSpinPose.localFovBoost();
 		if (boost > 0f) {
 			cir.setReturnValue(cir.getReturnValue() + boost);
 		}

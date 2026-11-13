@@ -2,6 +2,7 @@ package dev.flake.render.vfx.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import dev.flake.features.chaosbroadsword.client.BroadswordSpinPose;
 import dev.flake.features.junglespear.client.SpearLungePose;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
@@ -15,11 +16,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** First-person spear lunge thrust during Jungle Spear dash. */
+/** First-person weapon ability transforms for Jungle Spear thrust and Chaos Broadsword heavy slash. */
 @Mixin(FirstPersonHandsAndItemsRenderer.class)
 abstract class SpearFirstPersonMixin {
 	@Inject(method = "submitArmWithItem", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V", shift = At.Shift.AFTER))
-	private void flake$thrustSpearFirstPerson(
+	private void flake$applyFirstPersonWeaponPose(
 			PlayerRenderState playerRenderState,
 			FirstPersonHandsAndItemsRenderState handsState,
 			float xRot,
@@ -34,17 +35,35 @@ abstract class SpearFirstPersonMixin {
 			CallbackInfo ci) {
 		var player = Minecraft.getInstance().player;
 		if (player == null) return;
-		float w = SpearLungePose.weight(player.getId());
-		if (w <= 0.001f) return;
 
-		if (hand == InteractionHand.MAIN_HAND) {
-			poseStack.translate(-0.18f * w, 0.10f * w, -0.38f * w);
-			poseStack.rotateDegrees(Axis.XP, -42.0f * w);
-			poseStack.rotateDegrees(Axis.YP, 16.0f * w);
-			poseStack.rotateDegrees(Axis.ZP, 10.0f * w);
-		} else {
-			poseStack.translate(0.14f * w, -0.02f * w, -0.22f * w);
-			poseStack.rotateDegrees(Axis.XP, -26.0f * w);
+		float spearW = SpearLungePose.weight(player.getId());
+		if (spearW > 0.001f) {
+			if (hand == InteractionHand.MAIN_HAND) {
+				poseStack.translate(-0.18f * spearW, 0.10f * spearW, -0.38f * spearW);
+				poseStack.rotateDegrees(Axis.XP, -42.0f * spearW);
+				poseStack.rotateDegrees(Axis.YP, 16.0f * spearW);
+				poseStack.rotateDegrees(Axis.ZP, 10.0f * spearW);
+			} else {
+				poseStack.translate(0.14f * spearW, -0.02f * spearW, -0.22f * spearW);
+				poseStack.rotateDegrees(Axis.XP, -26.0f * spearW);
+			}
+		}
+
+		float swordW = BroadswordSpinPose.weight(player.getId());
+		if (swordW > 0.001f) {
+			float spin = BroadswordSpinPose.spinProgress(player.getId());
+			float sweep = -1.0f + spin * 2.0f; // -1 (right windup) -> +1 (full left follow-through)
+			if (hand == InteractionHand.MAIN_HAND) {
+				poseStack.translate((-0.24f - 0.34f * sweep) * swordW, -0.04f * swordW, -0.34f * swordW);
+				poseStack.rotateDegrees(Axis.XP, -68.0f * swordW);
+				poseStack.rotateDegrees(Axis.YP, (48.0f + 78.0f * sweep) * swordW);
+				poseStack.rotateDegrees(Axis.ZP, 62.0f * swordW);
+			} else {
+				// Off-hand reaches across to grip the sword two-handed
+				poseStack.translate((0.28f - 0.22f * sweep) * swordW, -0.06f * swordW, -0.30f * swordW);
+				poseStack.rotateDegrees(Axis.XP, -42.0f * swordW);
+				poseStack.rotateDegrees(Axis.YP, (-32.0f + 45.0f * sweep) * swordW);
+			}
 		}
 	}
 }

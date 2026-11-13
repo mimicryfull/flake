@@ -12,6 +12,6 @@ public final class ChaosBroadswordVisuals {
 	public static void sweep(ServerPlayer source) {
 		var origin = source.position().add(0, 0.05, 0);
 		CombatVisuals.broadcast(source, new CombatVfxPayload(origin, source.getId(),
-				CombatVfxPayload.Phase.BROADSWORD_SWEEP, 0.0f, -1, origin.add(0, 0.9, 0)), origin, DURATION);
+				CombatVfxPayload.Phase.BROADSWORD_SWEEP, (float) Math.toRadians(source.getYRot()), -1, origin.add(0, 0.9, 0)), origin, DURATION);
 	}
 }
