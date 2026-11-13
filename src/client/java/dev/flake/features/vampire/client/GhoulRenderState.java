@@ -15,7 +15,20 @@ import net.minecraft.world.phys.Vec3;
 
 /** Hybrid mesh-based blood rig rendered in world space, with only a lightweight 2D edge pulse in post. */
 public final class GhoulRenderState {
+	private static float localFovBoost;
+	private static long localFovBoostNanos;
+
 	private GhoulRenderState() {}
+
+	public static float localBloodlustFovBoost() {
+		if (localFovBoost <= 0.0001f) return 0f;
+		if (System.nanoTime() - localFovBoostNanos > 150_000_000L) {
+			localFovBoost = 0f;
+			return 0f;
+		}
+		return localFovBoost;
+	}
+
 	public static boolean handles(CombatVfxPayload.Phase phase) {
 		return switch (phase) {
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON -> true;
@@ -168,6 +181,13 @@ public final class GhoulRenderState {
 			meshLungeCompression = compression;
 			meshFeeding = Math.min(1f, absorbed);
 			meshHeartbeat = heartbeat;
+
+			boolean isLocal = client.player != null && client.player.getId() == sourceId;
+			if (isLocal) {
+				float scale = client.options.fovEffectScale().get().floatValue();
+				localFovBoost = (aura * 0.075f + Math.max(compression * 0.045f, flash * 0.06f)) * scale;
+				localFovBoostNanos = nanos;
+			}
 
 			// Post-pass only runs the cheap 2D screen-edge vignette when in 1st person.
 			int style = slot.style;
