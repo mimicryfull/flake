@@ -12,25 +12,49 @@ import dev.flake.render.vfx.RenderFrame;
 import dev.flake.render.vfx.SlotWriter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 /**
- * Routes HAMMER_STUN impacts:
- * - Control Hammer (yaw <= 0.5): keeps the classic white radial impact burst.
- * - Axe of Cumshot (yaw > 0.5): drops a 3D voxel anvil onto the struck enemy's head
- *   (or renders an orange-brown voxel burst when hitting a block).
+ * Shared HAMMER_STUN actor:
+ * - Control Hammer (yaw <= 0.5): keeps the classic white radial explosion burst.
+ * - Axe of Cumshot enemy hit (yaw > 0.5, targetId > 0): drops a jagged voxel boulder
+ *   from above the target's head that passes straight through them while crumbling apart.
+ * - Axe of Cumshot block hit (yaw > 0.5, targetId <= 0): crisp earthen voxel debris burst.
  */
 public final class HammerStunActor implements EffectActor {
-	private static final float ANVIL_DURATION_SEC = 0.88f;
-	private static final float BLOCK_BURST_DURATION_SEC = 0.42f;
-	private static final float DROP_TIME_SEC = 0.17f;
+	private static final float BOULDER_DURATION_SEC = 0.86f;
+	private static final float BLOCK_BURST_DURATION_SEC = 0.44f;
+
+	// Precomputed jagged boulder fragments (14 multi-voxel stone chunks forming an irregular ~0.95m boulder).
+	// Each entry: {ox, oy, oz, hx, hy, hz, colorTier, breakDelayBias, scatterSpeed, spinRate}
+	private static final float[][] BOULDER_CHUNKS = {
+			// Core chunks (punch straight down through the centerline)
+			{  0.00f,  0.02f,  0.00f, 0.20f, 0.21f, 0.19f, 1f, 0.05f, 0.65f, 4.2f },
+			{ -0.10f, -0.18f,  0.08f, 0.16f, 0.15f, 0.15f, 0f, 0.00f, 1.05f, 5.6f },
+			{  0.11f,  0.19f, -0.07f, 0.15f, 0.16f, 0.14f, 2f, 0.08f, 0.90f, 4.8f },
+			// Outer jagged shell chunks (peel outward and tumble down around/through the body)
+			{  0.26f, -0.05f,  0.14f, 0.14f, 0.13f, 0.13f, 1f, 0.02f, 2.35f, 7.2f },
+			{ -0.25f,  0.04f,  0.16f, 0.13f, 0.15f, 0.12f, 3f, 0.03f, 2.50f, 6.8f },
+			{  0.18f, -0.14f, -0.22f, 0.13f, 0.12f, 0.14f, 0f, 0.01f, 2.65f, 7.8f },
+			{ -0.20f, -0.12f, -0.20f, 0.14f, 0.13f, 0.13f, 2f, 0.02f, 2.45f, 6.4f },
+			{  0.02f, -0.26f,  0.19f, 0.13f, 0.11f, 0.13f, 1f, 0.00f, 2.25f, 8.1f },
+			{ -0.04f, -0.24f, -0.19f, 0.12f, 0.12f, 0.14f, 3f, 0.00f, 2.40f, 7.4f },
+			{  0.25f,  0.16f, -0.11f, 0.13f, 0.13f, 0.12f, 2f, 0.06f, 2.15f, 6.9f },
+			{ -0.24f,  0.17f, -0.09f, 0.12f, 0.13f, 0.13f, 0f, 0.06f, 2.30f, 7.5f },
+			{  0.13f,  0.24f,  0.21f, 0.12f, 0.12f, 0.12f, 1f, 0.07f, 2.05f, 6.2f },
+			{ -0.12f,  0.26f,  0.19f, 0.13f, 0.11f, 0.12f, 3f, 0.07f, 2.20f, 7.1f },
+			{  0.01f,  0.32f, -0.04f, 0.14f, 0.11f, 0.13f, 2f, 0.09f, 1.75f, 5.9f },
+	};
 
 	private final int sourceId;
 	private final int targetId;
 	private final Vec3 fallbackPos;
 	private final boolean axeImpact;
-	private final boolean dropAnvil;
+	private final boolean dropBoulder;
 	private final float durationSec;
 	private final RadialActor controlHammerBurst;
 	private long startNanos = -1L;
@@ -41,27 +65,33 @@ public final class HammerStunActor implements EffectActor {
 		this.targetId = payload.targetId();
 		this.fallbackPos = payload.origin();
 		this.axeImpact = payload.yaw() > 0.5f;
-		this.dropAnvil = this.axeImpact && this.targetId > 0;
-		this.durationSec = this.dropAnvil ? ANVIL_DURATION_SEC : BLOCK_BURST_DURATION_SEC;
-		this.controlHammerBurst = this.axeImpact ? null : new RadialActor(payload) {
-			@Override protected float duration() { return HammerAnimation.DURATION; }
-			@Override protected float radius(float age) { return HammerAnimation.radius(age); }
-			@Override protected float opacity(float age) { return HammerAnimation.opacity(age); }
-			@Override protected int style() { return 0; }
-			@Override protected float styleExtra(float age) { return ShockwaveAnimation.chargeProgress(age); }
-		};
+		this.dropBoulder = this.axeImpact && this.targetId > 0;
+		this.durationSec = this.dropBoulder ? BOULDER_DURATION_SEC : BLOCK_BURST_DURATION_SEC;
+
+		if (!this.axeImpact) {
+			this.controlHammerBurst = new RadialActor(payload) {
+				@Override protected float duration() { return HammerAnimation.DURATION; }
+				@Override protected float radius(float age) { return HammerAnimation.radius(age); }
+				@Override protected float opacity(float age) { return HammerAnimation.opacity(age); }
+				@Override protected int style() { return 0; }
+				@Override protected float styleExtra(float age) { return ShockwaveAnimation.chargeProgress(age); }
+			};
+		} else {
+			this.controlHammerBurst = null;
+		}
 	}
 
 	@Override public int sourceId() { return sourceId; }
 
 	@Override
 	public boolean expired() {
-		return axeImpact && startNanos >= 0L && ageSec >= durationSec;
+		if (controlHammerBurst != null) return controlHammerBurst.expired();
+		return startNanos >= 0L && ageSec >= durationSec;
 	}
 
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
-		if (!axeImpact) {
+		if (controlHammerBurst != null) {
 			return controlHammerBurst.write(frame, slot);
 		}
 		if (startNanos < 0L) startNanos = frame.nanos;
@@ -77,170 +107,244 @@ public final class HammerStunActor implements EffectActor {
 		ageSec = (System.nanoTime() - startNanos) / 1_000_000_000.0f;
 		if (ageSec >= durationSec) return;
 
-		if (!dropAnvil) {
+		if (!dropBoulder) {
 			submitBlockBurst(poseStack, collector, cameraPos);
 			return;
 		}
 
-		Vec3 headAnchor = resolveHeadAnchor();
-		float cx = (float) (headAnchor.x - cameraPos.x);
-		float cz = (float) (headAnchor.z - cameraPos.z);
+		submitCrumblingBoulder(poseStack, collector, cameraPos);
+	}
 
-		float dropT = Math.clamp(ageSec / DROP_TIME_SEC, 0f, 1f);
-		float dropOffset = (1.0f - dropT * dropT) * 2.55f;
-		float sinceHit = ageSec - DROP_TIME_SEC;
-		float bounce = sinceHit > 0f && sinceHit < 0.18f
-				? (float) Math.abs(Math.sin((sinceHit / 0.18f) * Math.PI)) * 0.14f * (1.0f - sinceHit / 0.18f)
-				: 0f;
+	private void submitCrumblingBoulder(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
+		Minecraft mc = Minecraft.getInstance();
+		Entity target = mc.level != null ? mc.level.getEntity(targetId) : null;
 
-		float fadeIn = Math.min(1.0f, ageSec / 0.04f);
-		float fadeOut = 1.0f - smoothstep(0.62f, ANVIL_DURATION_SEC, ageSec);
-		float alpha = fadeIn * fadeOut;
-		if (alpha <= 0.01f) return;
+		double anchorX;
+		double footY;
+		float bodyH;
+		double anchorZ;
+		if (target != null) {
+			anchorX = target.getX();
+			footY = target.getY();
+			bodyH = Math.max(1.0f, (float) target.getBbHeight());
+			anchorZ = target.getZ();
+		} else {
+			anchorX = fallbackPos.x;
+			footY = fallbackPos.y - 1.35;
+			bodyH = 1.8f;
+			anchorZ = fallbackPos.z;
+		}
 
-		float anvilBaseY = (float) (headAnchor.y - cameraPos.y) + 0.06f + dropOffset + bounce;
-		float scale = 0.85f + 0.15f * fadeOut;
+		double headY = footY + bodyH;
+		// Start ~1.85m above the head and accelerate straight down through the body to the ground.
+		double startCenterY = headY + 1.85;
+		float t = ageSec;
+		double boulderCenterY = startCenterY - 8.4 * t - 12.0 * t * t;
 
-		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE, (pose, vc) -> {
-			emitVoxelAnvil(pose, vc, cx, anvilBaseY, cz, scale, alpha);
-			if (sinceHit >= 0f) {
-				emitImpactSparks(pose, vc, cx, (float) (headAnchor.y - cameraPos.y) + 0.05f, cz, sinceHit);
+		float fadeStart = 0.56f;
+		float fadeT = Mth.clamp((t - fadeStart) / (BOULDER_DURATION_SEC - fadeStart), 0f, 1f);
+		float globalAlpha = Math.min(1f, t / 0.04f) * (1f - fadeT * fadeT * (3f - 2f * fadeT));
+		if (globalAlpha <= 0.01f) return;
+
+		double relAnchorX = anchorX - cameraPos.x;
+		double relAnchorZ = anchorZ - cameraPos.z;
+		double relFootY = footY - cameraPos.y;
+		double relHeadY = headY - cameraPos.y;
+
+		// Emit each multi-voxel jagged boulder chunk independently so it stays packed on the drop,
+		// breaks apart sequentially as it passes through the head/body, and scatters along the floor.
+		for (int i = 0; i < BOULDER_CHUNKS.length; i++) {
+			float[] c = BOULDER_CHUNKS[i];
+			float ox = c[0];
+			float oy = c[1];
+			float oz = c[2];
+			float hx = c[3];
+			float hy = c[4];
+			float hz = c[5];
+			int colorTier = (int) c[6];
+			float breakDelayBias = c[7];
+			float scatterSpeed = c[8];
+			float spinRate = c[9];
+
+			// Solve roughly when this chunk reaches head height (~1.85 + oy below start at ~10.8 m/s avg)
+			float distToHead = 1.80f + oy;
+			float breakTime = Mth.clamp(distToHead / 11.2f + breakDelayBias, 0.09f, 0.27f);
+
+			double chunkX;
+			double chunkY;
+			double chunkZ;
+			float rotX;
+			float rotY;
+			float rotZ;
+			float scale = 1.0f;
+
+			if (t <= breakTime) {
+				// Still descending together inside the boulder above/entering the head
+				float intactSpin = t * 1.9f;
+				float cosS = (float) Math.cos(intactSpin);
+				float sinS = (float) Math.sin(intactSpin);
+				chunkX = relAnchorX + ox * cosS - oz * sinS;
+				chunkY = (boulderCenterY - cameraPos.y) + oy;
+				chunkZ = relAnchorZ + ox * sinS + oz * cosS;
+				rotX = t * 1.4f + i * 0.37f;
+				rotY = intactSpin + i * 0.61f;
+				rotZ = t * 1.1f + i * 0.23f;
+			} else {
+				float dt = t - breakTime;
+				float intactSpinAtBreak = breakTime * 1.9f;
+				float cosB = (float) Math.cos(intactSpinAtBreak);
+				float sinB = (float) Math.sin(intactSpinAtBreak);
+				float bx = ox * cosB - oz * sinB;
+				float bz = ox * sinB + oz * cosB;
+				double breakCenterY = startCenterY - 8.4 * breakTime - 12.0 * breakTime * breakTime;
+				double startChunkY = (breakCenterY - cameraPos.y) + oy;
+
+				// Radial outward burst + slight tangent swirl so shards crumble outward while falling through
+				float horizLen = (float) Math.sqrt(bx * bx + bz * bz);
+				float dirX = horizLen > 0.02f ? bx / horizLen : (float) Math.cos(i * 1.7f);
+				float dirZ = horizLen > 0.02f ? bz / horizLen : (float) Math.sin(i * 1.7f);
+				float tangX = -dirZ * 0.28f;
+				float tangZ = dirX * 0.28f;
+
+				float initialDownSpeed = 8.4f + 24.0f * breakTime;
+				float chunkDownSpeed = initialDownSpeed * (0.78f + 0.14f * (i % 3));
+				// Dragged outward scatter slows slightly over time
+				float lateralDist = scatterSpeed * dt * (1.0f - 0.35f * Math.min(1.0f, dt / 0.55f));
+				chunkX = relAnchorX + bx + (dirX + tangX) * lateralDist;
+				chunkZ = relAnchorZ + bz + (dirZ + tangZ) * lateralDist;
+
+				double rawY = startChunkY - chunkDownSpeed * dt - 7.5 * dt * dt;
+				double floorY = relFootY + hy * 0.72;
+				if (rawY < floorY) {
+					// Small rock bounce on ground contact, then settle and slide outward
+					double penetration = floorY - rawY;
+					double bounce = Math.sin(Math.min(1.0, penetration * 2.2) * Math.PI) * 0.16 * Math.max(0.0, 1.0 - dt * 1.6);
+					chunkY = floorY + bounce;
+				} else {
+					chunkY = rawY;
+				}
+
+				rotX = breakTime * 1.4f + i * 0.37f + dt * spinRate;
+				rotY = intactSpinAtBreak + i * 0.61f + dt * (spinRate * 0.85f);
+				rotZ = breakTime * 1.1f + i * 0.23f - dt * (spinRate * 0.65f);
+				scale = Math.max(0.28f, 1.0f - dt * 0.72f);
 			}
-		});
 
-		if (sinceHit >= 0f && sinceHit < 0.35f) {
-			float flash = 1.0f - sinceHit / 0.35f;
+			float[] rgb = stoneColor(colorTier);
+			final float fx = (float) chunkX;
+			final float fy = (float) chunkY;
+			final float fz = (float) chunkZ;
+			final float shx = hx * scale;
+			final float shy = hy * scale;
+			final float shz = hz * scale;
+			final float r = rgb[0], g = rgb[1], b = rgb[2];
+			final int chipIdx = i;
+
+			poseStack.pushPose();
+			poseStack.translate(fx, fy, fz);
+			poseStack.mulPose(new Matrix4f().rotate(new Quaternionf().rotateY(rotY).rotateX(rotX).rotateZ(rotZ)));
+			collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE, (pose, vc) -> {
+				WeaponVoxelRenderer.emitCube(pose, vc, 0f, 0f, 0f, shx, shy, shz, r, g, b, 0.96f * globalAlpha);
+				// Add a smaller asymmetric stone ridge so every chunk reads as rough broken rock
+				float subSignX = (chipIdx % 2 == 0) ? 0.55f : -0.55f;
+				float subSignY = (chipIdx % 3 == 0) ? 0.45f : -0.45f;
+				WeaponVoxelRenderer.emitCube(
+						pose, vc,
+						shx * subSignX, shy * subSignY, shz * 0.35f,
+						shx * 0.58f, shy * 0.52f, shz * 0.55f,
+						r * 0.84f, g * 0.84f, b * 0.85f, 0.92f * globalAlpha
+				);
+			});
+			poseStack.popPose();
+		}
+
+		// Trailing gravel pebbles + soft crumbling rock dust along the pass-through column
+		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
+				(pose, vc) -> emitPassThroughDust(pose, vc, (float) relAnchorX, (float) relHeadY, (float) relFootY, (float) relAnchorZ, t, globalAlpha));
+
+		// Restrained warm dust/crack pulse when crushing through head and ground
+		if (t > 0.11f && t < 0.48f) {
 			collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE, (pose, vc) -> {
-				WeaponVoxelRenderer.emitGlowSprite(pose, vc,
-						cx, (float) (headAnchor.y - cameraPos.y) + 0.12f, cz,
-						1.25f * (0.6f + 0.4f * (1f - flash)),
-						0.92f, 0.96f, 1.00f, flash * 0.55f);
+				float headPulse = 1.0f - Math.abs(t - 0.19f) / 0.10f;
+				if (headPulse > 0.0f) {
+					WeaponVoxelRenderer.emitGlowSprite(
+							pose, vc,
+							(float) relAnchorX, (float) (relHeadY - 0.15), (float) relAnchorZ,
+							0.52f, 0.88f, 0.66f, 0.42f, 0.28f * headPulse * globalAlpha
+					);
+				}
+				float footPulse = 1.0f - Math.abs(t - 0.34f) / 0.14f;
+				if (footPulse > 0.0f) {
+					WeaponVoxelRenderer.emitGlowSprite(
+							pose, vc,
+							(float) relAnchorX, (float) (relFootY + 0.12), (float) relAnchorZ,
+							0.68f, 0.82f, 0.60f, 0.38f, 0.24f * footPulse * globalAlpha
+					);
+				}
 			});
 		}
 	}
 
-	private Vec3 resolveHeadAnchor() {
-		var mc = Minecraft.getInstance();
-		if (mc.level != null && targetId > 0) {
-			Entity target = mc.level.getEntity(targetId);
-			if (target != null) {
-				return new Vec3(target.getX(), target.getY() + target.getBbHeight(), target.getZ());
-			}
-		}
-		return fallbackPos.add(0, 0.80, 0);
-	}
+	private void emitPassThroughDust(PoseStack.Pose pose, VertexConsumer vc,
+			float ax, float headY, float footY, float az, float t, float globalAlpha) {
+		if (t < 0.10f) return;
+		float dustAge = t - 0.10f;
+		float bodySpan = Math.max(0.9f, headY - footY);
 
-	private void emitVoxelAnvil(PoseStack.Pose pose, VertexConsumer vc,
-			float cx, float baseY, float cz, float s, float alpha) {
-		float v = 0.095f * s;
+		for (int i = 0; i < 24; i++) {
+			float frac = (i % 8) / 7.0f;
+			float spawnTime = 0.11f + frac * 0.22f;
+			if (t < spawnTime) continue;
 
-		for (int gx = -2; gx <= 2; gx++) {
-			for (int gz = -1; gz <= 1; gz++) {
-				boolean edge = Math.abs(gx) == 2 || Math.abs(gz) == 1;
-				float tone = edge ? 0.24f : 0.32f;
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						cx + gx * (v * 1.75f), baseY + v * 0.8f, cz + gz * (v * 1.85f),
-						v * 0.88f, v * 0.80f, v * 0.92f,
-						tone, tone + 0.02f, tone + 0.05f, alpha);
-			}
-		}
+			float pAge = t - spawnTime;
+			float angle = i * 2.39996f + dustAge * 0.7f;
+			float startY = headY - frac * bodySpan * 0.92f;
+			float radial = 0.18f + (0.95f + (i % 4) * 0.28f) * (1.0f - (float) Math.exp(-pAge * 4.8));
+			float px = ax + (float) Math.cos(angle) * radial;
+			float pz = az + (float) Math.sin(angle) * radial;
+			float py = (float) Math.max(footY + 0.06f, startY - pAge * (1.25f + (i % 3) * 0.45f));
 
-		for (int gy = 1; gy <= 2; gy++) {
-			for (int gx = -1; gx <= 1; gx++) {
-				float tone = (gx == 0) ? 0.30f : 0.22f;
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						cx + gx * (v * 1.55f), baseY + v * (1.5f + gy * 1.5f), cz,
-						v * 0.82f, v * 0.78f, v * 1.35f,
-						tone, tone + 0.02f, tone + 0.05f, alpha);
-			}
-		}
-
-		for (int gy = 0; gy < 2; gy++) {
-			for (int gx = -2; gx <= 3; gx++) {
-				for (int gz = -1; gz <= 1; gz++) {
-					boolean topLayer = (gy == 1);
-					boolean rim = topLayer && (gx == -2 || gx == 3 || Math.abs(gz) == 1);
-					float r = rim ? 0.76f : (topLayer ? 0.56f : 0.38f);
-					float g = rim ? 0.80f : (topLayer ? 0.60f : 0.41f);
-					float b = rim ? 0.88f : (topLayer ? 0.66f : 0.46f);
-					WeaponVoxelRenderer.emitCube(pose, vc,
-							cx + (gx - 0.35f) * (v * 1.75f), baseY + v * (5.2f + gy * 1.65f), cz + gz * (v * 1.85f),
-							v * 0.88f, v * 0.84f, v * 0.92f,
-							r, g, b, alpha);
-				}
-			}
-		}
-
-		WeaponVoxelRenderer.emitCube(pose, vc,
-				cx - 3.3f * (v * 1.75f), baseY + v * 6.5f, cz,
-				v * 1.05f, v * 0.75f, v * 1.15f,
-				0.64f, 0.68f, 0.75f, alpha);
-		WeaponVoxelRenderer.emitCube(pose, vc,
-				cx - 4.3f * (v * 1.75f), baseY + v * 6.8f, cz,
-				v * 0.75f, v * 0.52f, v * 0.68f,
-				0.82f, 0.86f, 0.94f, alpha);
-	}
-
-	private void emitImpactSparks(PoseStack.Pose pose, VertexConsumer vc,
-			float cx, float y, float cz, float sinceHit) {
-		float t = Math.clamp(sinceHit / 0.32f, 0f, 1f);
-		float fade = 1.0f - t;
-		if (fade <= 0.02f) return;
-
-		int sparks = 14;
-		for (int i = 0; i < sparks; i++) {
-			float ang = (i / (float) sparks) * (float) (Math.PI * 2.0);
-			float r = 0.25f + t * 1.15f;
-			float sx = cx + (float) Math.cos(ang) * r;
-			float sz = cz + (float) Math.sin(ang) * r;
-			float sy = y + (float) Math.sin(t * Math.PI) * 0.28f;
-
-			float size = 0.052f * (1.0f - 0.5f * t);
-			boolean whiteSpark = (i % 2 == 0);
-			WeaponVoxelRenderer.emitCube(pose, vc, sx, sy, sz, size, size, size,
-					whiteSpark ? 0.96f : 1.00f,
-					whiteSpark ? 0.98f : 0.65f,
-					whiteSpark ? 1.00f : 0.22f,
-					fade * 0.92f);
+			float pFade = Mth.clamp(1.0f - pAge / 0.56f, 0.0f, 1.0f);
+			float size = (0.06f + (i % 3) * 0.025f) * (0.65f + 0.65f * (1.0f - pFade));
+			float shade = 0.42f + (i % 4) * 0.055f;
+			WeaponVoxelRenderer.emitCube(
+					pose, vc, px, py, pz, size, size, size,
+					shade, shade * 0.95f, shade * 0.90f,
+					0.48f * pFade * globalAlpha
+			);
 		}
 	}
 
 	private void submitBlockBurst(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
-		float t = Math.clamp(ageSec / BLOCK_BURST_DURATION_SEC, 0f, 1f);
-		float fade = 1.0f - t * t;
-		if (fade <= 0.02f) return;
+		float progress = Mth.clamp(ageSec / BLOCK_BURST_DURATION_SEC, 0f, 1f);
+		float opacity = 1f - progress * progress;
+		if (opacity <= 0.01f) return;
 
-		float cx = (float) (fallbackPos.x - cameraPos.x);
-		float cy = (float) (fallbackPos.y - cameraPos.y);
-		float cz = (float) (fallbackPos.z - cameraPos.z);
+		float rx = (float) (fallbackPos.x - cameraPos.x);
+		float ry = (float) (fallbackPos.y - cameraPos.y);
+		float rz = (float) (fallbackPos.z - cameraPos.z);
 
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE, (pose, vc) -> {
-			int count = 12;
-			for (int i = 0; i < count; i++) {
+			for (int i = 0; i < 14; i++) {
 				float ang = i * 2.39996f;
-				float pitch = ((i % 3) - 1) * 0.35f;
-				float r = 0.15f + t * 0.85f;
-				float vx = cx + (float) Math.cos(ang) * r;
-				float vy = cy + pitch * r + 0.12f * (float) Math.sin(t * Math.PI);
-				float vz = cz + (float) Math.sin(ang) * r;
-				float s = 0.055f * (1.0f - 0.45f * t);
-				boolean brown = (i % 3 == 1);
-				WeaponVoxelRenderer.emitCube(pose, vc, vx, vy, vz, s, s, s,
-						brown ? 0.52f : 1.00f,
-						brown ? 0.24f : 0.50f,
-						brown ? 0.08f : 0.12f,
-						fade * 0.90f);
+				float speed = 1.6f + (i % 4) * 0.55f;
+				float dist = speed * ageSec;
+				float px = rx + (float) Math.cos(ang) * dist;
+				float pz = rz + (float) Math.sin(ang) * dist;
+				float py = ry + (0.65f + (i % 3) * 0.35f) * ageSec - 4.2f * ageSec * ageSec;
+				float s = (0.065f - 0.03f * progress) * (0.8f + 0.2f * (i % 2));
+				float[] rgb = stoneColor(i % 4);
+				WeaponVoxelRenderer.emitCube(pose, vc, px, py, pz, s, s, s, rgb[0], rgb[1], rgb[2], 0.92f * opacity);
 			}
-		});
-
-		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE, (pose, vc) -> {
-			WeaponVoxelRenderer.emitGlowSprite(pose, vc, cx, cy, cz, 0.95f * (0.6f + 0.4f * t),
-					1.0f, 0.52f, 0.14f, fade * 0.45f);
 		});
 	}
 
-	private static float smoothstep(float lo, float hi, float x) {
-		float t = Math.clamp((x - lo) / (hi - lo), 0f, 1f);
-		return t * t * (3f - 2f * t);
+	private static float[] stoneColor(int tier) {
+		return switch (tier) {
+			case 0 -> new float[] { 0.24f, 0.25f, 0.28f }; // dark slate
+			case 1 -> new float[] { 0.40f, 0.41f, 0.44f }; // granite midtone
+			case 2 -> new float[] { 0.55f, 0.55f, 0.57f }; // chipped limestone highlight
+			default -> new float[] { 0.46f, 0.36f, 0.29f }; // earthy mineral rock
+		};
 	}
 }
