@@ -16,8 +16,8 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 
 /**
- * Smooth hardware-rasterized 3D blood mesh renderer for Vampire ("Упир").
- * Uses continuous camera-aligned mitered ribbon strips and smooth-SDF billboard orbs/auras.
+ * Animated voxel + glow renderer for Vampire ("Упир").
+ * Renders articulated glowing red voxel cubes along moving splines plus soft atmospheric glow halos.
  */
 public final class GhoulMeshRenderer {
 	public static final RenderPipeline GHOUL_PIPELINE = RenderPipelines.register(
@@ -38,83 +38,37 @@ public final class GhoulMeshRenderer {
 
 	private GhoulMeshRenderer() {}
 
-	/**
-	 * Emits a continuous, gap-free camera-aligned ribbon strip from packed points (x, y, z, width, alpha).
-	 * Adjacent quads share exact edge vertices so curved tendrils have zero kinks or seams.
-	 */
-	public static void emitSmoothPolyline(PoseStack.Pose pose, VertexConsumer vc,
-			float[] pts, int startOffset, int count, float widthScale,
-			float kind, float seed, float pulse) {
-		if (count < 2) return;
-		float prevLx = 0, prevLy = 0, prevLz = 0;
-		float prevRx = 0, prevRy = 0, prevRz = 0;
-		float prevU = 0, prevA = 0;
-		boolean hasPrev = false;
+	/** Emits a 3D glowing voxel cube centered at (cx, cy, cz) with half-extents (hx, hy, hz). */
+	public static void emitVoxelCube(PoseStack.Pose pose, VertexConsumer vc,
+			float cx, float cy, float cz, float hx, float hy, float hz,
+			float kind, float seed, float pulse, float alpha) {
+		if (alpha <= 0.01f || hx <= 0.002f || hy <= 0.002f || hz <= 0.002f) return;
+		float x0 = cx - hx, x1 = cx + hx;
+		float y0 = cy - hy, y1 = cy + hy;
+		float z0 = cz - hz, z1 = cz + hz;
 
-		for (int i = 0; i < count; i++) {
-			int cur = startOffset + i * 5;
-			float px = pts[cur], py = pts[cur + 1], pz = pts[cur + 2];
-			float w = pts[cur + 3] * widthScale;
-			float a = pts[cur + 4];
-
-			int prevIdx = startOffset + Math.max(0, i - 1) * 5;
-			int nextIdx = startOffset + Math.min(count - 1, i + 1) * 5;
-			float tx = pts[nextIdx] - pts[prevIdx];
-			float ty = pts[nextIdx + 1] - pts[prevIdx + 1];
-			float tz = pts[nextIdx + 2] - pts[prevIdx + 2];
-			float tLenSq = tx * tx + ty * ty + tz * tz;
-			if (tLenSq < 1e-8f) {
-				hasPrev = false;
-				continue;
-			}
-
-			// Camera-relative position is (px, py, pz), so vector toward camera is (-px, -py, -pz)
-			float cx = -px, cy = -py, cz = -pz;
-			float sx = ty * cz - tz * cy;
-			float sy = tz * cx - tx * cz;
-			float sz = tx * cy - ty * cx;
-			float sLenSq = sx * sx + sy * sy + sz * sz;
-			if (sLenSq < 1e-8f) {
-				// Fallback if tangent points straight at camera
-				sx = -tz; sy = 0f; sz = tx;
-				sLenSq = sx * sx + sz * sz;
-				if (sLenSq < 1e-8f) { sx = 1f; sy = 0f; sz = 0f; sLenSq = 1f; }
-			}
-			float invS = (float) (1.0 / Math.sqrt(sLenSq));
-			sx *= invS * w;
-			sy *= invS * w;
-			sz *= invS * w;
-
-			float lx = px - sx, ly = py - sy, lz = pz - sz;
-			float rx = px + sx, ry = py + sy, rz = pz + sz;
-			float u = (float) i / (count - 1);
-
-			if (hasPrev && (prevA > 0.005f || a > 0.005f)) {
-				vertex(pose, vc, prevLx, prevLy, prevLz, prevU, 0f, kind, seed, pulse, prevA);
-				vertex(pose, vc, prevRx, prevRy, prevRz, prevU, 1f, kind, seed, pulse, prevA);
-				vertex(pose, vc, rx, ry, rz, u, 1f, kind, seed, pulse, a);
-				vertex(pose, vc, lx, ly, lz, u, 0f, kind, seed, pulse, a);
-			}
-
-			prevLx = lx; prevLy = ly; prevLz = lz;
-			prevRx = rx; prevRy = ry; prevRz = rz;
-			prevU = u; prevA = a;
-			hasPrev = true;
-		}
+		// +Y (top)
+		quad(pose, vc, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, kind, seed, pulse, alpha);
+		// -Y (bottom)
+		quad(pose, vc, x0, y0, z1, x0, y0, z0, x1, y0, z0, x1, y0, z1, kind, seed, pulse, alpha);
+		// +Z (south)
+		quad(pose, vc, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, kind, seed, pulse, alpha);
+		// -Z (north)
+		quad(pose, vc, x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0, kind, seed, pulse, alpha);
+		// +X (east)
+		quad(pose, vc, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1, kind, seed, pulse, alpha);
+		// -X (west)
+		quad(pose, vc, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, kind, seed, pulse, alpha);
 	}
 
-	/**
-	 * Emits a camera-facing billboard quad for smooth-SDF blood droplets (kind ~ 0.75)
-	 * or soft atmospheric aura mist (kind >= 0.90).
-	 */
-	public static void emitBillboardOrb(PoseStack.Pose pose, VertexConsumer vc,
+	/** Emits a camera-facing soft red glow halo behind/around voxel clusters (kind >= 0.90). */
+	public static void emitGlowHalo(PoseStack.Pose pose, VertexConsumer vc,
 			float cx, float cy, float cz, float radiusX, float radiusY,
-			float kind, float seed, float pulse, float alpha) {
-		if (alpha <= 0.005f || radiusX <= 0.0005f) return;
+			float seed, float pulse, float alpha) {
+		if (alpha <= 0.005f || radiusX <= 0.01f) return;
 		float distSq = cx * cx + cy * cy + cz * cz;
 		if (distSq < 1e-6f) return;
 
-		// Right vector = normalize(cross(toCam, worldUp))
 		float toCamX = -cx, toCamY = -cy, toCamZ = -cz;
 		float rx = -toCamZ, rz = toCamX;
 		float rLenSq = rx * rx + rz * rz;
@@ -125,7 +79,6 @@ public final class GhoulMeshRenderer {
 		} else {
 			float invR = (float) (1.0 / Math.sqrt(rLenSq));
 			rx *= invR; rz *= invR;
-			// Up vector = normalize(cross(right, toCam))
 			ux = -(rz * toCamY);
 			uy = rz * toCamX - rx * toCamZ;
 			uz = rx * toCamY;
@@ -138,28 +91,22 @@ public final class GhoulMeshRenderer {
 		float rvx = rx * radiusX, rvz = rz * radiusX;
 		float uvx = ux * radiusY, uvy = uy * radiusY, uvz = uz * radiusY;
 
-		vertex(pose, vc, cx - rvx - uvx, cy - uvy, cz - rvz - uvz, 0f, 0f, kind, seed, pulse, alpha);
-		vertex(pose, vc, cx + rvx - uvx, cy - uvy, cz + rvz - uvz, 1f, 0f, kind, seed, pulse, alpha);
-		vertex(pose, vc, cx + rvx + uvx, cy + uvy, cz + rvz + uvz, 1f, 1f, kind, seed, pulse, alpha);
-		vertex(pose, vc, cx - rvx + uvx, cy + uvy, cz - rvz + uvz, 0f, 1f, kind, seed, pulse, alpha);
+		vertex(pose, vc, cx - rvx - uvx, cy - uvy, cz - rvz - uvz, 0f, 0f, 0.95f, seed, pulse, alpha);
+		vertex(pose, vc, cx + rvx - uvx, cy - uvy, cz + rvz - uvz, 1f, 0f, 0.95f, seed, pulse, alpha);
+		vertex(pose, vc, cx + rvx + uvx, cy + uvy, cz + rvz + uvz, 1f, 1f, 0.95f, seed, pulse, alpha);
+		vertex(pose, vc, cx - rvx + uvx, cy + uvy, cz - rvz + uvz, 0f, 1f, 0.95f, seed, pulse, alpha);
 	}
 
-	/** Emits a horizontal arterial floor pulse ring. */
-	public static void emitFloorRing(PoseStack.Pose pose, VertexConsumer vc,
-			float cx, float cy, float cz, float innerR, float outerR, int segments,
+	private static void quad(PoseStack.Pose pose, VertexConsumer vc,
+			float x0, float y0, float z0,
+			float x1, float y1, float z1,
+			float x2, float y2, float z2,
+			float x3, float y3, float z3,
 			float kind, float seed, float pulse, float alpha) {
-		if (alpha <= 0.005f || outerR <= innerR) return;
-		double step = Math.PI * 2.0 / segments;
-		for (int i = 0; i < segments; i++) {
-			double a0 = i * step, a1 = (i + 1) * step;
-			float c0 = (float) Math.cos(a0), s0 = (float) Math.sin(a0);
-			float c1 = (float) Math.cos(a1), s1 = (float) Math.sin(a1);
-			float u0 = (float) i / segments, u1 = (float) (i + 1) / segments;
-			vertex(pose, vc, cx + c0 * innerR, cy, cz + s0 * innerR, u0, 0f, kind, seed, pulse, alpha);
-			vertex(pose, vc, cx + c0 * outerR, cy, cz + s0 * outerR, u0, 1f, kind, seed, pulse, alpha);
-			vertex(pose, vc, cx + c1 * outerR, cy, cz + s1 * outerR, u1, 1f, kind, seed, pulse, alpha);
-			vertex(pose, vc, cx + c1 * innerR, cy, cz + s1 * innerR, u1, 0f, kind, seed, pulse, alpha);
-		}
+		vertex(pose, vc, x0, y0, z0, 0f, 0f, kind, seed, pulse, alpha);
+		vertex(pose, vc, x1, y1, z1, 1f, 0f, kind, seed, pulse, alpha);
+		vertex(pose, vc, x2, y2, z2, 1f, 1f, kind, seed, pulse, alpha);
+		vertex(pose, vc, x3, y3, z3, 0f, 1f, kind, seed, pulse, alpha);
 	}
 
 	private static void vertex(PoseStack.Pose pose, VertexConsumer vc,
