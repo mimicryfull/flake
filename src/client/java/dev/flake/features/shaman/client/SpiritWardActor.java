@@ -11,23 +11,32 @@ import dev.flake.render.vfx.SlotWriter;
 import dev.flake.render.vfx.VfxTimeline;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/** Smoothly following emerald-teal 3D voxel Spirit Ward ring (r = 4.0) with rising spirit ember cubes. */
+/**
+ * Emerald Spirit Ward aura (style = 19): projects green floor pulsation onto the ground below
+ * the caster so jumps look crisp and natural, paired with rising spirit wisps around the player.
+ */
 public final class SpiritWardActor implements EffectActor {
 	private static final float DURATION_SEC = ShamanRuntime.WARD_TICKS / 20.0f;
 	private static final float WARD_RADIUS = (float) ShamanRuntime.WARD_RADIUS;
-	private static final int RING_SEGMENTS = 32;
-	private static final int EMBER_COUNT = 16;
+	private static final int EMBER_COUNT = 14;
 
 	private final int sourceId;
 	private final VfxTimeline timeline = new VfxTimeline();
 	private Vec3 lastOrigin;
+	private float lastGroundY;
 	private float ageSec;
 
 	public SpiritWardActor(CombatVfxPayload payload) {
 		this.sourceId = payload.sourceId();
 		this.lastOrigin = payload.origin();
+		this.lastGroundY = (float) payload.origin().y;
 	}
 
 	@Override public int sourceId() { return sourceId; }
@@ -42,7 +51,55 @@ public final class SpiritWardActor implements EffectActor {
 		return ageSec >= DURATION_SEC;
 	}
 
-	@Override public boolean write(RenderFrame frame, SlotWriter slot) { return expired(); }
+	private Vec3 resolveCenter(Level level, float partial) {
+		if (level != null) {
+			Entity entity = level.getEntity(sourceId);
+			if (entity != null) {
+				lastOrigin = entity.getPosition(partial);
+				BlockHitResult hit = level.clip(new ClipContext(
+						lastOrigin.add(0.0, 0.35, 0.0),
+						lastOrigin.subtract(0.0, 8.0, 0.0),
+						ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
+				if (hit.getType() == HitResult.Type.BLOCK) {
+					lastGroundY = (float) hit.getLocation().y;
+				} else {
+					lastGroundY = (float) lastOrigin.y;
+				}
+			}
+		}
+		return lastOrigin;
+	}
+
+	private float computeOpacity() {
+		float spawnRaw = Math.clamp(ageSec / 0.18f, 0f, 1f);
+		float spawn = spawnRaw * spawnRaw * (3.0f - 2.0f * spawnRaw);
+		float tailFade = Math.clamp((DURATION_SEC - ageSec) / 0.35f, 0f, 1f);
+		return spawn * tailFade;
+	}
+
+	@Override
+	public boolean write(RenderFrame frame, SlotWriter slot) {
+		ageSec = timeline.sample(frame.nanos, frame.client.isPaused());
+		if (expired()) return true;
+
+		Vec3 center = resolveCenter(frame.client.level, frame.partial);
+		float opacity = computeOpacity();
+		float spawnRaw = Math.clamp(ageSec / 0.18f, 0f, 1f);
+		float radius = WARD_RADIUS * (0.85f + 0.15f * spawnRaw);
+		float jumpHeight = Math.max(0.0f, (float) (center.y - lastGroundY));
+
+		float[] values = slot.values;
+		values[slot.position] = (float) (center.x - frame.camera.x);
+		values[slot.position + 1] = (float) (lastGroundY - frame.camera.y);
+		values[slot.position + 2] = (float) (center.z - frame.camera.z);
+		values[slot.position + 3] = radius;
+
+		values[slot.style] = opacity;
+		values[slot.style + 1] = ageSec;
+		values[slot.style + 2] = 19.0f;
+		values[slot.style + 3] = jumpHeight;
+		return false;
+	}
 
 	@Override
 	public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
@@ -50,109 +107,62 @@ public final class SpiritWardActor implements EffectActor {
 		ageSec = timeline.sample(System.nanoTime(), mc.isPaused());
 		if (expired()) return;
 
-		Vec3 center = lastOrigin;
-		if (mc.level != null) {
-			var entity = mc.level.getEntity(sourceId);
-			if (entity != null) {
-				float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-				center = entity.getPosition(partial);
-				lastOrigin = center;
-			}
-		}
-
+		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		Vec3 center = resolveCenter(mc.level, partial);
 		double dx = center.x - cameraPos.x;
 		double dy = center.y - cameraPos.y;
 		double dz = center.z - cameraPos.z;
 		if (dx * dx + dy * dy + dz * dz > 64.0 * 64.0) return;
 
-		float spawnRaw = Math.clamp(ageSec / 0.18f, 0f, 1f);
-		float spawn = spawnRaw * spawnRaw * (3.0f - 2.0f * spawnRaw);
-		float tailFade = Math.clamp((DURATION_SEC - ageSec) / 0.35f, 0f, 1f);
-		float opacity = spawn * tailFade;
+		float opacity = computeOpacity();
 		if (opacity <= 0.01f) return;
 
-		// Subtle 1s heal pulse beat
 		float healPhase = ageSec % 1.0f;
 		float pulse = Math.max(0.0f, 1.0f - healPhase / 0.38f);
-		float radius = WARD_RADIUS * (0.82f + 0.18f * spawn);
+		float groundDy = (float) (lastGroundY - cameraPos.y);
 
+		// Ground-projected perimeter accent motes (remain flush on floor even while jumping)
+		poseStack.pushPose();
+		poseStack.translate((float) dx, groundDy, (float) dz);
+		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
+				(pose, vc) -> emitGroundEmbers(pose, vc, pulse, opacity));
+		poseStack.popPose();
+
+		// Lightweight rising emerald motes tracking player body smoothly through jumps
 		poseStack.pushPose();
 		poseStack.translate((float) dx, (float) dy, (float) dz);
-
-		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE,
-				(pose, vc) -> emitSpiritRing(pose, vc, radius, pulse, opacity));
-
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
-				(pose, vc) -> emitSpiritEmbers(pose, vc, radius, pulse, opacity));
-
-		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE,
-				(pose, vc) -> emitWardGlows(pose, vc, radius, pulse, opacity));
-
+				(pose, vc) -> emitBodyWisps(pose, vc, pulse, opacity));
 		poseStack.popPose();
 	}
 
-	private void emitSpiritRing(PoseStack.Pose pose, VertexConsumer vc, float radius, float pulse, float opacity) {
-		float segStep = (float) (Math.PI * 2.0 / RING_SEGMENTS);
-		float spin = ageSec * 0.42f;
-
-		for (int i = 0; i < RING_SEGMENTS; i++) {
-			float ang = i * segStep + spin;
-			float x = (float) Math.cos(ang) * radius;
-			float z = (float) Math.sin(ang) * radius;
-			boolean pillar = (i % 4 == 0);
-			float wave = (float) Math.sin(ageSec * 3.0f + i * 0.6f) * 0.025f;
-			float hy = pillar ? (0.075f + 0.030f * pulse) : 0.024f;
-			float w = pillar ? 0.055f : 0.042f;
-			float r = pillar ? 0.24f : 0.10f;
-			float g = pillar ? (0.94f + 0.06f * pulse) : 0.80f;
-			float b = pillar ? 0.78f : 0.64f;
-			WeaponVoxelRenderer.emitCube(pose, vc, x, 0.04f + hy + wave, z, w, hy, w, r, g, b, opacity * (pillar ? 0.90f : 0.72f));
+	private void emitGroundEmbers(PoseStack.Pose pose, VertexConsumer vc, float pulse, float opacity) {
+		for (int i = 0; i < 8; i++) {
+			float ang = i * (float) (Math.PI * 0.25) + ageSec * 0.55f;
+			float x = (float) Math.cos(ang) * WARD_RADIUS;
+			float z = (float) Math.sin(ang) * WARD_RADIUS;
+			float h = 0.045f + 0.025f * pulse;
+			WeaponVoxelRenderer.emitCube(pose, vc, x, h, z, 0.040f, h, 0.040f,
+					0.24f, 0.96f, 0.52f, opacity * 0.65f);
 		}
 	}
 
-	private void emitSpiritEmbers(PoseStack.Pose pose, VertexConsumer vc, float radius, float pulse, float opacity) {
-		// Soft inner spirit circle shimmer
-		float innerRadius = radius * 0.95f;
-		float segStep = (float) (Math.PI * 2.0 / 24);
-		float counterSpin = -ageSec * 0.55f;
-		for (int i = 0; i < 24; i++) {
-			float ang = i * segStep + counterSpin;
-			float x = (float) Math.cos(ang) * innerRadius;
-			float z = (float) Math.sin(ang) * innerRadius;
-			WeaponVoxelRenderer.emitCube(pose, vc, x, 0.028f, z, 0.052f, 0.012f, 0.052f,
-					0.16f, 0.90f, 0.74f, opacity * (0.28f + 0.18f * pulse));
-		}
-
-		// Gently rising emerald-teal spirit ember cubes across the ward zone
+	private void emitBodyWisps(PoseStack.Pose pose, VertexConsumer vc, float pulse, float opacity) {
 		for (int i = 0; i < EMBER_COUNT; i++) {
-			float phase = (ageSec * 0.62f + i / (float) EMBER_COUNT) % 1.0f;
-			float ang = i * 2.39996f + ageSec * 0.45f;
-			float radialFrac = 0.22f + ((i * 37) % 100) / 100.0f * 0.74f;
-			float rDist = radius * radialFrac;
+			float phase = (ageSec * 0.72f + i / (float) EMBER_COUNT) % 1.0f;
+			float ang = i * 2.39996f + ageSec * 1.45f;
+			float rDist = 0.62f + 0.28f * (1.0f - phase * 0.5f);
 			float ex = (float) Math.cos(ang) * rDist;
 			float ez = (float) Math.sin(ang) * rDist;
-			float ey = 0.08f + phase * 1.45f;
+			float ey = 0.12f + phase * 1.65f;
 			float fade = (float) Math.sin(phase * Math.PI);
-			float size = (0.024f + (i % 3) * 0.008f) * (0.65f + 0.35f * fade);
+			float size = (0.022f + (i % 2) * 0.008f) * (0.70f + 0.30f * pulse);
 			boolean bright = (i % 3 == 0);
-			WeaponVoxelRenderer.emitCube(pose, vc, ex, ey, ez, size, size * 1.2f, size,
-					bright ? 0.38f : 0.12f,
-					bright ? 1.00f : 0.86f,
-					bright ? 0.86f : 0.70f,
-					opacity * fade * 0.72f);
-		}
-	}
-
-	private void emitWardGlows(PoseStack.Pose pose, VertexConsumer vc, float radius, float pulse, float opacity) {
-		float spin = ageSec * 0.42f;
-		float glowAlpha = opacity * (0.24f + 0.22f * pulse);
-		float glowRad = 0.42f + 0.16f * pulse;
-		for (int i = 0; i < 8; i++) {
-			float ang = i * (float) (Math.PI * 0.25) + spin;
-			float x = (float) Math.cos(ang) * radius;
-			float z = (float) Math.sin(ang) * radius;
-			WeaponVoxelRenderer.emitGlowSprite(pose, vc, x, 0.14f, z, glowRad,
-					0.16f, 0.96f, 0.76f, glowAlpha);
+			WeaponVoxelRenderer.emitCube(pose, vc, ex, ey, ez, size, size * 1.25f, size,
+					bright ? 0.58f : 0.16f,
+					bright ? 1.00f : 0.92f,
+					bright ? 0.74f : 0.48f,
+					opacity * fade * 0.74f);
 		}
 	}
 }

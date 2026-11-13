@@ -49,16 +49,13 @@ public final class FlakeCreativeTab {
 			ActiveItem.VOID_ANCHOR,
 			ActiveItem.STORM_HARPOON,
 			ActiveItem.AXE_OF_CUMSHOT,
-			ActiveItem.HUNTER_MARK,
 			ActiveItem.DARK_CUBE,
-			ActiveItem.SMOKE_BOMB,
 			// Defense
 			ActiveItem.MIRROR_TRAP,
 			// Buffs
 			ActiveItem.SPARK_SYRINGE,
 			ActiveItem.CRYSTAL_CLAW,
 			ActiveItem.MATADORA,
-			ActiveItem.ADRENALINE,
 			// Mobility
 			ActiveItem.PHASE_CRYSTAL);
 

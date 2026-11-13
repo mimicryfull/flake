@@ -7,23 +7,26 @@ import dev.flake.render.vfx.CombatVfxPayload;
 import dev.flake.render.vfx.EffectActor;
 import dev.flake.render.vfx.RenderFrame;
 import dev.flake.render.vfx.SlotWriter;
+import dev.flake.render.vfx.VfxTimeline;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 3D metallic-crimson voxel chain link stream connecting the Chain Blade wielder to the pulled enemy.
+ * Reworked Chain Blade VFX: sleek glowing crimson-obsidian energy lash rendered in post-shader
+ * (`style = 21`) with a sharp razor hook claw & crimson impact sparks (no blocky link cubes).
  */
 public final class ChainBladeActor implements EffectActor {
-	private static final float DURATION_SEC = 0.72f;
-	private static final int LINK_COUNT = 16;
+	private static final float DURATION_SEC = 0.68f;
+	private static final int SEGMENTS = 14;
 
 	private final int sourceId;
 	private final int targetId;
 	private final Vec3 fallbackOrigin;
 	private final Vec3 fallbackAim;
-	private long startNanos = -1L;
+	private final VfxTimeline timeline = new VfxTimeline();
 	private float ageSec;
 
 	public ChainBladeActor(CombatVfxPayload payload) {
@@ -35,29 +38,108 @@ public final class ChainBladeActor implements EffectActor {
 
 	@Override public int sourceId() { return sourceId; }
 
-	@Override public boolean expired() { return startNanos >= 0L && ageSec >= DURATION_SEC; }
+	@Override
+	public boolean replaces(CombatVfxPayload payload) {
+		return payload.sourceId() == sourceId && payload.phase() == CombatVfxPayload.Phase.CHAIN_BLADE_PULL;
+	}
+
+	@Override public boolean expired() { return ageSec >= DURATION_SEC; }
+
+	private float computeAlpha() {
+		float progress = Math.clamp(ageSec / DURATION_SEC, 0f, 1f);
+		float popIn = Math.min(1.0f, ageSec / 0.045f);
+		float fade = 1.0f - Math.clamp((progress - 0.55f) / 0.45f, 0f, 1f);
+		return popIn * fade * fade;
+	}
+
+	private Vec3 resolveStart(Level level, float partial) {
+		if (level == null) return fallbackOrigin;
+		Entity src = level.getEntity(sourceId);
+		if (src == null) return fallbackOrigin;
+		Vec3 look = src.getViewVector(partial);
+		Vec3 rawRight = look.cross(new Vec3(0, 1, 0));
+		Vec3 right = rawRight.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : rawRight.normalize();
+		return src.getEyePosition(partial).add(look.scale(0.45)).add(right.scale(0.28)).add(0, -0.26, 0);
+	}
+
+	private Vec3 resolveEnd(Level level, float partial) {
+		if (level == null || targetId < 0) return fallbackAim;
+		Entity tgt = level.getEntity(targetId);
+		if (tgt == null) return fallbackAim;
+		return tgt.getPosition(partial).add(0, tgt.getBbHeight() * 0.55, 0);
+	}
+
+	private Vec3[] buildWhipPoints(Vec3 start, Vec3 end) {
+		Vec3 delta = end.subtract(start);
+		double len = Math.max(0.25, delta.length());
+		Vec3 dir = delta.lengthSqr() > 1e-6 ? delta.scale(1.0 / len) : new Vec3(0, 0, 1);
+		Vec3 rawRight = dir.cross(new Vec3(0, 1, 0));
+		Vec3 right = rawRight.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : rawRight.normalize();
+		Vec3 up = right.cross(dir).normalize();
+
+		float extend = Math.min(1.0f, ageSec / 0.085f);
+		float whipDecay = (float) Math.exp(-ageSec * 8.0f);
+		Vec3[] pts = new Vec3[SEGMENTS + 1];
+		for (int i = 0; i <= SEGMENTS; i++) {
+			float t = (i / (float) SEGMENTS) * extend;
+			float sag = (float) Math.sin(t * Math.PI) * (-0.18f * whipDecay - 0.04f);
+			float wave = (float) Math.sin(t * 9.0f - ageSec * 24.0f) * (0.14f * whipDecay);
+			pts[i] = start.add(dir.scale(t * len)).add(up.scale(sag)).add(right.scale(wave));
+		}
+		return pts;
+	}
 
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
-		if (startNanos < 0L) startNanos = frame.nanos;
-		ageSec = (frame.nanos - startNanos) / 1_000_000_000.0f;
-		return ageSec >= DURATION_SEC;
+		ageSec = timeline.sample(frame.nanos, frame.client.isPaused());
+		if (expired()) return true;
+
+		Vec3 start = resolveStart(frame.client.level, frame.partial);
+		Vec3 end = resolveEnd(frame.client.level, frame.partial);
+		Vec3[] pts = buildWhipPoints(start, end);
+		Vec3 mid = start.add(end).scale(0.5);
+		float boundRadius = (float) (start.distanceTo(end) * 0.55 + 1.5);
+		float alpha = computeAlpha();
+
+		float[] values = slot.values;
+		values[slot.position] = (float) (mid.x - frame.camera.x);
+		values[slot.position + 1] = (float) (mid.y - frame.camera.y);
+		values[slot.position + 2] = (float) (mid.z - frame.camera.z);
+		values[slot.position + 3] = boundRadius;
+
+		values[slot.style] = alpha;
+		values[slot.style + 1] = ageSec;
+		values[slot.style + 2] = 21.0f;
+		values[slot.style + 3] = 0.0f;
+
+		values[slot.material] = SEGMENTS;
+		for (int i = 0; i < SEGMENTS; i++) {
+			int sb = slot.segment + i * 4;
+			int eb = slot.segmentEnd + i * 4;
+			values[sb] = (float) (pts[i].x - frame.camera.x);
+			values[sb + 1] = (float) (pts[i].y - frame.camera.y);
+			values[sb + 2] = (float) (pts[i].z - frame.camera.z);
+			values[sb + 3] = 0.022f;
+			values[eb] = (float) (pts[i + 1].x - frame.camera.x);
+			values[eb + 1] = (float) (pts[i + 1].y - frame.camera.y);
+			values[eb + 2] = (float) (pts[i + 1].z - frame.camera.z);
+			values[eb + 3] = 1.0f;
+		}
+		return false;
 	}
 
 	@Override
 	public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
-		if (startNanos < 0L) startNanos = System.nanoTime();
-		ageSec = (System.nanoTime() - startNanos) / 1_000_000_000.0f;
-		if (ageSec >= DURATION_SEC) return;
+		Minecraft mc = Minecraft.getInstance();
+		ageSec = timeline.sample(System.nanoTime(), mc.isPaused());
+		if (expired() || mc.level == null) return;
 
-		float progress = Math.clamp(ageSec / DURATION_SEC, 0f, 1f);
-		float popIn = Math.min(1.0f, ageSec / 0.055f);
-		float fade = 1.0f - Math.clamp((progress - 0.58f) / 0.42f, 0f, 1f);
-		float alpha = popIn * fade * fade;
+		float alpha = computeAlpha();
 		if (alpha <= 0.015f) return;
 
-		Vec3 start = resolveStart(fallbackOrigin);
-		Vec3 end = resolveEnd(fallbackAim);
+		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		Vec3 start = resolveStart(mc.level, partial);
+		Vec3 end = resolveEnd(mc.level, partial);
 		Vec3 delta = end.subtract(start);
 		double len = delta.length();
 		if (len < 0.25) return;
@@ -67,135 +149,45 @@ public final class ChainBladeActor implements EffectActor {
 		Vec3 right = rawRight.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : rawRight.normalize();
 		Vec3 up = right.cross(dir).normalize();
 
-		// Extension surges out rapidly on cast, then snaps taut as the enemy is yanked inward.
-		float extend = Math.min(1.0f, progress / 0.14f);
-		float whipDecay = (float) Math.exp(-ageSec * 7.5f);
-
-		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE,
-				(pose, vc) -> emitChainLinks(pose, vc, cameraPos, start, dir, right, up, len, extend, whipDecay, alpha));
+		float progress = Math.clamp(ageSec / DURATION_SEC, 0f, 1f);
+		float extend = Math.min(1.0f, ageSec / 0.085f);
+		Vec3 hookPos = start.add(dir.scale(len * extend));
 
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
-				(pose, vc) -> emitHookSparks(pose, vc, cameraPos, end, dir, right, up, progress, alpha));
+				(pose, vc) -> emitRazorHookAndSparks(pose, vc, cameraPos, hookPos, end, dir, right, up, progress, alpha));
 
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE,
-				(pose, vc) -> emitHookGlow(pose, vc, cameraPos, start, end, dir, len, extend, alpha));
+				(pose, vc) -> WeaponVoxelRenderer.emitGlowSprite(pose, vc,
+						(float) (hookPos.x - cameraPos.x), (float) (hookPos.y - cameraPos.y), (float) (hookPos.z - cameraPos.z),
+						0.52f, 1.00f, 0.22f, 0.28f, 0.42f * alpha));
 	}
 
-	private Vec3 resolveStart(Vec3 fallback) {
-		var mc = Minecraft.getInstance();
-		if (mc.level == null) return fallback;
-		Entity src = mc.level.getEntity(sourceId);
-		if (src == null) return fallback;
-		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-		Vec3 look = src.getViewVector(partial);
-		Vec3 rawRight = look.cross(new Vec3(0, 1, 0));
-		Vec3 right = rawRight.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : rawRight.normalize();
-		return src.getEyePosition(partial).add(look.scale(0.50)).add(right.scale(0.28)).add(0, -0.32, 0);
-	}
-
-	private Vec3 resolveEnd(Vec3 fallback) {
-		var mc = Minecraft.getInstance();
-		if (mc.level == null || targetId < 0) return fallback;
-		Entity tgt = mc.level.getEntity(targetId);
-		if (tgt == null) return fallback;
-		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-		return tgt.getPosition(partial).add(0, tgt.getBbHeight() * 0.55, 0);
-	}
-
-	private void emitChainLinks(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
-			Vec3 start, Vec3 dir, Vec3 right, Vec3 up, double len, float extend, float whipDecay, float alpha) {
-		int links = Math.max(6, Math.min(LINK_COUNT, (int) Math.ceil(len * 2.2)));
-		for (int i = 0; i < links; i++) {
-			float t = (i + 0.5f) / links;
-			if (t > extend) continue;
-
-			// Slight whipping S-curve that pulls taut quickly
-			float sag = (float) Math.sin(t * Math.PI) * (-0.16f * whipDecay);
-			float wave = (float) Math.sin(t * 10.0f - ageSec * 22.0f) * (0.09f * whipDecay);
-			Vec3 center = start.add(dir.scale(t * len)).add(up.scale(sag)).add(right.scale(wave));
-
-			boolean crimsonLink = (i % 3 == 1) || i == links - 1;
-			boolean horizontal = (i % 2 == 0);
-			Vec3 sideA = horizontal ? right : up;
-			Vec3 sideB = horizontal ? up : right;
-
-			float r, g, b;
-			if (i == links - 1) {
-				r = 1.00f; g = 0.24f; b = 0.22f; // bright crimson hook clasp
-			} else if (crimsonLink) {
-				r = 0.88f; g = 0.12f; b = 0.16f; // deep crimson link
-			} else if (i % 2 == 0) {
-				r = 0.64f; g = 0.68f; b = 0.74f; // cold steel
-			} else {
-				r = 0.34f; g = 0.36f; b = 0.42f; // dark forged iron
-			}
-
-			float linkHalfSpan = 0.085f;
-			float linkHalfLen = Math.min(0.16f, (float) (len / links) * 0.46f);
-			float barThick = 0.030f;
-
-			// Two parallel side rails + front/back end caps forming a hollow 3D voxel chain link
-			for (int s = -1; s <= 1; s += 2) {
-				Vec3 rail = center.add(sideA.scale(s * linkHalfSpan));
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) (rail.x - cam.x), (float) (rail.y - cam.y), (float) (rail.z - cam.z),
-						barThick, barThick, barThick, r, g, b, alpha * 0.94f);
-				Vec3 railFwd = rail.add(dir.scale(linkHalfLen * 0.6f));
-				Vec3 railBack = rail.add(dir.scale(-linkHalfLen * 0.6f));
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) (railFwd.x - cam.x), (float) (railFwd.y - cam.y), (float) (railFwd.z - cam.z),
-						barThick, barThick, barThick, r, g, b, alpha * 0.94f);
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) (railBack.x - cam.x), (float) (railBack.y - cam.y), (float) (railBack.z - cam.z),
-						barThick, barThick, barThick, r, g, b, alpha * 0.94f);
-			}
-			// End cap bridging the two rails at front and back
-			Vec3 capFwd = center.add(dir.scale(linkHalfLen));
-			Vec3 capBack = center.add(dir.scale(-linkHalfLen));
-			float capThick = 0.028f;
-			for (int s = -1; s <= 1; s++) {
-				Vec3 p1 = capFwd.add(sideA.scale(s * linkHalfSpan * 0.55f)).add(sideB.scale(0.01f));
-				Vec3 p2 = capBack.add(sideA.scale(s * linkHalfSpan * 0.55f)).add(sideB.scale(-0.01f));
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) (p1.x - cam.x), (float) (p1.y - cam.y), (float) (p1.z - cam.z),
-						capThick, capThick, capThick, r * 0.92f, g * 0.92f, b * 0.92f, alpha * 0.92f);
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) (p2.x - cam.x), (float) (p2.y - cam.y), (float) (p2.z - cam.z),
-						capThick, capThick, capThick, r * 0.92f, g * 0.92f, b * 0.92f, alpha * 0.92f);
-			}
+	private void emitRazorHookAndSparks(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
+			Vec3 hookPos, Vec3 end, Vec3 dir, Vec3 right, Vec3 up, float progress, float alpha) {
+		// Sharp minimalist obsidian-crimson barb clasp at hook tip
+		WeaponVoxelRenderer.emitCube(pose, vc,
+				(float) (hookPos.x - cam.x), (float) (hookPos.y - cam.y), (float) (hookPos.z - cam.z),
+				0.040f, 0.040f, 0.040f, 1.00f, 0.36f, 0.30f, alpha * 0.92f);
+		for (int side = -1; side <= 1; side += 2) {
+			Vec3 barb = hookPos.subtract(dir.scale(0.14)).add(right.scale(side * 0.095));
+			WeaponVoxelRenderer.emitCube(pose, vc,
+					(float) (barb.x - cam.x), (float) (barb.y - cam.y), (float) (barb.z - cam.z),
+					0.026f, 0.026f, 0.026f, 0.72f, 0.06f, 0.14f, alpha * 0.88f);
 		}
-	}
 
-	private void emitHookSparks(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
-			Vec3 end, Vec3 dir, Vec3 right, Vec3 up, float progress, float alpha) {
-		int sparks = 8;
-		float burst = Math.min(1.0f, progress / 0.35f);
+		// Crisp ember sparks bursting backward off impact
+		int sparks = 6;
+		float burst = Math.min(1.0f, progress / 0.32f);
 		for (int i = 0; i < sparks; i++) {
-			float ang = (i / (float) sparks) * (float) (Math.PI * 2.0) + progress * 2.4f;
-			float rad = 0.16f + 0.42f * burst;
+			float ang = (i / (float) sparks) * (float) (Math.PI * 2.0) + progress * 2.8f;
+			float rad = 0.14f + 0.38f * burst;
 			Vec3 p = end.add(right.scale(Math.cos(ang) * rad))
 					.add(up.scale(Math.sin(ang) * rad))
-					.add(dir.scale(-0.22f * burst));
-			float s = 0.034f * (1.0f - 0.45f * progress);
-			boolean bright = (i % 2 == 0);
+					.add(dir.scale(-0.20f * burst));
+			float s = 0.024f * (1.0f - 0.50f * progress);
 			WeaponVoxelRenderer.emitCube(pose, vc,
 					(float) (p.x - cam.x), (float) (p.y - cam.y), (float) (p.z - cam.z),
-					s, s, s,
-					bright ? 1.00f : 0.78f,
-					bright ? 0.30f : 0.08f,
-					bright ? 0.24f : 0.12f,
-					alpha * 0.78f);
+					s, s, s, 1.00f, i % 2 == 0 ? 0.42f : 0.14f, 0.24f, alpha * 0.78f);
 		}
-	}
-
-	private void emitHookGlow(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
-			Vec3 start, Vec3 end, Vec3 dir, double len, float extend, float alpha) {
-		Vec3 hookPos = start.add(dir.scale(len * extend));
-		WeaponVoxelRenderer.emitGlowSprite(pose, vc,
-				(float) (hookPos.x - cam.x), (float) (hookPos.y - cam.y), (float) (hookPos.z - cam.z),
-				0.72f, 0.98f, 0.16f, 0.20f, 0.44f * alpha);
-		WeaponVoxelRenderer.emitGlowSprite(pose, vc,
-				(float) (end.x - cam.x), (float) (end.y - cam.y), (float) (end.z - cam.z),
-				0.48f, 1.00f, 0.34f, 0.28f, 0.32f * alpha);
 	}
 }

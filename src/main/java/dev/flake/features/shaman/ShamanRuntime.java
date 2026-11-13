@@ -1,5 +1,6 @@
 package dev.flake.features.shaman;
 
+import dev.flake.combat.CombatFeedback;
 import dev.flake.combat.CombatModifiers;
 import dev.flake.combat.ability.AbilityEffects;
 import dev.flake.combat.ability.AbilitySlots.Ability;
@@ -26,6 +27,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /** Shaman owns its Totem of Pain zone and Spirit Ward ally aura mechanics. */
@@ -105,12 +109,36 @@ public final class ShamanRuntime implements ClassAbilityRuntime {
 		};
 	}
 
+	public static final double TOTEM_MAX_GROUND_DROP = 0.55;
+
+	static Vec3 resolveTotemGroundPos(Vec3 origin, boolean onGround, boolean hitGround, double hitY) {
+		if (!hitGround) return null;
+		double drop = origin.y - hitY;
+		if (!onGround && (drop < -0.15 || drop > TOTEM_MAX_GROUND_DROP)) return null;
+		if (drop < -0.5 || drop > 1.5) return null;
+		return new Vec3(origin.x, hitY, origin.z);
+	}
+
+	private static Vec3 findTotemGroundPos(ServerPlayer player, ServerLevel level) {
+		Vec3 origin = player.position();
+		BlockHitResult hit = level.clip(new ClipContext(
+				origin.add(0.0, 0.35, 0.0),
+				origin.subtract(0.0, 1.5, 0.0),
+				ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+		boolean hitGround = hit.getType() == HitResult.Type.BLOCK;
+		return resolveTotemGroundPos(origin, player.onGround(), hitGround, hitGround ? hit.getLocation().y : origin.y);
+	}
+
 	private boolean placeTotem(ServerPlayer player, ServerLevel level, int now) {
+		Vec3 pos = findTotemGroundPos(player, level);
+		if (pos == null) {
+			CombatFeedback.groundOnly(player, Ability.TOTEM_OF_PAIN);
+			return false;
+		}
 		UUID ownerId = player.getUUID();
 		Totem previous = totems.remove(ownerId);
 		if (previous != null) clearTotemSlows(previous.slowedIds);
 
-		Vec3 pos = player.position();
 		Totem totem = new Totem(level, pos, player.getId(), now, now + TOTEM_LIFE_TICKS, now + TOTEM_TICK_INTERVAL);
 		totems.put(ownerId, totem);
 		applyTotemZone(player, totem, false, new HashSet<>());

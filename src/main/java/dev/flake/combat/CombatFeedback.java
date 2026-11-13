@@ -118,6 +118,11 @@ public final class CombatFeedback {
 		send(player, itemIconId(stack), itemSubjectKey(stack), "flake.feedback.phase_locked", "", CombatFeedbackPayload.TONE_BLOCKED);
 	}
 
+	public static void groundOnly(ServerPlayer player, Ability ability) {
+		send(player, "skill", abilityTitle(ability),
+				"flake.feedback.ground_only", "", CombatFeedbackPayload.TONE_WARN);
+	}
+
 	public static void blocked(ServerPlayer player) {
 		blocked(player, (Ability) null);
 	}

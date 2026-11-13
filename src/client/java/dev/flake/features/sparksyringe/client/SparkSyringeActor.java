@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
-/** Rising golden-cyan cleansing voxel helix around the caster. */
+/** Rising golden-cyan cleansing voxel helix + shader purifier pulse (`style = 23`). */
 public final class SparkSyringeActor extends TimedActor {
 	private static final float DURATION_SEC = 0.85f;
 	private static final int HELIX_POINTS = 18;
@@ -36,7 +36,27 @@ public final class SparkSyringeActor extends TimedActor {
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
 		ageSec = age(frame);
-		return expired();
+		if (expired()) return true;
+
+		Vec3 base = origin;
+		if (frame.client.level != null) {
+			var entity = frame.client.level.getEntity(sourceId);
+			if (entity != null) base = entity.getPosition(frame.partial);
+		}
+		float progress = Mth.clamp(ageSec / DURATION_SEC, 0.0f, 1.0f);
+		float fade = 1.0f - smoothstep(0.50f, 1.0f, progress);
+
+		float[] values = slot.values;
+		values[slot.position] = (float) (base.x - frame.camera.x);
+		values[slot.position + 1] = (float) (base.y - frame.camera.y);
+		values[slot.position + 2] = (float) (base.z - frame.camera.z);
+		values[slot.position + 3] = 1.85f;
+
+		values[slot.style] = fade;
+		values[slot.style + 1] = ageSec;
+		values[slot.style + 2] = 23.0f;
+		values[slot.style + 3] = 0.0f;
+		return false;
 	}
 
 	@Override
@@ -84,27 +104,14 @@ public final class SparkSyringeActor extends TimedActor {
 				float r = radiusBase * (0.85f + 0.20f * (1.0f - tailFrac));
 				float x = cx + (float) Math.cos(angle) * r;
 				float z = cz + (float) Math.sin(angle) * r;
-				float s = (0.056f - 0.030f * tailFrac) * (0.65f + 0.35f * fade);
+				float s = (0.052f - 0.026f * tailFrac) * (0.65f + 0.35f * fade);
 				float alpha = (1.0f - tailFrac * 0.72f) * 0.92f * fade;
 
 				if (gold) {
-					WeaponVoxelRenderer.emitCube(pose, vc, x, cy + yOffset, z, s, s, s, 1.00f, 0.84f, 0.24f, alpha);
+					WeaponVoxelRenderer.emitCube(pose, vc, x, cy + yOffset, z, s, s, s, 1.00f, 0.86f, 0.28f, alpha);
 				} else {
-					WeaponVoxelRenderer.emitCube(pose, vc, x, cy + yOffset, z, s, s, s, 0.32f, 0.96f, 1.00f, alpha);
+					WeaponVoxelRenderer.emitCube(pose, vc, x, cy + yOffset, z, s, s, s, 0.36f, 0.96f, 1.00f, alpha);
 				}
-			}
-		}
-
-		// Ground cleanse ring expanding quickly at cast
-		float ringT = Mth.clamp(progress / 0.45f, 0.0f, 1.0f);
-		if (ringT < 1.0f) {
-			float rr = 0.35f + ringT * 1.15f;
-			float ra = (1.0f - ringT) * 0.75f;
-			for (int i = 0; i < 16; i++) {
-				float a = (i / 16.0f) * (float) (Math.PI * 2.0);
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						cx + (float) Math.cos(a) * rr, cy + 0.05f, cz + (float) Math.sin(a) * rr,
-						0.042f, 0.020f, 0.042f, 0.92f, 0.95f, 0.55f, ra);
 			}
 		}
 	}
@@ -112,8 +119,8 @@ public final class SparkSyringeActor extends TimedActor {
 	private void emitGlows(PoseStack.Pose pose, VertexConsumer vc,
 			float cx, float cy, float cz, float height, float progress, float fade) {
 		float riseY = cy + Math.min(height + 0.25f, progress * (height + 0.45f));
-		WeaponVoxelRenderer.emitGlowSprite(pose, vc, cx, riseY, cz, 0.65f * (0.6f + 0.4f * fade),
-				0.85f, 0.96f, 0.68f, 0.55f * fade);
+		WeaponVoxelRenderer.emitGlowSprite(pose, vc, cx, riseY, cz, 0.72f * (0.6f + 0.4f * fade),
+				0.88f, 0.96f, 0.72f, 0.60f * fade);
 	}
 
 	private static float smoothstep(float low, float high, float x) {

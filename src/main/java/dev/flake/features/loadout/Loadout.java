@@ -411,8 +411,6 @@ public record Loadout(
 		SHIELD("flake.active.shield.title", "flake.active.shield.desc", "flake.category.defense"),
 		WIND_CHARGE("flake.active.wind_charge.title", "flake.active.wind_charge.desc", "flake.category.mobility"),
 		DARK_CUBE("flake.active.dark_cube.title", "flake.active.dark_cube.desc", "flake.category.control"),
-		SMOKE_BOMB("flake.active.smoke_bomb.title", "flake.active.smoke_bomb.desc", "flake.category.control"),
-		ADRENALINE("flake.active.adrenaline.title", "flake.active.adrenaline.desc", "flake.category.buff"),
 		MATADORA("flake.active.matadora.title", "flake.active.matadora.desc", "flake.category.buff"),
 		CRYSTAL_CLAW("flake.active.crystal_claw.title", "flake.active.crystal_claw.desc", "flake.category.buff"),
 		AXE_OF_CUMSHOT("flake.active.axe_of_cumshot.title", "flake.active.axe_of_cumshot.desc", "flake.category.control"),
@@ -420,7 +418,6 @@ public record Loadout(
 		VOID_ANCHOR("flake.active.void_anchor.title", "flake.active.void_anchor.desc", "flake.category.control"),
 		MIRROR_TRAP("flake.active.mirror_trap.title", "flake.active.mirror_trap.desc", "flake.category.defense"),
 		SPARK_SYRINGE("flake.active.spark_syringe.title", "flake.active.spark_syringe.desc", "flake.category.buff"),
-		HUNTER_MARK("flake.active.hunter_mark.title", "flake.active.hunter_mark.desc", "flake.category.control"),
 		STORM_HARPOON("flake.active.storm_harpoon.title", "flake.active.storm_harpoon.desc", "flake.category.control"),
 		PHASE_CRYSTAL("flake.active.phase_crystal.title", "flake.active.phase_crystal.desc", "flake.category.mobility");
 

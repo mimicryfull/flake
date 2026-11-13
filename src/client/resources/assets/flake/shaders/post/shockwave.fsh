@@ -29,6 +29,8 @@
 #include <flake:classes/vampire/bloodlust.glsl>
 #include <flake:classes/demolitionist/demolition_blast.glsl>
 #include <flake:classes/hunter_highlight.glsl>
+#include <flake:classes/shaman/shaman_vfx.glsl>
+#include <flake:items/vfx_beams_and_orbs.glsl>
 
 void main() {
     vec4 original = texture(InSampler, texCoord);
@@ -77,6 +79,30 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 22.5) {
+            sparkSyringeWave(ray, sceneDistance, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
+        if (charging > 21.5) {
+            voidAnchorWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
+            continue;
+        }
+        if (charging > 20.5) {
+            chainLashWave(ray, sceneDistance, i, light, darkness, chipAlpha, chipColor, distortion);
+            continue;
+        }
+        if (charging > 19.5) {
+            stormBeamWave(ray, sceneDistance, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
+        if (charging > 18.5) {
+            shamanWardWave(ray, sceneDistance, scenePoint, depth, i, light, distortion);
+            continue;
+        }
+        if (charging > 17.5) {
+            shamanTotemWave(ray, sceneDistance, scenePoint, depth, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
         if (charging > 16.5) {
             hunterHighlight(ray, sceneDistance, i, light);
             continue;

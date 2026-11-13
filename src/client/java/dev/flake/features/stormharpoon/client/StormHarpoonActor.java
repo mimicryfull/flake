@@ -12,11 +12,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-/** Bright cyan-white 3D voxel harpoon chain + crackling thunder rings. */
+/**
+ * Storm Harpoon hybrid VFX: blazing cyan HDR post-shader laser + bloom & spiraling lightning arcs
+ * (`style = 20`, mode 1), paired with a sleek crisp harpoon head & impact thunder ring.
+ */
 public final class StormHarpoonActor implements EffectActor {
 	private static final float DURATION_SEC = 0.55f;
+	private static final int ARC_SEGMENTS = 6;
 
 	private final int sourceId;
 	private final int targetId;
@@ -39,15 +44,90 @@ public final class StormHarpoonActor implements EffectActor {
 		return payload.sourceId() == sourceId && payload.phase() == CombatVfxPayload.Phase.STORM_HARPOON;
 	}
 
-	@Override
-	public boolean expired() {
-		return ageSec >= DURATION_SEC;
+	@Override public boolean expired() { return ageSec >= DURATION_SEC; }
+
+	private Vec3 resolveStart(Level level, float partial) {
+		if (level == null) return origin;
+		Entity caster = level.getEntity(sourceId);
+		return caster != null
+				? caster.getEyePosition(partial).add(caster.getViewVector(partial).scale(0.45)).add(0.0, -0.15, 0.0)
+				: origin;
+	}
+
+	private Vec3 resolveEnd(Level level, float partial) {
+		if (level == null || targetId < 0) return aim;
+		Entity target = level.getEntity(targetId);
+		return target != null
+				? target.getPosition(partial).add(0.0, target.getBbHeight() * 0.55, 0.0)
+				: aim;
 	}
 
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
 		ageSec = timeline.sample(frame.nanos, frame.client.isPaused());
-		return expired();
+		if (expired()) return true;
+
+		Vec3 start = resolveStart(frame.client.level, frame.partial);
+		Vec3 end = resolveEnd(frame.client.level, frame.partial);
+		Vec3 delta = end.subtract(start);
+		double dist = delta.length();
+		if (dist < 0.15) return false;
+
+		Vec3 dir = delta.scale(1.0 / dist);
+		float extend = Mth.clamp(ageSec / 0.075f, 0.0f, 1.0f);
+		Vec3 tip = start.add(dir.scale(dist * extend));
+		Vec3 mid = start.add(tip).scale(0.5);
+
+		float progress = Mth.clamp(ageSec / DURATION_SEC, 0.0f, 1.0f);
+		float fade = 1.0f - smoothstep(0.35f, 1.0f, progress);
+		float impactFlash = (float) Math.exp(-ageSec * 6.0f);
+
+		float[] values = slot.values;
+		values[slot.position] = (float) (mid.x - frame.camera.x);
+		values[slot.position + 1] = (float) (mid.y - frame.camera.y);
+		values[slot.position + 2] = (float) (mid.z - frame.camera.z);
+		values[slot.position + 3] = (float) (dist * 0.55 + 2.0);
+
+		values[slot.style] = fade;
+		values[slot.style + 1] = ageSec;
+		values[slot.style + 2] = 20.0f;
+		values[slot.style + 3] = 1.0f; // mode 1: laser + HDR bloom
+
+		// Segment 0 = primary laser beam
+		writeSeg(values, slot, 0, frame.camera, start, tip, 0.048f, impactFlash);
+
+		// Segments 1..ARC_SEGMENTS = spiraling plasma arcs around laser shaft
+		Vec3 rawRight = dir.cross(new Vec3(0.0, 1.0, 0.0));
+		Vec3 right = rawRight.lengthSqr() < 1e-4 ? new Vec3(1.0, 0.0, 0.0) : rawRight.normalize();
+		Vec3 up = right.cross(dir).normalize();
+		double reach = dist * extend;
+		Vec3 prev = start;
+		for (int i = 1; i <= ARC_SEGMENTS; i++) {
+			float t = i / (float) ARC_SEGMENTS;
+			float spin = ageSec * 22.0f + t * 14.0f;
+			float amp = i == ARC_SEGMENTS ? 0.0f : (float) Math.sin(t * Math.PI) * 0.18f;
+			Vec3 cur = start.add(dir.scale(reach * t))
+					.add(right.scale(Math.cos(spin) * amp))
+					.add(up.scale(Math.sin(spin) * amp));
+			writeSeg(values, slot, i, frame.camera, prev, cur, 0.020f, 0.85f);
+			prev = cur;
+		}
+		values[slot.material] = ARC_SEGMENTS;
+		return false;
+	}
+
+	private static void writeSeg(float[] values, SlotWriter slot, int idx, Vec3 cam,
+			Vec3 a, Vec3 b, float w, float intensity) {
+		int sb = slot.segment + idx * 4;
+		int eb = slot.segmentEnd + idx * 4;
+		values[sb] = (float) (a.x - cam.x);
+		values[sb + 1] = (float) (a.y - cam.y);
+		values[sb + 2] = (float) (a.z - cam.z);
+		values[sb + 3] = w;
+		values[eb] = (float) (b.x - cam.x);
+		values[eb + 1] = (float) (b.y - cam.y);
+		values[eb + 2] = (float) (b.z - cam.z);
+		values[eb + 3] = intensity;
 	}
 
 	@Override
@@ -57,15 +137,8 @@ public final class StormHarpoonActor implements EffectActor {
 		if (expired() || mc.level == null) return;
 
 		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-		Entity caster = mc.level.getEntity(sourceId);
-		Vec3 start = caster != null
-				? caster.getEyePosition(partial).add(caster.getViewVector(partial).scale(0.45)).add(0.0, -0.15, 0.0)
-				: origin;
-		Entity target = targetId >= 0 ? mc.level.getEntity(targetId) : null;
-		Vec3 end = target != null
-				? target.getPosition(partial).add(0.0, target.getBbHeight() * 0.55, 0.0)
-				: aim;
-
+		Vec3 start = resolveStart(mc.level, partial);
+		Vec3 end = resolveEnd(mc.level, partial);
 		Vec3 delta = end.subtract(start);
 		double dist = delta.length();
 		if (dist < 0.15) return;
@@ -77,7 +150,7 @@ public final class StormHarpoonActor implements EffectActor {
 		if (midDx * midDx + midDy * midDy + midDz * midDz > 64.0 * 64.0) return;
 
 		float progress = Mth.clamp(ageSec / DURATION_SEC, 0.0f, 1.0f);
-		float extend = Mth.clamp(ageSec / 0.08f, 0.0f, 1.0f);
+		float extend = Mth.clamp(ageSec / 0.075f, 0.0f, 1.0f);
 		float fade = 1.0f - smoothstep(0.35f, 1.0f, progress);
 		if (fade <= 0.01f) return;
 
@@ -86,86 +159,55 @@ public final class StormHarpoonActor implements EffectActor {
 		Vec3 up = right.cross(dir).normalize();
 
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.CORE_RENDER_TYPE,
-				(pose, vc) -> emitChainAndHead(pose, vc, cameraPos, start, dir, right, up, dist * extend, progress, fade));
+				(pose, vc) -> emitHarpoonHead(pose, vc, cameraPos, start, dir, right, dist * extend, fade));
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
 				(pose, vc) -> emitThunderRings(pose, vc, cameraPos, start, dir, right, up, end, dist * extend, progress, fade));
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE,
-				(pose, vc) -> emitGlows(pose, vc, cameraPos, start, dir, dist * extend, fade));
+				(pose, vc) -> WeaponVoxelRenderer.emitGlowSprite(pose, vc,
+						(float) (start.x + dir.x * (dist * extend) - cameraPos.x),
+						(float) (start.y + dir.y * (dist * extend) - cameraPos.y),
+						(float) (start.z + dir.z * (dist * extend) - cameraPos.z),
+						0.85f, 0.65f, 0.96f, 1.00f, 0.75f * fade));
 	}
 
-	private void emitChainAndHead(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
-			Vec3 start, Vec3 dir, Vec3 right, Vec3 up, double reach, float progress, float fade) {
-		int links = Math.max(8, Math.min(28, (int) (reach * 2.2)));
-		for (int i = 0; i < links; i++) {
-			double t = i / (double) Math.max(1, links - 1);
-			double d = reach * t;
-			float crackle = (float) Math.sin(ageSec * 36.0f + i * 2.1f) * 0.065f * (1.0f - progress * 0.5f);
-			float crackleUp = (float) Math.cos(ageSec * 29.0f + i * 1.7f) * 0.055f * (1.0f - progress * 0.5f);
-			Vec3 p = start.add(dir.scale(d)).add(right.scale(crackle)).add(up.scale(crackleUp));
-
-			boolean coreWhite = (i % 2 == 0);
-			float size = coreWhite ? 0.048f : 0.036f;
-			WeaponVoxelRenderer.emitCube(pose, vc,
-					(float) (p.x - cam.x), (float) (p.y - cam.y), (float) (p.z - cam.z),
-					size, size, size,
-					coreWhite ? 0.90f : 0.34f,
-					coreWhite ? 0.98f : 0.90f,
-					1.00f,
-					0.95f * fade);
-		}
-
-		// Harpoon tip cluster at the tip of the beam
+	private void emitHarpoonHead(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
+			Vec3 start, Vec3 dir, Vec3 right, double reach, float fade) {
 		Vec3 head = start.add(dir.scale(reach));
-		float hs = 0.088f * (0.75f + 0.25f * fade);
+		float hs = 0.075f * (0.75f + 0.25f * fade);
 		WeaponVoxelRenderer.emitCube(pose, vc,
 				(float) (head.x - cam.x), (float) (head.y - cam.y), (float) (head.z - cam.z),
-				hs, hs, hs, 0.92f, 0.99f, 1.00f, fade);
+				hs, hs, hs, 0.94f, 0.99f, 1.00f, fade);
 		for (int side = -1; side <= 1; side += 2) {
 			Vec3 barb = head.subtract(dir.scale(0.18)).add(right.scale(side * 0.14));
 			WeaponVoxelRenderer.emitCube(pose, vc,
 					(float) (barb.x - cam.x), (float) (barb.y - cam.y), (float) (barb.z - cam.z),
-					0.045f, 0.045f, 0.045f, 0.42f, 0.94f, 1.00f, fade);
+					0.042f, 0.042f, 0.042f, 0.42f, 0.94f, 1.00f, fade);
 		}
 	}
 
 	private void emitThunderRings(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
 			Vec3 start, Vec3 dir, Vec3 right, Vec3 up, Vec3 end, double reach, float progress, float fade) {
-		// Two crackling perpendicular rings along the harpoon shaft
-		for (int ring = 0; ring < 2; ring++) {
-			double d = reach * (ring == 0 ? 0.42 : 0.86);
-			Vec3 center = start.add(dir.scale(d));
-			float radius = 0.24f + 0.28f * progress + ring * 0.08f;
-			int segments = 12;
-			for (int i = 0; i < segments; i++) {
-				float ang = (i / (float) segments) * (float) (Math.PI * 2.0) + ageSec * (ring == 0 ? 7.0f : -6.0f);
-				Vec3 p = center.add(right.scale(Math.cos(ang) * radius)).add(up.scale(Math.sin(ang) * radius));
-				float s = 0.032f;
-				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) (p.x - cam.x), (float) (p.y - cam.y), (float) (p.z - cam.z),
-						s, s, s, 0.56f, 0.95f, 1.00f, 0.78f * fade);
-			}
-		}
-
-		// Expanding thunder ring around impact point if an entity was hit
 		if (targetId >= 0) {
 			float impR = 0.35f + progress * 1.15f;
-			for (int i = 0; i < 14; i++) {
-				float ang = (i / 14.0f) * (float) (Math.PI * 2.0) - ageSec * 5.0f;
+			for (int i = 0; i < 12; i++) {
+				float ang = (i / 12.0f) * (float) (Math.PI * 2.0) - ageSec * 5.0f;
 				WeaponVoxelRenderer.emitCube(pose, vc,
 						(float) (end.x - cam.x + Math.cos(ang) * impR),
 						(float) (end.y - cam.y),
 						(float) (end.z - cam.z + Math.sin(ang) * impR),
-						0.040f, 0.025f, 0.040f, 0.75f, 0.98f, 1.00f, 0.70f * fade);
+						0.036f, 0.022f, 0.036f, 0.75f, 0.98f, 1.00f, 0.72f * fade);
+			}
+		} else {
+			Vec3 tip = start.add(dir.scale(reach));
+			for (int i = 0; i < 8; i++) {
+				float ang = (i / 8.0f) * (float) (Math.PI * 2.0) + ageSec * 7.0f;
+				float r = 0.20f + 0.18f * progress;
+				Vec3 p = tip.add(right.scale(Math.cos(ang) * r)).add(up.scale(Math.sin(ang) * r));
+				WeaponVoxelRenderer.emitCube(pose, vc,
+						(float) (p.x - cam.x), (float) (p.y - cam.y), (float) (p.z - cam.z),
+						0.028f, 0.028f, 0.028f, 0.56f, 0.95f, 1.00f, 0.70f * fade);
 			}
 		}
-	}
-
-	private void emitGlows(PoseStack.Pose pose, VertexConsumer vc, Vec3 cam,
-			Vec3 start, Vec3 dir, double reach, float fade) {
-		Vec3 head = start.add(dir.scale(reach));
-		WeaponVoxelRenderer.emitGlowSprite(pose, vc,
-				(float) (head.x - cam.x), (float) (head.y - cam.y), (float) (head.z - cam.z),
-				0.72f, 0.65f, 0.96f, 1.00f, 0.72f * fade);
 	}
 
 	private static float smoothstep(float low, float high, float x) {

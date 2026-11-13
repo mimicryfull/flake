@@ -15,7 +15,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
-/** 3D dark-violet rotating void anchor + collapsing inward pull rings rendered via WeaponVoxelRenderer. */
+/** 3D dark-violet rotating void anchor paired with gravitational singularity & suction distortion (`style = 22`). */
 public final class VoidAnchorActor implements EffectActor {
 	private static final float DELAY_SEC = VoidAnchorRuntime.DELAY_TICKS / 20.0f;
 	private static final float PULL_DURATION_SEC = 0.65f;
@@ -60,7 +60,25 @@ public final class VoidAnchorActor implements EffectActor {
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
 		ageSec = timeline.sample(frame.nanos, frame.client.isPaused());
-		return expired();
+		if (expired()) return true;
+
+		float pullStart = Float.isNaN(pullAt) ? DELAY_SEC : pullAt;
+		boolean pulling = ageSec >= pullStart;
+		float pullProgress = pulling ? Mth.clamp((ageSec - pullStart) / PULL_DURATION_SEC, 0.0f, 1.0f) : 0.0f;
+		float opacity = pulling ? (1.0f - smoothstep(0.45f, 1.0f, pullProgress)) : Math.min(1.0f, ageSec / 0.12f);
+		float pullBurst = pulling ? (1.0f - pullProgress) : 0.0f;
+
+		float[] values = slot.values;
+		values[slot.position] = (float) (origin.x - frame.camera.x);
+		values[slot.position + 1] = (float) (origin.y - frame.camera.y);
+		values[slot.position + 2] = (float) (origin.z - frame.camera.z);
+		values[slot.position + 3] = PULL_RADIUS;
+
+		values[slot.style] = opacity;
+		values[slot.style + 1] = ageSec;
+		values[slot.style + 2] = 22.0f;
+		values[slot.style + 3] = pullBurst;
+		return false;
 	}
 
 	@Override
@@ -95,7 +113,6 @@ public final class VoidAnchorActor implements EffectActor {
 				(pose, vc) -> emitAnchorMesh(pose, vc, anchorScale, chargeT, opacity));
 		poseStack.popPose();
 
-		// Ground perimeter + collapsing pull rings
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
 				(pose, vc) -> emitRingsAndMotes(pose, vc, chargeT, pulling, pullProgress, opacity));
 
@@ -109,18 +126,14 @@ public final class VoidAnchorActor implements EffectActor {
 		float dr = 0.26f + 0.20f * chargeT, dg = 0.06f, db = 0.44f + 0.30f * chargeT;
 		float br = 0.68f, bg = 0.26f, bb = 0.98f;
 
-		// Central vertical shank
 		WeaponVoxelRenderer.emitCube(pose, vc, 0f, 0.38f * scale, 0f,
 				0.065f * scale, 0.46f * scale, 0.065f * scale, dr, dg, db, opacity);
-		// Top void ring
 		WeaponVoxelRenderer.emitCube(pose, vc, 0f, 0.90f * scale, 0f,
 				0.13f * scale, 0.045f * scale, 0.055f * scale, br, bg, bb, opacity);
 		WeaponVoxelRenderer.emitCube(pose, vc, 0f, 1.02f * scale, 0f,
 				0.10f * scale, 0.045f * scale, 0.055f * scale, br, bg, bb, opacity);
-		// Upper crossbar
 		WeaponVoxelRenderer.emitCube(pose, vc, 0f, 0.64f * scale, 0f,
 				0.34f * scale, 0.055f * scale, 0.055f * scale, dr * 1.15f, dg, db * 1.1f, opacity);
-		// Lower anchor arms & curved flukes
 		for (int side = -1; side <= 1; side += 2) {
 			WeaponVoxelRenderer.emitCube(pose, vc, side * 0.22f * scale, 0.04f * scale, 0f,
 					0.18f * scale, 0.06f * scale, 0.06f * scale, dr, dg, db, opacity);
@@ -129,7 +142,6 @@ public final class VoidAnchorActor implements EffectActor {
 			WeaponVoxelRenderer.emitCube(pose, vc, side * 0.46f * scale, 0.30f * scale, 0f,
 					0.055f * scale, 0.08f * scale, 0.055f * scale, 0.90f, 0.56f, 1.0f, opacity);
 		}
-		// Bottom tip
 		WeaponVoxelRenderer.emitCube(pose, vc, 0f, -0.10f * scale, 0f,
 				0.085f * scale, 0.085f * scale, 0.085f * scale, br, bg, bb, opacity);
 	}
@@ -137,57 +149,42 @@ public final class VoidAnchorActor implements EffectActor {
 	private void emitRingsAndMotes(PoseStack.Pose pose, VertexConsumer vc,
 			float chargeT, boolean pulling, float pullProgress, float opacity) {
 		if (!pulling) {
-			// Outer 5.0m warning ring + inward-drifting anticipation ring
-			int segments = 28;
-			for (int i = 0; i < segments; i++) {
-				float ang = (i / (float) segments) * (float) (Math.PI * 2.0) + ageSec * 0.45f;
-				float x = (float) Math.cos(ang) * PULL_RADIUS;
-				float z = (float) Math.sin(ang) * PULL_RADIUS;
-				boolean major = (i % 7 == 0);
-				float s = major ? 0.075f : 0.045f;
-				WeaponVoxelRenderer.emitCube(pose, vc, x, 0.04f, z, s, 0.025f, s,
-						0.50f, 0.14f, 0.85f, opacity * (0.42f + 0.35f * chargeT));
-			}
 			for (int i = 0; i < 16; i++) {
-				float phase = ((ageSec * 0.9f + i * 0.17f) % 1.0f);
-				float r = PULL_RADIUS * (1.0f - phase * 0.88f);
-				float ang = i * 2.39996f + ageSec * 1.4f;
-				float s = 0.040f * (1.0f - phase * 0.45f);
+				float phase = ((ageSec * 0.95f + i * 0.17f) % 1.0f);
+				float r = PULL_RADIUS * (1.0f - phase * 0.90f);
+				float ang = i * 2.39996f + ageSec * 1.8f;
+				float s = 0.036f * (1.0f - phase * 0.45f);
 				WeaponVoxelRenderer.emitCube(pose, vc,
-						(float) Math.cos(ang) * r, 0.12f + phase * 0.35f, (float) Math.sin(ang) * r,
-						s, s, s, 0.68f, 0.24f, 0.98f, opacity * (1.0f - phase) * 0.72f);
+						(float) Math.cos(ang) * r, 0.12f + phase * 0.42f, (float) Math.sin(ang) * r,
+						s, s, s, 0.72f, 0.28f, 1.00f, opacity * (1.0f - phase) * 0.76f);
 			}
 			return;
 		}
 
-		// Three staggered collapsing pull rings rushing inward from 5.0m to 0.2m
-		for (int ring = 0; ring < 3; ring++) {
-			float localT = Mth.clamp((pullProgress - ring * 0.14f) / 0.72f, 0.0f, 1.0f);
+		// Two crisp staggered inward pull rings
+		for (int ring = 0; ring < 2; ring++) {
+			float localT = Mth.clamp((pullProgress - ring * 0.16f) / 0.76f, 0.0f, 1.0f);
 			if (localT <= 0.0f || localT >= 1.0f) continue;
-			float radius = Mth.lerp(easeInQuad(localT), PULL_RADIUS, 0.22f);
-			float ringAlpha = opacity * (1.0f - localT * 0.35f) * 0.88f;
-			float y = 0.10f + ring * 0.32f * (1.0f - localT);
-			int count = 24;
-			for (int i = 0; i < count; i++) {
-				float ang = (i / (float) count) * (float) (Math.PI * 2.0) + ageSec * (3.2f - ring * 0.8f);
-				float x = (float) Math.cos(ang) * radius;
-				float z = (float) Math.sin(ang) * radius;
-				float s = 0.055f * (1.0f - 0.35f * localT);
-				WeaponVoxelRenderer.emitCube(pose, vc, x, y, z, s, s * 0.6f, s,
-						0.72f, 0.26f, 1.00f, ringAlpha);
+			float radius = Mth.lerp(localT * localT, PULL_RADIUS, 0.22f);
+			float ringAlpha = opacity * (1.0f - localT * 0.35f) * 0.85f;
+			float y = 0.12f + ring * 0.32f * (1.0f - localT);
+			for (int i = 0; i < 18; i++) {
+				float ang = (i / 18.0f) * (float) (Math.PI * 2.0) + ageSec * (3.6f - ring * 0.9f);
+				float s = 0.044f * (1.0f - 0.35f * localT);
+				WeaponVoxelRenderer.emitCube(pose, vc,
+						(float) Math.cos(ang) * radius, y, (float) Math.sin(ang) * radius,
+						s, s * 0.6f, s, 0.78f, 0.32f, 1.00f, ringAlpha);
 			}
 		}
 	}
 
 	private void emitGlows(PoseStack.Pose pose, VertexConsumer vc,
 			float hover, float chargeT, boolean pulling, float pullProgress, float opacity) {
-		float coreRadius = pulling ? (1.10f * (1.0f - 0.55f * pullProgress)) : (0.52f + 0.35f * chargeT);
-		float coreAlpha = pulling ? (0.85f * (1.0f - pullProgress)) : (0.45f + 0.30f * chargeT);
+		float coreRadius = pulling ? (1.15f * (1.0f - 0.55f * pullProgress)) : (0.56f + 0.38f * chargeT);
+		float coreAlpha = pulling ? (0.85f * (1.0f - pullProgress)) : (0.48f + 0.30f * chargeT);
 		WeaponVoxelRenderer.emitGlowSprite(pose, vc, 0f, hover + 0.25f, 0f, coreRadius,
-				0.64f, 0.22f, 0.98f, coreAlpha * opacity);
+				0.68f, 0.26f, 1.00f, coreAlpha * opacity);
 	}
-
-	private static float easeInQuad(float t) { return t * t; }
 
 	private static float smoothstep(float low, float high, float x) {
 		float t = Mth.clamp((x - low) / (high - low), 0.0f, 1.0f);

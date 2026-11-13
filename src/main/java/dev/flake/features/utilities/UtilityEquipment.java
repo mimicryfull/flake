@@ -12,23 +12,11 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 
-/** Vertical slice for utility gadgets («Димова шашка», «Адреналін») + standard weapons and utility items. */
+/** Standard weapons and vanilla utility active items. */
 public final class UtilityEquipment implements Lifecycle {
 	private UtilityEquipment() {}
 
-	public static void registerItems() {
-		Gadgets.bind(gadget("smoke_bomb", Gadgets.SMOKE_COOLDOWN, Gadgets::smoke),
-				gadget("adrenaline", Gadgets.ADRENALINE_COOLDOWN, Gadgets::adrenaline));
-	}
-
-	private static net.minecraft.world.item.Item gadget(String path, int cooldown, Gadgets.Effect effect) {
-		var id = net.minecraft.resources.Identifier.fromNamespaceAndPath("flake", path);
-		return dev.flake.content.ItemRegistration.active(id, (player, target) -> {
-			if (dev.flake.features.duel.DuelRuntime.blocksAbility(player.getUUID()) || !effect.apply(player, player.level())) return false;
-			player.getCooldowns().addCooldown(id, cooldown);
-			return true;
-		});
-	}
+	public static void registerItems() {}
 
 	public static void install() {
 		// Standard weapons
@@ -50,13 +38,9 @@ public final class UtilityEquipment implements Lifecycle {
 		ContentCatalog.registerActive(new ActiveItemSpec(ActiveItem.SHIELD, "flake.active.shield.short", 100, 0, true, () -> new ItemStack(Items.SHIELD)));
 		ContentCatalog.registerActive(new ActiveItemSpec(ActiveItem.WIND_CHARGE, "flake.active.wind_charge.short", 10, 0, false, () -> new ItemStack(Items.WIND_CHARGE, 4)));
 
-		// Custom gadgets
-		ContentCatalog.registerActive(new ActiveItemSpec(ActiveItem.SMOKE_BOMB, "flake.active.smoke_bomb.short", Gadgets.SMOKE_COOLDOWN, 0, false, () -> Gadgets.smokeStack()));
-		ContentCatalog.registerActive(new ActiveItemSpec(ActiveItem.ADRENALINE, "flake.active.adrenaline.short", Gadgets.ADRENALINE_COOLDOWN, 0, false, () -> Gadgets.adrenalineStack()));
-
 		ContentCatalog.registerLifecycle(new UtilityEquipment());
 	}
 
 	@Override public void register() { }
-	@Override public void reset(ServerPlayer player) { Gadgets.reset(player); }
+	@Override public void reset(ServerPlayer player) { }
 }

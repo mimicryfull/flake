@@ -20,7 +20,6 @@ import dev.flake.features.mirrordagger.MirrorDaggerDefinition;
 import dev.flake.features.voidanchor.VoidAnchorDefinition;
 import dev.flake.features.mirrortrap.MirrorTrapDefinition;
 import dev.flake.features.sparksyringe.SparkSyringeDefinition;
-import dev.flake.features.huntermark.HunterMarkDefinition;
 import dev.flake.features.stormharpoon.StormHarpoonDefinition;
 import dev.flake.features.phasecrystal.PhaseCrystalDefinition;
 
@@ -56,7 +55,6 @@ public final class Features {
 			new Feature(VoidAnchorDefinition::install, VoidAnchorDefinition::registerItems),
 			new Feature(MirrorTrapDefinition::install, MirrorTrapDefinition::registerItems),
 			new Feature(SparkSyringeDefinition::install, SparkSyringeDefinition::registerItems),
-			new Feature(HunterMarkDefinition::install, HunterMarkDefinition::registerItems),
 			new Feature(StormHarpoonDefinition::install, StormHarpoonDefinition::registerItems),
 			new Feature(PhaseCrystalDefinition::install, PhaseCrystalDefinition::registerItems),
 			new Feature(dev.flake.features.shaman.ShamanRuntime::install),

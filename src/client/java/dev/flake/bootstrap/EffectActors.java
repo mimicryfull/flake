@@ -27,7 +27,6 @@ import dev.flake.features.passives.client.StormArcActor;
 import dev.flake.features.voidanchor.client.VoidAnchorActor;
 import dev.flake.features.mirrortrap.client.MirrorTrapActor;
 import dev.flake.features.sparksyringe.client.SparkSyringeActor;
-import dev.flake.features.huntermark.client.HunterMarkActor;
 import dev.flake.features.stormharpoon.client.StormHarpoonActor;
 import dev.flake.features.phasecrystal.client.PhaseCrystalActor;
 import dev.flake.features.chainblade.client.ChainBladeActor;
@@ -76,7 +75,6 @@ public final class EffectActors {
 			case VOID_ANCHOR_CAST, VOID_ANCHOR_PULL -> new VoidAnchorActor(payload);
 			case MIRROR_TRAP_ON, MIRROR_TRAP_REFLECT -> new MirrorTrapActor(payload);
 			case SPARK_SYRINGE -> new SparkSyringeActor(payload);
-			case HUNTER_MARK -> new HunterMarkActor(payload);
 			case STORM_HARPOON -> new StormHarpoonActor(payload);
 			case PHASE_CRYSTAL_ON -> new PhaseCrystalActor(payload);
 			case CHAIN_BLADE_PULL -> new ChainBladeActor(payload);
