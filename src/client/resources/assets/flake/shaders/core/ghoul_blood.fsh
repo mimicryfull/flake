@@ -39,11 +39,11 @@ float fbm(vec2 p) {
 }
 
 vec3 bloodRamp(float x) {
-    const vec3 c0 = vec3(0.09, 0.003, 0.012);
-    const vec3 c1 = vec3(0.34, 0.009, 0.026);
-    const vec3 c2 = vec3(0.74, 0.025, 0.058);
-    const vec3 c3 = vec3(1.00, 0.110, 0.140);
-    const vec3 c4 = vec3(1.00, 0.440, 0.320);
+    const vec3 c0 = vec3(0.12, 0.006, 0.020);
+    const vec3 c1 = vec3(0.40, 0.012, 0.040);
+    const vec3 c2 = vec3(0.82, 0.040, 0.080);
+    const vec3 c3 = vec3(1.00, 0.160, 0.200);
+    const vec3 c4 = vec3(1.00, 0.500, 0.420);
     x = clamp(x, 0.0, 1.0) * 4.0;
     if (x < 1.0) return mix(c0, c1, x);
     if (x < 2.0) return mix(c1, c2, x - 1.0);
@@ -84,11 +84,11 @@ void main() {
         float swell = 1.0 + pulse * 0.55;
         float ripple = exp(-pow((r - (0.30 + pulse * 0.34)) * 7.0, 2.0)) * pulse * 0.55;
         float density = clamp((body + ripple) * swell, 0.0, 1.0);
-        float core = pow(1.0 - r, 4.0) * smoke;
-        rgb = bloodRamp(0.18 + density * 0.72 + core * 0.65 + pulse * 0.10) * 1.25;
-        outAlpha = alpha * density * (1.0 - smoothstep(0.78, 1.0, r));
+        float core = pow(1.0 - r, 5.0) * smoke;
+        rgb = bloodRamp(0.04 + density * 0.62 + core * 0.55 + pulse * 0.06);
+        outAlpha = alpha * min(1.0, density * 2.2) * (1.0 - smoothstep(0.78, 1.0, r));
     } else {
-        // Voxel face: per-texel blood texture, directional light, fresnel rim, strong inner glow
+        // Voxel face: per-texel blood texture, directional light, fresnel rim, hot veins
         vec2 d = abs(texCoord0 - 0.5) * 2.0;
         float b = max(d.x, d.y);
         float radial = length(d);
@@ -99,33 +99,30 @@ void main() {
         float flick = h21(g + seed * 53.1 + faceId * 7.7 + floor(sec * 3.0 + n * 5.0));
 
         float tier = clamp(kind, 0.0, 1.0);
-        float hot = smoothstep(0.42, 0.78, tier);
+        float hot = smoothstep(0.60, 0.80, tier);
 
         vec3 L = normalize(vec3(0.35, 0.85, 0.40));
         float diff = max(dot(N, L), 0.0);
-        float faceTone = N.y > 0.5 ? 1.0 : (N.y < -0.5 ? 0.48 : 0.78);
-        float light = 0.55 + 0.55 * diff * faceTone;
+        float faceTone = N.y > 0.5 ? 1.0 : (N.y < -0.5 ? 0.38 : 0.70);
+        float light = 0.38 + 0.62 * diff * faceTone;
 
         float beat = pulse * (0.55 + 0.45 * sin(sec * 7.0 + seed * 40.0));
-        float heat = clamp(tier + 0.14 + (n - 0.5) * 0.20 + beat * 0.16, 0.0, 1.0);
+        float heat = tier + (n - 0.5) * 0.22 + beat * 0.16;
         vec3 base = bloodRamp(heat);
 
-        float innerGlow = exp(-radial * radial * 1.75);
-        float core = exp(-radial * radial * 2.6);
-        float rimHi = smoothstep(0.58, 0.86, b) * (1.0 - smoothstep(0.90, 1.0, b));
-        float edgeDark = smoothstep(0.92, 1.0, b);
-        float fres = pow(1.0 - max(dot(N, V), 0.0), 2.5);
+        float core = exp(-radial * radial * 2.2);
+        float rimHi = smoothstep(0.60, 0.86, b) * (1.0 - smoothstep(0.90, 1.0, b));
+        float edgeDark = smoothstep(0.90, 1.0, b);
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
 
-        rgb = base * light;
-        rgb += vec3(1.00, 0.14, 0.18) * innerGlow * (0.48 + tier * 0.65);
-        rgb += vec3(1.00, 0.40, 0.30) * core * core * (0.30 + tier * 0.65 + 0.35 * beat);
-        rgb += vec3(0.95, 0.10, 0.14) * rimHi * (0.28 + tier * 0.55);
-        rgb += vec3(0.85, 0.07, 0.10) * fres * (0.28 + tier * 0.55);
-        rgb += vec3(1.00, 0.24, 0.16) * core * hot * (0.45 + 0.55 * beat);
-        rgb += vec3(1.00, 0.60, 0.52) * step(0.86, flick) * hot * 0.55;
-        rgb *= 1.0 - edgeDark * 0.30;
+        rgb = base * (0.55 + light * 1.1) * 1.5;
+        rgb += vec3(0.86, 0.07, 0.10) * rimHi * (0.18 + tier * 0.50);
+        rgb += vec3(0.70, 0.04, 0.07) * fres * (0.20 + tier * 0.55);
+        rgb += vec3(1.00, 0.22, 0.14) * core * hot * (0.45 + 0.55 * beat + 0.25);
+        rgb += vec3(1.00, 0.55, 0.50) * step(0.86, flick) * hot * 0.55;
+        rgb *= 1.0 - edgeDark * 0.45;
 
-        outAlpha = alpha * (0.95 + 0.05 * rimHi);
+        outAlpha = alpha * (0.94 + 0.06 * rimHi);
     }
 
     if (outAlpha <= 0.01) discard;
