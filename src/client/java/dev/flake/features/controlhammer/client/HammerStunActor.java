@@ -3,8 +3,11 @@ package dev.flake.features.controlhammer.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.flake.client.vfx.WeaponVoxelRenderer;
+import dev.flake.features.concussed.ShockwaveAnimation;
+import dev.flake.features.controlhammer.HammerAnimation;
 import dev.flake.render.vfx.CombatVfxPayload;
 import dev.flake.render.vfx.EffectActor;
+import dev.flake.render.vfx.RadialActor;
 import dev.flake.render.vfx.RenderFrame;
 import dev.flake.render.vfx.SlotWriter;
 import net.minecraft.client.Minecraft;
@@ -13,19 +16,23 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Drops a voxel-built anvil onto the target's head for Control Hammer hits
- * (or renders a compact orange-brown voxel burst when triggered by Axe of Cumshot impact).
+ * Routes HAMMER_STUN impacts:
+ * - Control Hammer (yaw <= 0.5): keeps the classic white radial impact burst.
+ * - Axe of Cumshot (yaw > 0.5): drops a 3D voxel anvil onto the struck enemy's head
+ *   (or renders an orange-brown voxel burst when hitting a block).
  */
 public final class HammerStunActor implements EffectActor {
 	private static final float ANVIL_DURATION_SEC = 0.88f;
-	private static final float AXE_IMPACT_DURATION_SEC = 0.42f;
+	private static final float BLOCK_BURST_DURATION_SEC = 0.42f;
 	private static final float DROP_TIME_SEC = 0.17f;
 
 	private final int sourceId;
 	private final int targetId;
 	private final Vec3 fallbackPos;
 	private final boolean axeImpact;
+	private final boolean dropAnvil;
 	private final float durationSec;
+	private final RadialActor controlHammerBurst;
 	private long startNanos = -1L;
 	private float ageSec;
 
@@ -34,15 +41,29 @@ public final class HammerStunActor implements EffectActor {
 		this.targetId = payload.targetId();
 		this.fallbackPos = payload.origin();
 		this.axeImpact = payload.yaw() > 0.5f;
-		this.durationSec = axeImpact ? AXE_IMPACT_DURATION_SEC : ANVIL_DURATION_SEC;
+		this.dropAnvil = this.axeImpact && this.targetId > 0;
+		this.durationSec = this.dropAnvil ? ANVIL_DURATION_SEC : BLOCK_BURST_DURATION_SEC;
+		this.controlHammerBurst = this.axeImpact ? null : new RadialActor(payload) {
+			@Override protected float duration() { return HammerAnimation.DURATION; }
+			@Override protected float radius(float age) { return HammerAnimation.radius(age); }
+			@Override protected float opacity(float age) { return HammerAnimation.opacity(age); }
+			@Override protected int style() { return 0; }
+			@Override protected float styleExtra(float age) { return ShockwaveAnimation.chargeProgress(age); }
+		};
 	}
 
 	@Override public int sourceId() { return sourceId; }
 
-	@Override public boolean expired() { return startNanos >= 0L && ageSec >= durationSec; }
+	@Override
+	public boolean expired() {
+		return axeImpact && startNanos >= 0L && ageSec >= durationSec;
+	}
 
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
+		if (!axeImpact) {
+			return controlHammerBurst.write(frame, slot);
+		}
 		if (startNanos < 0L) startNanos = frame.nanos;
 		ageSec = (frame.nanos - startNanos) / 1_000_000_000.0f;
 		return ageSec >= durationSec;
@@ -50,12 +71,14 @@ public final class HammerStunActor implements EffectActor {
 
 	@Override
 	public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
+		if (!axeImpact) return;
+
 		if (startNanos < 0L) startNanos = System.nanoTime();
 		ageSec = (System.nanoTime() - startNanos) / 1_000_000_000.0f;
 		if (ageSec >= durationSec) return;
 
-		if (axeImpact) {
-			submitAxeImpact(poseStack, collector, cameraPos);
+		if (!dropAnvil) {
+			submitBlockBurst(poseStack, collector, cameraPos);
 			return;
 		}
 
@@ -65,7 +88,6 @@ public final class HammerStunActor implements EffectActor {
 
 		float dropT = Math.clamp(ageSec / DROP_TIME_SEC, 0f, 1f);
 		float dropOffset = (1.0f - dropT * dropT) * 2.55f;
-		// Tiny heavy bounce right after hitting the head
 		float sinceHit = ageSec - DROP_TIME_SEC;
 		float bounce = sinceHit > 0f && sinceHit < 0.18f
 				? (float) Math.abs(Math.sin((sinceHit / 0.18f) * Math.PI)) * 0.14f * (1.0f - sinceHit / 0.18f)
@@ -99,7 +121,7 @@ public final class HammerStunActor implements EffectActor {
 
 	private Vec3 resolveHeadAnchor() {
 		var mc = Minecraft.getInstance();
-		if (mc.level != null && targetId >= 0) {
+		if (mc.level != null && targetId > 0) {
 			Entity target = mc.level.getEntity(targetId);
 			if (target != null) {
 				return new Vec3(target.getX(), target.getY() + target.getBbHeight(), target.getZ());
@@ -110,9 +132,8 @@ public final class HammerStunActor implements EffectActor {
 
 	private void emitVoxelAnvil(PoseStack.Pose pose, VertexConsumer vc,
 			float cx, float baseY, float cz, float s, float alpha) {
-		float v = 0.095f * s; // voxel half-step grid
+		float v = 0.095f * s;
 
-		// 1. Wide heavy base foot (5 x 1 x 3 voxels)
 		for (int gx = -2; gx <= 2; gx++) {
 			for (int gz = -1; gz <= 1; gz++) {
 				boolean edge = Math.abs(gx) == 2 || Math.abs(gz) == 1;
@@ -124,7 +145,6 @@ public final class HammerStunActor implements EffectActor {
 			}
 		}
 
-		// 2. Narrow waist/neck (3 x 2 x 1.5 voxels)
 		for (int gy = 1; gy <= 2; gy++) {
 			for (int gx = -1; gx <= 1; gx++) {
 				float tone = (gx == 0) ? 0.30f : 0.22f;
@@ -135,7 +155,6 @@ public final class HammerStunActor implements EffectActor {
 			}
 		}
 
-		// 3. Top striking face (6 x 2 x 3 voxels, bright forged steel rim on top)
 		for (int gy = 0; gy < 2; gy++) {
 			for (int gx = -2; gx <= 3; gx++) {
 				for (int gz = -1; gz <= 1; gz++) {
@@ -152,7 +171,6 @@ public final class HammerStunActor implements EffectActor {
 			}
 		}
 
-		// 4. Anvil horn protruding from the front (-X side)
 		WeaponVoxelRenderer.emitCube(pose, vc,
 				cx - 3.3f * (v * 1.75f), baseY + v * 6.5f, cz,
 				v * 1.05f, v * 0.75f, v * 1.15f,
@@ -187,8 +205,8 @@ public final class HammerStunActor implements EffectActor {
 		}
 	}
 
-	private void submitAxeImpact(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
-		float t = Math.clamp(ageSec / AXE_IMPACT_DURATION_SEC, 0f, 1f);
+	private void submitBlockBurst(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
+		float t = Math.clamp(ageSec / BLOCK_BURST_DURATION_SEC, 0f, 1f);
 		float fade = 1.0f - t * t;
 		if (fade <= 0.02f) return;
 
