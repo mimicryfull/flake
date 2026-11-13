@@ -45,13 +45,25 @@ public final class DuelRuntime {
 		UseBlockCallback.EVENT.register((player, level, hand, hit) ->
 				!level.isClientSide() && protectedInventory(player.getUUID()) && !fighting(player.getUUID())
 						? InteractionResult.FAIL : InteractionResult.PASS);
-		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
-				!level.isClientSide() && protectedInventory(player.getUUID())
-						&& (!fighting(player.getUUID()) || !(entity instanceof net.minecraft.world.entity.player.Player))
-						? InteractionResult.FAIL : InteractionResult.PASS);
-		UseItemCallback.EVENT.register((player, level, hand) ->
-				!level.isClientSide() && protectedInventory(player.getUUID()) && !fighting(player.getUUID())
-						? InteractionResult.FAIL : InteractionResult.PASS);
+		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (!level.isClientSide() && protectedInventory(player.getUUID())
+					&& (!fighting(player.getUUID()) || !(entity instanceof net.minecraft.world.entity.player.Player))) {
+				if (player instanceof ServerPlayer sp && !sp.getItemInHand(hand).isEmpty()) {
+					dev.flake.combat.CombatFeedback.blocked(sp, sp.getItemInHand(hand));
+				}
+				return InteractionResult.FAIL;
+			}
+			return InteractionResult.PASS;
+		});
+		UseItemCallback.EVENT.register((player, level, hand) -> {
+			if (!level.isClientSide() && protectedInventory(player.getUUID()) && !fighting(player.getUUID())) {
+				if (player instanceof ServerPlayer sp && !sp.getItemInHand(hand).isEmpty()) {
+					dev.flake.combat.CombatFeedback.blocked(sp, sp.getItemInHand(hand));
+				}
+				return InteractionResult.FAIL;
+			}
+			return InteractionResult.PASS;
+		});
 
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
 			if (entity instanceof ItemEntity item && DuelEquipment.isTemporary(item.getItem())) item.discard();

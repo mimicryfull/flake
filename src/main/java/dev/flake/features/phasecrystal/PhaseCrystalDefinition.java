@@ -36,7 +36,10 @@ public final class PhaseCrystalDefinition implements Lifecycle {
 				PhaseCrystalRuntime.isItem(stack) ? Cooldowns.ticks(player, base) : base);
 		CombatModifiers.damageGate((victim, source) -> {
 			if (victim instanceof ServerPlayer vp && PhaseCrystalRuntime.active(vp)) return false;
-			if (source.getEntity() instanceof ServerPlayer ap && PhaseCrystalRuntime.active(ap)) return false;
+			if (source.getEntity() instanceof ServerPlayer ap && PhaseCrystalRuntime.active(ap)) {
+				dev.flake.combat.CombatFeedback.phaseLocked(ap, PhaseCrystalRuntime.stack());
+				return false;
+			}
 			return true;
 		});
 		CombatStatuses.register((player, now, statuses) -> {

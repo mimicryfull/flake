@@ -65,7 +65,10 @@ public final class ChainBladeRuntime {
 
 	public static boolean pull(ServerPlayer player, Entity directTarget) {
 		if (DuelRuntime.blocksAbility(player.getUUID()) || !(player.level() instanceof ServerLevel level)) return false;
-		if (!isChainBlade(player.getMainHandItem())) return false;
+		if (!isChainBlade(player.getMainHandItem())) {
+			dev.flake.combat.CombatFeedback.mainHandOnly(player, player.getOffhandItem());
+			return false;
+		}
 
 		LivingEntity target = null;
 		if (directTarget instanceof LivingEntity living && validTarget(player, living)
@@ -76,7 +79,10 @@ public final class ChainBladeRuntime {
 			if (clip.getType() == HitResult.Type.MISS) target = living;
 		}
 		if (target == null) target = AbilityTargeting.target(player, PULL_RANGE, AIM_COS, true);
-		if (target == null) return false;
+		if (target == null) {
+			dev.flake.combat.CombatFeedback.noTarget(player, player.getMainHandItem());
+			return false;
+		}
 
 		player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
 		player.getCooldowns().addCooldown(ID, Cooldowns.ticks(player, COOLDOWN_TICKS));

@@ -57,10 +57,18 @@ public final class CrystalClawRuntime {
 
 	public static boolean activate(ServerPlayer player) {
 		var id = player.getUUID();
-		if (DuelRuntime.blocksAbility(id) || active(player)) return false;
+		if (DuelRuntime.blocksAbility(id)) return false;
+		if (active(player)) {
+			dev.flake.combat.CombatFeedback.alreadyActive(player, stack());
+			return false;
+		}
 		int now = player.level().getServer().getTickCount();
 		var state = STATES.of(player);
-		if (now < state.ready.getOrDefault(id, 0)) return false;
+		int readyAt = state.ready.getOrDefault(id, 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack(), readyAt - now);
+			return false;
+		}
 		state.buffs.put(id, now + BUFF_TICKS);
 		state.ready.put(id, now + COOLDOWN_TICKS);
 		player.getCooldowns().addCooldown(ID, COOLDOWN_TICKS);

@@ -67,7 +67,11 @@ public final class SparkSyringeRuntime {
 		if (server == null) return false;
 		int now = server.getTickCount();
 		State state = STATES.of(server);
-		if (now < state.ready.getOrDefault(id, 0)) return false;
+		int readyAt = state.ready.getOrDefault(id, 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack(), readyAt - now);
+			return false;
+		}
 
 		int cooldown = Cooldowns.ticks(player, COOLDOWN_TICKS);
 		state.buffs.put(id, now + BUFF_TICKS);

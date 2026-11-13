@@ -1,5 +1,7 @@
 package dev.flake.combat.item;
 
+import dev.flake.combat.CombatFeedback;
+import dev.flake.features.duel.DuelRuntime;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -35,13 +37,16 @@ public abstract class ActiveCombatItem extends Item {
 
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (player.getCooldowns().isOnCooldown(player.getItemInHand(hand))) return InteractionResult.PASS;
+		var stack = player.getItemInHand(hand);
+		if (player.getCooldowns().isOnCooldown(stack)) {
+			if (level.isClientSide() && hand == InteractionHand.MAIN_HAND) CombatFeedback.notifyClientCooldown(stack);
+			return InteractionResult.PASS;
+		}
 		if (level.isClientSide()) {
 			return hand == InteractionHand.MAIN_HAND && player.getOffhandItem().is(Items.SHIELD) && !canConsumeOnClient(player)
 					? InteractionResult.PASS : InteractionResult.CONSUME;
 		}
-		return player instanceof ServerPlayer sp && activateServer(sp, null)
-				? InteractionResult.SUCCESS_SERVER : InteractionResult.PASS;
+		return invokeServer(player, stack, null);
 	}
 
 	@Override
@@ -52,9 +57,27 @@ public abstract class ActiveCombatItem extends Item {
 
 	@Override
 	public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
-		if (player.getCooldowns().isOnCooldown(stack)) return InteractionResult.PASS;
+		if (player.getCooldowns().isOnCooldown(stack)) {
+			if (player.level().isClientSide() && hand == InteractionHand.MAIN_HAND) CombatFeedback.notifyClientCooldown(stack);
+			return InteractionResult.PASS;
+		}
 		if (player.level().isClientSide()) return InteractionResult.CONSUME;
-		return player instanceof ServerPlayer sp && activateServer(sp, target)
-				? InteractionResult.SUCCESS_SERVER : InteractionResult.PASS;
+		return invokeServer(player, stack, target);
+	}
+
+	private InteractionResult invokeServer(Player player, ItemStack stack, Entity directTarget) {
+		if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
+		CombatFeedback.beginAttempt();
+		boolean fired = activateServer(sp, directTarget);
+		boolean reported = CombatFeedback.finishAttemptReported();
+		if (fired) return InteractionResult.SUCCESS_SERVER;
+		if (!reported) {
+			if (DuelRuntime.blocksAbility(sp.getUUID()) || !sp.isAlive() || sp.isSpectator()) {
+				CombatFeedback.blocked(sp, stack);
+			} else {
+				CombatFeedback.unavailable(sp, stack);
+			}
+		}
+		return InteractionResult.PASS;
 	}
 }

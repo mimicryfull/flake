@@ -28,6 +28,7 @@ public final class FlakeNetworking implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(BuildResultPayload.TYPE, BuildResultPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(LobbySnapshotPayload.TYPE, LobbySnapshotPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HudStatePayload.TYPE, HudStatePayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.flake.combat.CombatFeedbackPayload.TYPE, dev.flake.combat.CombatFeedbackPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(LobbyActionPayload.TYPE, (payload, context) ->
 				context.server().execute(() -> act(context.server(), context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(BuildApplyPayload.TYPE, (payload, context) ->

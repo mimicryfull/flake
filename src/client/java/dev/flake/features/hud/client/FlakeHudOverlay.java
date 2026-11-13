@@ -55,9 +55,9 @@ public final class FlakeHudOverlay {
 		if (BattleModeSettings.enabled()) {
 			extractBuildHud(g, client, hud, dt);
 			StatusHud.extract(g, client, hud, dt);
-			extractSkillHud(g, client, hud, elapsed, dt, timeSec);
+			int skillTopY = extractSkillHud(g, client, hud, elapsed, dt, timeSec);
 			FlakePlayerHud.extract(g, client);
-			FlakeItemHud.extract(g, client, timeSec);
+			FlakeItemHud.extract(g, client, hud, skillTopY, dt, timeSec);
 		} else {
 			FlakePlayerHud.extract(g, client);
 		}
@@ -236,14 +236,14 @@ public final class FlakeHudOverlay {
 		UiTheme.text(g, gearLine, x + 29, y + 17, w - 34, hud.validBuild() ? UiTheme.MUTED : UiTheme.RED);
 	}
 
-	private static void extractSkillHud(GuiGraphicsExtractor g, Minecraft client, HudStatePayload hud, float elapsed, float dt, float timeSec) {
+	private static int extractSkillHud(GuiGraphicsExtractor g, Minecraft client, HudStatePayload hud, float elapsed, float dt, float timeSec) {
 		boolean chatOpen = client.gui.screen() instanceof ChatScreen;
 		boolean compact = g.guiWidth() < 420;
 		int w = compact ? 118 : Math.min(148, g.guiWidth() / 2 - 96);
-		if (w < 92) return;
 		int h = 34;
-		int x = g.guiWidth() - w - 6;
 		int baseY = g.guiHeight() - h - (compact ? 25 : (chatOpen ? 18 : 6));
+		if (w < 92) return g.guiHeight() - (compact ? 25 : (chatOpen ? 18 : 6));
+		int x = g.guiWidth() - w - 6;
 
 		boolean changed = !skillClass.equals(hud.fighterClass());
 		skillClass = hud.fighterClass();
@@ -265,6 +265,7 @@ public final class FlakeHudOverlay {
 					state, cooldown, Math.max(0.05f, hud.slotCooldownTotal(slot) / 20f), active, activeTotal,
 					hud.blockReason(), skillBars[i], readyFlashes[i], slot == 1 ? UiTheme.CYAN : 0xff689dff, dt, timeSec);
 		}
+		return baseY - (AbilitySlots.COUNT - 1) * (h + 5);
 	}
 
 	private static float drawSkillCard(

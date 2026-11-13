@@ -98,14 +98,27 @@ public final class Stuns {
 			int remaining = stun == null ? 0 : Math.max(0, stun.until() - now);
 			if (remaining > 0) statuses.addFirst(new CombatStatuses.Status("stun", remaining, stun.totalTicks(), 0));
 		});
-		net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
-				blocked(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
+		net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (!blocked(player)) return net.minecraft.world.InteractionResult.PASS;
+			if (player instanceof ServerPlayer sp) CombatFeedback.blocked(sp, sp.getItemInHand(hand));
+			return net.minecraft.world.InteractionResult.FAIL;
+		});
 		net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, level, hand, hit) ->
 				blocked(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
-		net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, level, hand) ->
-				blocked(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
-		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
-				blocked(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
+		net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, level, hand) -> {
+			if (!blocked(player)) return net.minecraft.world.InteractionResult.PASS;
+			if (player instanceof ServerPlayer sp && !sp.getItemInHand(hand).isEmpty()) {
+				CombatFeedback.blocked(sp, sp.getItemInHand(hand));
+			}
+			return net.minecraft.world.InteractionResult.FAIL;
+		});
+		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (!blocked(player)) return net.minecraft.world.InteractionResult.PASS;
+			if (player instanceof ServerPlayer sp && !sp.getItemInHand(hand).isEmpty()) {
+				CombatFeedback.blocked(sp, sp.getItemInHand(hand));
+			}
+			return net.minecraft.world.InteractionResult.FAIL;
+		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			var states = STATES.of(server);
 			int now = server.getTickCount();

@@ -63,13 +63,21 @@ public final class PhaseCrystalRuntime {
 
 	public static boolean activate(ServerPlayer player) {
 		UUID id = player.getUUID();
-		if (DuelRuntime.blocksAbility(id) || active(player)) return false;
+		if (DuelRuntime.blocksAbility(id)) return false;
+		if (active(player)) {
+			dev.flake.combat.CombatFeedback.alreadyActive(player, stack());
+			return false;
+		}
 
 		MinecraftServer server = player.level().getServer();
 		if (server == null) return false;
 		int now = server.getTickCount();
 		State state = STATES.of(server);
-		if (now < state.ready.getOrDefault(id, 0)) return false;
+		int readyAt = state.ready.getOrDefault(id, 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack(), readyAt - now);
+			return false;
+		}
 
 		int cooldown = Cooldowns.ticks(player, COOLDOWN_TICKS);
 		state.buffs.put(id, now + BUFF_TICKS);

@@ -54,7 +54,11 @@ public final class StormHarpoonRuntime {
 		MinecraftServer server = level.getServer();
 		int now = server.getTickCount();
 		Map<UUID, Integer> ready = READY.of(server);
-		if (now < ready.getOrDefault(id, 0)) return false;
+		int readyAt = ready.getOrDefault(id, 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack(), readyAt - now);
+			return false;
+		}
 
 		int cooldown = Cooldowns.ticks(player, COOLDOWN_TICKS);
 		ready.put(id, now + cooldown);

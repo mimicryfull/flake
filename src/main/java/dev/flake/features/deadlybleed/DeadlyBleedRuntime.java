@@ -49,7 +49,10 @@ public final class DeadlyBleedRuntime {
 		if (directTarget instanceof LivingEntity living && validTarget(player, living)
 				&& player.isWithinEntityInteractionRange(living, 1.0)) target = living;
 		if (target == null) target = AbilityTargeting.target(player, player.entityInteractionRange(), AIM_COS, true);
-		if (target == null) return false;
+		if (target == null) {
+			dev.flake.combat.CombatFeedback.noTarget(player, stack());
+			return false;
+		}
 
 		player.getCooldowns().addCooldown(ID, Cooldowns.ticks(player, COOLDOWN_TICKS));
 		float damage = Math.max(BASE_DAMAGE, (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE)) * CRIT_MULTIPLIER;

@@ -1,6 +1,13 @@
 package dev.flake.client.network;
 
+import dev.flake.combat.CombatFeedback;
+import dev.flake.combat.CombatFeedbackPayload;
+import dev.flake.combat.item.ActiveCombatItem;
+import dev.flake.features.hud.client.FlakeItemHud;
 import dev.flake.features.lobby.client.FlakeTabOverlay;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.flake.features.loadout.Loadout;
@@ -51,6 +58,19 @@ public final class FlakeUiClient implements ClientModInitializer {
 			hud = payload;
 			hudReceived = System.nanoTime();
 		}));
+		ClientPlayNetworking.registerGlobalReceiver(CombatFeedbackPayload.TYPE, (payload, context) -> context.client().execute(() ->
+				FlakeItemHud.pushFeedback(payload)));
+		CombatFeedback.onClientCooldown(FlakeItemHud::notifyClientCooldown);
+		UseItemCallback.EVENT.register((player, level, hand) -> {
+			if (level.isClientSide() && hand == InteractionHand.MAIN_HAND) {
+				var stack = player.getItemInHand(hand);
+				if (!stack.isEmpty() && !(stack.getItem() instanceof ActiveCombatItem)
+						&& player.getCooldowns().isOnCooldown(stack)) {
+					FlakeItemHud.notifyClientCooldown(stack);
+				}
+			}
+			return InteractionResult.PASS;
+		});
 		ClientPlayNetworking.registerGlobalReceiver(BuildResultPayload.TYPE, (payload, context) -> context.client().execute(() -> {
 			buildResult = payload;
 			buildResultAt = System.nanoTime();
@@ -61,7 +81,7 @@ public final class FlakeUiClient implements ClientModInitializer {
 		}));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			snapshot = null; received = 0; hud = null; hudReceived = 0; pending = 0; error = ""; errorUntil = 0;
-			buildResult = null; buildResultAt = 0; localRoomId = ""; FlakeTabOverlay.reset();
+			buildResult = null; buildResultAt = 0; localRoomId = ""; FlakeTabOverlay.reset(); FlakeItemHud.reset();
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (nextPageKey.consumeClick()) if (client.options.keyPlayerList.isDown()) FlakeTabOverlay.page(1);

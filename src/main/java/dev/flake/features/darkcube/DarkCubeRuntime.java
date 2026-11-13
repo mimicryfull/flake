@@ -52,9 +52,16 @@ public final class DarkCubeRuntime {
 		if (DuelRuntime.blocksAbility(id) || !(player.level() instanceof ServerLevel level)) return false;
 		int now = level.getServer().getTickCount();
 		var ready = READY.of(player);
-		if (now < ready.getOrDefault(id, 0)) return false;
+		int readyAt = ready.getOrDefault(id, 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack(), readyAt - now);
+			return false;
+		}
 		var target = findTarget(player, level);
-		if (target == null) return false;
+		if (target == null) {
+			dev.flake.combat.CombatFeedback.noTarget(player, stack());
+			return false;
+		}
 		ready.put(id, now + COOLDOWN_TICKS);
 		player.getCooldowns().addCooldown(ID, COOLDOWN_TICKS);
 		target.hurtServer(level, player.damageSources().indirectMagic(player, player), DAMAGE);

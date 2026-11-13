@@ -93,17 +93,32 @@ public final class ControlHammerRuntime {
 
 	public static boolean use(ServerPlayer player, Entity directTarget) {
 		var stack = player.getMainHandItem();
-		if (!isHammer(stack) || DuelRuntime.blocksAbility(player.getUUID())) return false;
+		if (!isHammer(stack)) {
+			dev.flake.combat.CombatFeedback.mainHandOnly(player, player.getOffhandItem());
+			return false;
+		}
+		if (DuelRuntime.blocksAbility(player.getUUID())) return false;
 		int now = player.level().getServer().getTickCount();
 		var state = STATES.of(player);
-		if (stunned(player.getUUID(), now) || now < state.ready.getOrDefault(player.getUUID(), 0)) return false;
+		if (stunned(player.getUUID(), now)) {
+			dev.flake.combat.CombatFeedback.blocked(player, stack);
+			return false;
+		}
+		int readyAt = state.ready.getOrDefault(player.getUUID(), 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack, readyAt - now);
+			return false;
+		}
 		LivingEntity target = null;
 		if (directTarget instanceof LivingEntity living && validTarget(player, living)
 				&& player.distanceToSqr(living) <= (REACH + 0.6) * (REACH + 0.6)) {
 			target = living;
 		}
 		if (target == null) target = findTarget(player);
-		if (target == null || stunned(target.getUUID(), now)) return false;
+		if (target == null || stunned(target.getUUID(), now)) {
+			dev.flake.combat.CombatFeedback.noTarget(player, stack);
+			return false;
+		}
 		int cooldown = Cooldowns.ticks(player, COOLDOWN_TICKS);
 		state.ready.put(player.getUUID(), now + cooldown);
 		state.totals.put(player.getUUID(), cooldown);

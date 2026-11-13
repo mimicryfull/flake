@@ -60,7 +60,15 @@ public final class MatadoraRuntime {
 		if (DuelRuntime.blocksAbility(id)) return false;
 		int now = player.level().getServer().getTickCount();
 		var state = STATES.of(player);
-		if (active(player) || now < state.ready.getOrDefault(id, 0)) return false;
+		if (active(player)) {
+			dev.flake.combat.CombatFeedback.alreadyActive(player, stack());
+			return false;
+		}
+		int readyAt = state.ready.getOrDefault(id, 0);
+		if (now < readyAt) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, stack(), readyAt - now);
+			return false;
+		}
 		state.buffs.put(id, now + BUFF_TICKS);
 		state.ready.put(id, now + COOLDOWN_TICKS);
 		player.getCooldowns().addCooldown(ID, COOLDOWN_TICKS);

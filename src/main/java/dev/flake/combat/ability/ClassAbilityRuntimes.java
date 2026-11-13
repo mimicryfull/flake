@@ -113,20 +113,20 @@ public final class ClassAbilityRuntimes {
 		int now = server.getTickCount();
 		int remaining = remaining(player.getUUID(), slot, now);
 		if (DuelRuntime.blocksAbility(player.getUUID())) {
-			CombatFeedback.blocked(player);
+			CombatFeedback.blocked(player, ability);
 			return 0;
 		}
 		if (remaining > 0) {
-			CombatFeedback.onCooldown(player, remaining);
+			CombatFeedback.onCooldown(player, ability, remaining);
 			return 0;
 		}
 		if (!(player.level() instanceof ServerLevel)) {
-			CombatFeedback.unavailable(player);
+			CombatFeedback.unavailable(player, ability);
 			return 0;
 		}
 		var runtime = byAbility.get(ability);
 		if (runtime == null || !runtime.cast(player, ability, now)) {
-			CombatFeedback.noTarget(player);
+			CombatFeedback.noTarget(player, ability);
 			return 0;
 		}
 		int cooldown = Cooldowns.ticks(player, ability.cooldownTicks());

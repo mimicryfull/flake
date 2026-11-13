@@ -202,22 +202,26 @@ public final class ConcussedAbilities {
 	private int shockwave(ServerPlayer player) {
 		var server = player.level().getServer();
 		var id = player.getUUID();
+		var ability = Ability.GRAVITATIONAL_DISSONANCE;
 		if (DuelRuntime.blocksAbility(id)) {
-			failure(player, "Дочекайся початку бою або завершення повернення речей.");
+			dev.flake.combat.CombatFeedback.blocked(player, ability);
 			return 0;
 		}
-		if (LoadoutService.of(server).get(id).fighterClass() != Loadout.FighterClass.CONCUSSED) {
-			failure(player, "Здібність доступна класу Контужений.");
-			return 0;
-		}
-		if (!player.isAlive() || player.isSpectator()) {
-			failure(player, "Здібність доступна лише живому гравцю.");
+		if (LoadoutService.of(server).get(id).fighterClass() != Loadout.FighterClass.CONCUSSED
+				|| !player.isAlive() || player.isSpectator()) {
+			dev.flake.combat.CombatFeedback.unavailable(player, ability);
 			return 0;
 		}
 		int now = server.getTickCount();
-		if (CHARGES.containsKey(id)) return 0;
+		if (CHARGES.containsKey(id)) {
+			dev.flake.combat.CombatFeedback.alreadyActive(player, ability);
+			return 0;
+		}
 		Integer lastUse = COOLDOWNS.get(id);
-		if (lastUse != null && now - lastUse < Shockwave.COOLDOWN_TICKS) return 0;
+		if (lastUse != null && now - lastUse < Shockwave.COOLDOWN_TICKS) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, ability, Shockwave.COOLDOWN_TICKS - (now - lastUse));
+			return 0;
+		}
 		int cooldown = Cooldowns.ticks(player, Shockwave.COOLDOWN_TICKS);
 		COOLDOWNS.put(id, now - (Shockwave.COOLDOWN_TICKS - cooldown));
 		SHOCKWAVE_TOTALS.put(id, cooldown);
@@ -264,22 +268,26 @@ public final class ConcussedAbilities {
 	private int quake(ServerPlayer player) {
 		var server = player.level().getServer();
 		var id = player.getUUID();
+		var ability = Ability.ELECTRIC_QUAKE;
 		if (DuelRuntime.blocksAbility(id)) {
-			failure(player, "Дочекайся початку бою або завершення повернення речей.");
+			dev.flake.combat.CombatFeedback.blocked(player, ability);
 			return 0;
 		}
-		if (LoadoutService.of(server).get(id).fighterClass() != Loadout.FighterClass.CONCUSSED) {
-			failure(player, "Електро-землетрус доступний класу Контужений.");
-			return 0;
-		}
-		if (!player.isAlive() || player.isSpectator()) {
-			failure(player, "Здібність доступна лише живому гравцю.");
+		if (LoadoutService.of(server).get(id).fighterClass() != Loadout.FighterClass.CONCUSSED
+				|| !player.isAlive() || player.isSpectator()) {
+			dev.flake.combat.CombatFeedback.unavailable(player, ability);
 			return 0;
 		}
 		int now = server.getTickCount();
-		if (QUAKES.containsKey(id)) return 0;
+		if (QUAKES.containsKey(id)) {
+			dev.flake.combat.CombatFeedback.alreadyActive(player, ability);
+			return 0;
+		}
 		Integer lastUse = QUAKE_COOLDOWNS.get(id);
-		if (lastUse != null && now - lastUse < ElectricQuake.COOLDOWN_TICKS) return 0;
+		if (lastUse != null && now - lastUse < ElectricQuake.COOLDOWN_TICKS) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, ability, ElectricQuake.COOLDOWN_TICKS - (now - lastUse));
+			return 0;
+		}
 		var look = player.getLookAngle();
 		double len = Math.hypot(look.x, look.z);
 		double fx = len < 1.0e-5 ? -Math.sin(Math.toRadians(player.getYRot())) : look.x / len;
