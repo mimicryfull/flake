@@ -48,12 +48,26 @@ public final class WeaponVoxelRenderer {
 					.withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
 					.build());
 
+	public static final RenderPipeline SLASH_PIPELINE = RenderPipelines.register(
+			RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+					.withLocation(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "pipeline/broadsword_slash"))
+					.withVertexShader(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "core/broadsword_slash"))
+					.withFragmentShader(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "core/broadsword_slash"))
+					.withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+					.withPrimitiveTopology(PrimitiveTopology.QUADS)
+					.withCull(false)
+					.withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+					.withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+					.build());
+
 	public static final RenderType CORE_RENDER_TYPE = RenderType.create(
 			"flake_weapon_voxel_core", RenderSetup.builder(CORE_PIPELINE).createRenderSetup());
 	public static final RenderType SOFT_RENDER_TYPE = RenderType.create(
 			"flake_weapon_voxel_soft", RenderSetup.builder(SOFT_PIPELINE).createRenderSetup());
 	public static final RenderType GLOW_RENDER_TYPE = RenderType.create(
 			"flake_weapon_voxel_glow", RenderSetup.builder(GLOW_PIPELINE).createRenderSetup());
+	public static final RenderType SLASH_RENDER_TYPE = RenderType.create(
+			"flake_broadsword_slash", RenderSetup.builder(SLASH_PIPELINE).createRenderSetup());
 
 	private WeaponVoxelRenderer() {}
 
