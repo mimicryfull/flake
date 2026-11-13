@@ -16,13 +16,13 @@ import net.minecraft.world.phys.Vec3;
  * for the Chaos Broadsword active sweep.
  */
 public final class BroadswordSweepActor implements EffectActor {
-	private static final float DURATION_TICKS = ChaosBroadswordAnimation.DURATION;
+	private static final float DURATION_SEC = 0.80f;
 
 	private final int sourceId;
 	private final Vec3 origin;
 	private final float startYaw;
 	private long startNanos = -1L;
-	private float ageTicks;
+	private float ageSec;
 
 	public BroadswordSweepActor(CombatVfxPayload payload) {
 		this.sourceId = payload.sourceId();
@@ -35,17 +35,19 @@ public final class BroadswordSweepActor implements EffectActor {
 	@Override
 	public boolean write(RenderFrame frame, SlotWriter slot) {
 		if (startNanos < 0L) startNanos = frame.nanos;
-		ageTicks = (frame.nanos - startNanos) * 20.0f / 1_000_000_000.0f;
-		return ageTicks >= DURATION_TICKS;
+		ageSec = (frame.nanos - startNanos) / 1_000_000_000.0f;
+		return ageSec >= DURATION_SEC;
 	}
 
 	@Override
 	public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
-		float progress = Math.clamp(ageTicks / DURATION_TICKS, 0f, 1f);
-		float opacity = ChaosBroadswordAnimation.opacity(ageTicks);
+		float progress = Math.clamp(ageSec / DURATION_SEC, 0f, 1f);
+		float fadeStart = 0.46f;
+		float fadeT = Math.clamp((ageSec - fadeStart) / (DURATION_SEC - fadeStart), 0f, 1f);
+		float opacity = Math.min(1f, ageSec / 0.04f) * (1f - fadeT * fadeT * (3f - 2f * fadeT));
 		if (opacity <= 0.01f) return;
 
-		float waveRadius = ChaosBroadswordAnimation.radius(ageTicks);
+		float waveRadius = 0.35f + (ChaosBroadswordAnimation.RADIUS - 0.35f) * (1.0f - (float) Math.exp(-ageSec * 6.2));
 		float cx = (float) (origin.x - cameraPos.x);
 		float cy = (float) (origin.y - cameraPos.y);
 		float cz = (float) (origin.z - cameraPos.z);
@@ -81,7 +83,7 @@ public final class BroadswordSweepActor implements EffectActor {
 
 			for (int i = 0; i < n; i++) {
 				float ang = (i / (float) n) * (float) (Math.PI * 2.0) + ring * 0.11f;
-				float waveMod = (float) Math.sin(ang * 7.0f - ageTicks * 0.85f + ring * 1.4f);
+				float waveMod = (float) Math.sin(ang * 7.0f - ageSec * 14.0f + ring * 1.4f);
 				float r = rBase + waveMod * 0.07f;
 
 				float vx = cx + (float) Math.cos(ang) * r;
@@ -109,7 +111,7 @@ public final class BroadswordSweepActor implements EffectActor {
 			float r = waveRadius * (0.90f + 0.14f * ((i % 3) - 1));
 			float vx = cx + (float) Math.cos(ang) * r;
 			float vz = cz + (float) Math.sin(ang) * r;
-			float vy = cy + 0.55f + 0.28f * (float) Math.sin(ang * 5.0f + ageTicks * 0.7f);
+			float vy = cy + 0.55f + 0.28f * (float) Math.sin(ang * 5.0f + ageSec * 12.0f);
 
 			float s = 0.095f * (1.0f - 0.3f * progress);
 			WeaponVoxelRenderer.emitCube(pose, vc, vx, vy, vz, s, 0.032f, s,
