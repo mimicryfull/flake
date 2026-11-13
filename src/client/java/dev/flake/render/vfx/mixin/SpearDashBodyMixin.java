@@ -3,6 +3,7 @@ package dev.flake.render.vfx.mixin;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.flake.features.chaosbroadsword.client.BroadswordSpinPose;
+import dev.flake.features.chronotrident.client.ChronoPlantPose;
 import dev.flake.features.junglespear.client.SpearLungePose;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -30,6 +31,15 @@ abstract class SpearDashBodyMixin {
 			poseStack.rotateDegrees(Axis.YP, spinDeg);
 			poseStack.rotateDegrees(Axis.XP, -38.0f * swordW);
 			poseStack.rotateDegrees(Axis.ZP, 14.0f * swordW);
+		}
+
+		float chronoW = ChronoPlantPose.weight(state.id);
+		if (chronoW > 0.001f) {
+			float lift = ChronoPlantPose.lift(state.id);
+			float slam = ChronoPlantPose.slamSpring(state.id);
+			// Brief windup hop followed by a springy-bouncy downward slam crouch
+			poseStack.translate(0.0f, 0.20f * lift - 0.28f * slam, 0.0f);
+			poseStack.rotateDegrees(Axis.XP, 10.0f * lift - 30.0f * slam);
 		}
 	}
 }

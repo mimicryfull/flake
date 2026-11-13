@@ -43,6 +43,7 @@ public final class ChronosphereActor extends RadialActor {
 
 	public ChronosphereActor(CombatVfxPayload payload) {
 		super(payload);
+		ChronoPlantPose.start(this.sourceId);
 	}
 
 	@Override

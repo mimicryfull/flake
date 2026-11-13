@@ -66,16 +66,16 @@ vec3 chronoSkyMaelstrom(vec3 ray, float age) {
     float depthMask = smoothstep(0.20, 0.84, density);
     float stars = pow(clamp(chronoNoise3D(dir * 44.0 + warp1 * 1.35), 0.0, 1.0), 14.0) * 1.45;
 
-    vec3 abyss = vec3(0.025, 0.004, 0.068);
-    vec3 nebula = vec3(0.26, 0.035, 0.56);
-    vec3 violet = vec3(0.58, 0.13, 0.95);
-    vec3 magentaCore = vec3(0.92, 0.50, 1.00);
+    vec3 abyss = vec3(0.018, 0.002, 0.050);
+    vec3 nebula = vec3(0.20, 0.025, 0.44);
+    vec3 violet = vec3(0.46, 0.09, 0.78);
+    vec3 magentaCore = vec3(0.78, 0.38, 0.90);
 
     vec3 sky = mix(abyss, nebula, depthMask);
-    sky = mix(sky, violet, smoothstep(0.42, 0.90, warp2.x) * 0.68);
-    sky += mix(violet, magentaCore, filaments) * filaments * 0.88;
-    sky += CHRONO_CORE * stars;
-    return sky;
+    sky = mix(sky, violet, smoothstep(0.42, 0.90, warp2.x) * 0.62);
+    sky += mix(violet, magentaCore, filaments) * filaments * 0.72;
+    sky += CHRONO_CORE * stars * 0.85;
+    return sky * 0.88;
 }
 
 void chronoShell(vec3 ray, float sceneDistance, vec3 origin, float radius, float alpha,

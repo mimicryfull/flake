@@ -1,6 +1,7 @@
 package dev.flake.render.vfx.mixin;
 
 import dev.flake.features.chaosbroadsword.client.BroadswordSpinPose;
+import dev.flake.features.chronotrident.client.ChronoPlantPose;
 import dev.flake.features.junglespear.client.SpearLungePose;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -60,6 +61,31 @@ abstract class SpearDashModelMixin extends HumanoidModel<AvatarRenderState> {
 
 			this.leftLeg.xRot = lerp(this.leftLeg.xRot, 0.72f, swordW);
 			this.leftLeg.zRot = lerp(this.leftLeg.zRot, -0.32f, swordW);
+		}
+
+		float chronoW = ChronoPlantPose.weight(state.id);
+		if (chronoW > 0.001f) {
+			float lift = ChronoPlantPose.lift(state.id);
+			float slam = ChronoPlantPose.slamSpring(state.id);
+			float targetRightArmX = lerp(-2.35f, -0.58f, Math.clamp(slam, 0.0f, 1.35f));
+			float targetLeftArmX = lerp(-1.85f, -0.78f, Math.clamp(slam, 0.0f, 1.35f));
+			float armBlend = Math.max(lift, Math.min(1.0f, chronoW));
+
+			this.head.xRot = lerp(this.head.xRot, -0.20f * lift + 0.44f * slam, chronoW);
+
+			this.rightArm.xRot = lerp(this.rightArm.xRot, targetRightArmX, armBlend);
+			this.rightArm.yRot = lerp(this.rightArm.yRot, -0.18f, chronoW);
+			this.rightArm.zRot = lerp(this.rightArm.zRot, 0.14f, chronoW);
+
+			this.leftArm.xRot = lerp(this.leftArm.xRot, targetLeftArmX, armBlend);
+			this.leftArm.yRot = lerp(this.leftArm.yRot, 0.48f, chronoW);
+			this.leftArm.zRot = lerp(this.leftArm.zRot, -0.16f, chronoW);
+
+			this.rightLeg.xRot = lerp(this.rightLeg.xRot, -0.62f * slam + 0.25f * lift, chronoW);
+			this.rightLeg.zRot = lerp(this.rightLeg.zRot, 0.20f * slam, chronoW);
+
+			this.leftLeg.xRot = lerp(this.leftLeg.xRot, 0.54f * slam - 0.20f * lift, chronoW);
+			this.leftLeg.zRot = lerp(this.leftLeg.zRot, -0.20f * slam, chronoW);
 		}
 	}
 

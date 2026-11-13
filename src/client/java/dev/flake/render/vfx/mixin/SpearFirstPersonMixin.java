@@ -3,6 +3,8 @@ package dev.flake.render.vfx.mixin;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.flake.features.chaosbroadsword.client.BroadswordSpinPose;
+import dev.flake.features.chronotrident.ChronoTridentRuntime;
+import dev.flake.features.chronotrident.client.ChronoPlantPose;
 import dev.flake.features.junglespear.client.SpearLungePose;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
@@ -63,6 +65,29 @@ abstract class SpearFirstPersonMixin {
 				poseStack.translate((0.28f - 0.24f * sweep) * swordW, -0.10f * swordW, -0.32f * swordW);
 				poseStack.rotateDegrees(Axis.XP, -52.0f * swordW);
 				poseStack.rotateDegrees(Axis.YP, (-32.0f + 52.0f * sweep) * swordW);
+			}
+		}
+
+		float chronoW = ChronoPlantPose.weight(player.getId());
+		if (chronoW > 0.001f) {
+			float lift = ChronoPlantPose.lift(player.getId());
+			float flip = ChronoPlantPose.flipProgress(player.getId());
+			float slam = ChronoPlantPose.slamSpring(player.getId());
+			float bounceDelta = slam - flip;
+			if (ChronoTridentRuntime.isTrident(stack)) {
+				float side = (hand == InteractionHand.MAIN_HAND) ? -1.0f : 1.0f;
+				poseStack.translate(
+						side * (0.16f * flip + 0.04f * slam),
+						0.18f * lift - 0.30f * slam,
+						-0.24f * flip - 0.10f * slam
+				);
+				// Flip the trident prongs-down and drive it into the ground with springy rebound
+				poseStack.rotateDegrees(Axis.XP, -162.0f * flip - 16.0f * bounceDelta);
+				poseStack.rotateDegrees(Axis.ZP, side * (-14.0f * flip + 8.0f * bounceDelta));
+			} else {
+				float side = (hand == InteractionHand.MAIN_HAND) ? -1.0f : 1.0f;
+				poseStack.translate(side * 0.08f * chronoW, 0.06f * lift - 0.12f * slam, -0.14f * chronoW);
+				poseStack.rotateDegrees(Axis.XP, -22.0f * slam);
 			}
 		}
 	}
