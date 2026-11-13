@@ -14,7 +14,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** Small utility active items with vanilla textures: «Димова шашка» and «Адреналін». Provisional numbers. */
 public final class Gadgets {
-	public static final int SMOKE_COOLDOWN = 300, ADRENALINE_COOLDOWN = 440;
+	public static final int SMOKE_COOLDOWN = 20, ADRENALINE_COOLDOWN = 20;
 
 	private static final Identifier SMOKE_ID = Identifier.fromNamespaceAndPath("flake", "smoke_bomb");
 	private static final Identifier ADRENALINE_ID = Identifier.fromNamespaceAndPath("flake", "adrenaline");

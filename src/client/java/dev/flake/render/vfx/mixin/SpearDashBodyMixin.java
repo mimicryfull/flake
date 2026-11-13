@@ -24,12 +24,12 @@ abstract class SpearDashBodyMixin {
 
 		float swordW = BroadswordSpinPose.weight(state.id);
 		if (swordW > 0.001f) {
-			float spin = BroadswordSpinPose.spinProgress(state.id);
-			// Plant low into the ground and whip through a full 360-degree heavy spin
-			poseStack.translate(0.0f, -0.15f * swordW, 0.0f);
-			poseStack.rotateDegrees(Axis.YP, -360.0f * spin);
-			poseStack.rotateDegrees(Axis.XP, -18.0f * swordW);
-			poseStack.rotateDegrees(Axis.ZP, 10.0f * swordW);
+			float spinDeg = BroadswordSpinPose.spinDegrees(state.id);
+			// Heavy low crouch pressing into the ground with deep forward lean and weighted 360 spin
+			poseStack.translate(0.0f, -0.26f * swordW, 0.0f);
+			poseStack.rotateDegrees(Axis.YP, spinDeg);
+			poseStack.rotateDegrees(Axis.XP, -38.0f * swordW);
+			poseStack.rotateDegrees(Axis.ZP, 14.0f * swordW);
 		}
 	}
 }

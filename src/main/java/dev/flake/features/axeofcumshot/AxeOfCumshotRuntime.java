@@ -29,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
  * Кидає сокиру в напрямку погляду без автонаведення; влучання завдає шкоди та оглушує на 1.5с.
  */
 public final class AxeOfCumshotRuntime {
-	public static final int COOLDOWN_TICKS = 180;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final int STUN_TICKS = 30;
 	public static final float DAMAGE = 4.0f;
 	public static final double RANGE = 18.0;

@@ -27,7 +27,7 @@ public final class DarkCubeRuntime {
 	public static final float DAMAGE = 2.0f;
 	public static final int SLOW_AMPLIFIER = 1;
 	public static final int SLOW_TICKS = 20;
-	public static final int COOLDOWN_TICKS = 140;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final double RANGE = 16.0;
 	/** Ширший конус автонаведення (~32°), щоб промінь надійно знаходив ціль у динамічному PvP. */
 	public static final double AIM_COS = 0.85;

@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  * «Джунглеве спис»: зброя з подовженою дистанцією удару та плавним ривком уперед (ПКМ).
  */
 public final class JungleSpearRuntime {
-	public static final int COOLDOWN_TICKS = 200;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final double DASH_DISTANCE = 4.5;
 	public static final double REACH_BONUS = 0.5;
 	public static final double HIT_RADIUS = 1.35;

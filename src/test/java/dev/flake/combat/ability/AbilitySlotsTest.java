@@ -56,8 +56,8 @@ class AbilitySlotsTest {
 	}
 
 	@Test void eachSlotHasItsOwnTimingAndHudState() {
-		assertEquals(60, AbilitySlots.resolve("CONCUSSED", 1).cooldownTicks());
-		assertEquals(80, AbilitySlots.resolve("CONCUSSED", 2).cooldownTicks());
+		assertEquals(20, AbilitySlots.resolve("CONCUSSED", 1).cooldownTicks());
+		assertEquals(20, AbilitySlots.resolve("CONCUSSED", 2).cooldownTicks());
 		assertEquals(HudStatePayload.SkillState.COOLDOWN, HudStatePayload.skillState("CONCUSSED", 1, false, -1, 2));
 		assertEquals(HudStatePayload.SkillState.READY, HudStatePayload.skillState("CONCUSSED", 2, false, -1, 0));
 		assertEquals(HudStatePayload.SkillState.BLOCKED, HudStatePayload.skillState("CONCUSSED", 2, true, -1, 0));

@@ -27,7 +27,7 @@ import net.minecraft.world.item.component.SwingAnimation;
  * що завдає 10 шкоди й на 3 секунди зменшує вихідну шкоду цілей на 30%.
  */
 public final class ChaosBroadswordRuntime {
-	public static final int COOLDOWN_TICKS = 260;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final int WEAKNESS_TICKS = 60;
 	public static final float SWEEP_DAMAGE = 10.0f;
 	public static final double SWEEP_RADIUS = 4.5;

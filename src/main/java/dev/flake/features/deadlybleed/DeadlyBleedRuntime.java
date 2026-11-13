@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
  * шкоди з помаранчевою анімацією криту. Ціль і результат визначає сервер.
  */
 public final class DeadlyBleedRuntime {
-	public static final int COOLDOWN_TICKS = 240;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final float BASE_DAMAGE = 7.0f;
 	public static final float CRIT_MULTIPLIER = 2.0f;
 	public static final double AIM_COS = 0.6;

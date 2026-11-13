@@ -6,7 +6,7 @@ public final class Shockwave {
 	public static final double RADIUS = 5.0;
 	public static final double STRENGTH = 1.2;
 	public static final double UPWARD = 0.35;
-	public static final int COOLDOWN_TICKS = 60;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final int CHARGE_TICKS = 22;
 
 	private Shockwave() {}

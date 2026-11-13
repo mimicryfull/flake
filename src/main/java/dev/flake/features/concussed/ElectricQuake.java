@@ -20,7 +20,7 @@ public final class ElectricQuake {
 	public static final double MAX_UPWARD = 0.12;
 	public static final double MIN_UPWARD = 0.05;
 
-	public static final int COOLDOWN_TICKS = 80;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final int PROPAGATION_TICKS = 10;
 	public static final float SHADER_DURATION_SECONDS = 1.10f;
 

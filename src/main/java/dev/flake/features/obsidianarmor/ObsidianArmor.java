@@ -50,7 +50,7 @@ public final class ObsidianArmor implements Lifecycle {
 	public static final float PULSE_DAMAGE_THRESHOLD = 16.0f;
 	public static final float PULSE_ABSORPTION_HP = 4.0f;
 	public static final int PULSE_ABSORPTION_TICKS = 80;
-	public static final int PULSE_COOLDOWN_TICKS = 200;
+	public static final int PULSE_COOLDOWN_TICKS = 20;
 	public static final float PULSE_FEEDBACK_DAMAGE = 2.5f;
 	public static final double PULSE_RADIUS = 2.8;
 	public static final double PULSE_KNOCKBACK = 0.55;

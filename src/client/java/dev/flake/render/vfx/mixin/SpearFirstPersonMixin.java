@@ -51,18 +51,18 @@ abstract class SpearFirstPersonMixin {
 
 		float swordW = BroadswordSpinPose.weight(player.getId());
 		if (swordW > 0.001f) {
-			float spin = BroadswordSpinPose.spinProgress(player.getId());
-			float sweep = -1.0f + spin * 2.0f; // -1 (right windup) -> +1 (full left follow-through)
+			float swing = BroadswordSpinPose.swingProgress(player.getId());
+			float sweep = -1.0f + swing * 2.0f; // windup right -> heavy flat sweep across to the left
 			if (hand == InteractionHand.MAIN_HAND) {
-				poseStack.translate((-0.24f - 0.34f * sweep) * swordW, -0.04f * swordW, -0.34f * swordW);
-				poseStack.rotateDegrees(Axis.XP, -68.0f * swordW);
-				poseStack.rotateDegrees(Axis.YP, (48.0f + 78.0f * sweep) * swordW);
-				poseStack.rotateDegrees(Axis.ZP, 62.0f * swordW);
+				poseStack.translate((-0.26f - 0.38f * sweep) * swordW, -0.10f * swordW, -0.38f * swordW);
+				// Lay the broadsword flat and parallel to the ground
+				poseStack.rotateDegrees(Axis.XP, -86.0f * swordW);
+				poseStack.rotateDegrees(Axis.YP, (46.0f + 86.0f * sweep) * swordW);
+				poseStack.rotateDegrees(Axis.ZP, 84.0f * swordW);
 			} else {
-				// Off-hand reaches across to grip the sword two-handed
-				poseStack.translate((0.28f - 0.22f * sweep) * swordW, -0.06f * swordW, -0.30f * swordW);
-				poseStack.rotateDegrees(Axis.XP, -42.0f * swordW);
-				poseStack.rotateDegrees(Axis.YP, (-32.0f + 45.0f * sweep) * swordW);
+				poseStack.translate((0.28f - 0.24f * sweep) * swordW, -0.10f * swordW, -0.32f * swordW);
+				poseStack.rotateDegrees(Axis.XP, -52.0f * swordW);
+				poseStack.rotateDegrees(Axis.YP, (-32.0f + 52.0f * sweep) * swordW);
 			}
 		}
 	}

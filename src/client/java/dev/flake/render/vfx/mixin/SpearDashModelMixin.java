@@ -43,23 +43,23 @@ abstract class SpearDashModelMixin extends HumanoidModel<AvatarRenderState> {
 
 		float swordW = BroadswordSpinPose.weight(state.id);
 		if (swordW > 0.001f) {
-			this.head.xRot = lerp(this.head.xRot, -0.18f, swordW);
+			this.head.xRot = lerp(this.head.xRot, -0.36f, swordW);
 
-			// Two-handed heavy broadsword grip extended horizontally forward into the spin
-			this.rightArm.xRot = lerp(this.rightArm.xRot, -1.48f, swordW);
-			this.rightArm.yRot = lerp(this.rightArm.yRot, 0.34f, swordW);
-			this.rightArm.zRot = lerp(this.rightArm.zRot, -0.55f, swordW);
+			// Two-handed heavy grip bent flat parallel to the ground despite the 38-deg forward body lean
+			this.rightArm.xRot = lerp(this.rightArm.xRot, -1.32f, swordW);
+			this.rightArm.yRot = lerp(this.rightArm.yRot, 0.42f, swordW);
+			this.rightArm.zRot = lerp(this.rightArm.zRot, -1.34f, swordW);
 
-			this.leftArm.xRot = lerp(this.leftArm.xRot, -1.40f, swordW);
-			this.leftArm.yRot = lerp(this.leftArm.yRot, -0.58f, swordW);
-			this.leftArm.zRot = lerp(this.leftArm.zRot, 0.25f, swordW);
+			this.leftArm.xRot = lerp(this.leftArm.xRot, -1.26f, swordW);
+			this.leftArm.yRot = lerp(this.leftArm.yRot, -0.68f, swordW);
+			this.leftArm.zRot = lerp(this.leftArm.zRot, 0.48f, swordW);
 
-			// Wide, deeply planted stance bracing into the ground
-			this.rightLeg.xRot = lerp(this.rightLeg.xRot, -0.54f, swordW);
-			this.rightLeg.zRot = lerp(this.rightLeg.zRot, 0.26f, swordW);
+			// Deeply braced legs digging into the ground
+			this.rightLeg.xRot = lerp(this.rightLeg.xRot, -0.78f, swordW);
+			this.rightLeg.zRot = lerp(this.rightLeg.zRot, 0.30f, swordW);
 
-			this.leftLeg.xRot = lerp(this.leftLeg.xRot, 0.50f, swordW);
-			this.leftLeg.zRot = lerp(this.leftLeg.zRot, -0.28f, swordW);
+			this.leftLeg.xRot = lerp(this.leftLeg.xRot, 0.72f, swordW);
+			this.leftLeg.zRot = lerp(this.leftLeg.zRot, -0.32f, swordW);
 		}
 	}
 

@@ -37,7 +37,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class ControlHammerRuntime {
 	public static final int STUN_TICKS = 10;
-	public static final int COOLDOWN_TICKS = 200;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final double REACH = 4.2;
 	public static final Identifier MODEL = Identifier.fromNamespaceAndPath("flake", "control_hammer");
 

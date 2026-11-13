@@ -20,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class CrystalClawRuntime {
 	public static final int BUFF_TICKS = 100;
-	public static final int COOLDOWN_TICKS = 300;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final float SKILL_DAMAGE_MULTIPLIER = 1.20f;
 
 	public static final Identifier ID = Identifier.fromNamespaceAndPath("flake", "crystal_claw");

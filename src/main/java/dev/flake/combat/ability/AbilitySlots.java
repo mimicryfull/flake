@@ -10,14 +10,14 @@ public final class AbilitySlots {
 
 	public enum Ability {
 		/** activeTicks is the real server-side phase length, not a UI guess. */
-		GRAVITATIONAL_DISSONANCE("flake.ability.gravitational_dissonance", 60, dev.flake.features.concussed.Shockwave.CHARGE_TICKS, true),
-		ELECTRIC_QUAKE("flake.ability.electric_quake", 80, dev.flake.features.concussed.ElectricQuake.PROPAGATION_TICKS, true),
-		SHIELD_RAM("flake.ability.shield_ram", 120, 0, true),
-		BULWARK("flake.ability.bulwark", 280, dev.flake.features.bastion.BastionRuntime.BULWARK_TICKS, true),
-		BLOOD_LUNGE("flake.ability.blood_lunge", 120, 0, true),
-		BLOODLUST("flake.ability.bloodlust", 300, dev.flake.features.vampire.VampireRuntime.BLOODLUST_TICKS, true),
-		PROXIMITY_MINE("flake.ability.proximity_mine", 160, dev.flake.features.demolitionist.DemolitionistRuntime.MINE_LIFE_TICKS, true),
-		BLAST_JUMP("flake.ability.blast_jump", 180, 0, true),
+		GRAVITATIONAL_DISSONANCE("flake.ability.gravitational_dissonance", 20, dev.flake.features.concussed.Shockwave.CHARGE_TICKS, true),
+		ELECTRIC_QUAKE("flake.ability.electric_quake", 20, dev.flake.features.concussed.ElectricQuake.PROPAGATION_TICKS, true),
+		SHIELD_RAM("flake.ability.shield_ram", 20, 0, true),
+		BULWARK("flake.ability.bulwark", 20, dev.flake.features.bastion.BastionRuntime.BULWARK_TICKS, true),
+		BLOOD_LUNGE("flake.ability.blood_lunge", 20, 0, true),
+		BLOODLUST("flake.ability.bloodlust", 20, dev.flake.features.vampire.VampireRuntime.BLOODLUST_TICKS, true),
+		PROXIMITY_MINE("flake.ability.proximity_mine", 20, dev.flake.features.demolitionist.DemolitionistRuntime.MINE_LIFE_TICKS, true),
+		BLAST_JUMP("flake.ability.blast_jump", 20, 0, true),
 		UNIMPLEMENTED("flake.ability.unassigned", 0, 0, false);
 
 		private final String titleKey;

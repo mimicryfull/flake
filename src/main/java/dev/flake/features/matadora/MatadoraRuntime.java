@@ -21,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class MatadoraRuntime {
 	public static final int BUFF_TICKS = 100;
-	public static final int COOLDOWN_TICKS = 300;
+	public static final int COOLDOWN_TICKS = 20;
 	public static final double DAMAGE_BONUS = 0.10;
 	public static final double SPEED_BONUS = 0.20;
 
