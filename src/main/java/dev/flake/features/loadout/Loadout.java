@@ -109,6 +109,21 @@ public record Loadout(
 		return hasFullArmorSet() && helmet == ArmorMaterial.OBSIDIAN;
 	}
 
+	/** Number of equipped Storm Berserker pieces (0..4). Each piece trades +2% incoming damage for +3% attack speed. */
+	public int stormBerserkerPieces() {
+		int count = 0;
+		if (helmet == ArmorMaterial.STORM_BERSERKER) count++;
+		if (chestplate == ArmorMaterial.STORM_BERSERKER) count++;
+		if (leggings == ArmorMaterial.STORM_BERSERKER) count++;
+		if (boots == ArmorMaterial.STORM_BERSERKER) count++;
+		return count;
+	}
+
+	/** True when all 4 armor slots are equipped with Storm Berserker armor. */
+	public boolean hasFullStormBerserkerSet() {
+		return hasFullArmorSet() && helmet == ArmorMaterial.STORM_BERSERKER;
+	}
+
 	public Stats stats() {
 		int armorPoints = helmet.helmetArmor() + chestplate.chestArmor() + leggings.legsArmor() + boots.bootsArmor();
 		float toughness = helmet.toughness() + chestplate.toughness() + leggings.toughness() + boots.toughness();
@@ -127,6 +142,9 @@ public record Loadout(
 		}
 		if (hasFullObsidianSet()) {
 			passives.add(FlakeI18n.tr("flake.armor.obsidian.set_bonus"));
+		}
+		if (hasFullStormBerserkerSet()) {
+			passives.add(FlakeI18n.tr("flake.armor.storm_berserker.set_bonus"));
 		}
 
 		var actives = new ArrayList<String>();
@@ -215,7 +233,8 @@ public record Loadout(
 		CONCUSSED("flake.class.concussed.title", "flake.class.concussed.desc"),
 		BASTION("flake.class.bastion.title", "flake.class.bastion.desc"),
 		VAMPIRE("flake.class.vampire.title", "flake.class.vampire.desc"),
-		DEMOLITIONIST("flake.class.demolitionist.title", "flake.class.demolitionist.desc");
+		DEMOLITIONIST("flake.class.demolitionist.title", "flake.class.demolitionist.desc"),
+		SHAMAN("flake.class.shaman.title", "flake.class.shaman.desc");
 
 		private final String titleKey;
 		private final String descriptionKey;
@@ -241,7 +260,8 @@ public record Loadout(
 		GOLD("flake.armor.gold.title", 2, 5, 3, 1, 0.0f),
 		IRON("flake.armor.iron.title", 2, 6, 5, 2, 0.0f),
 		DIAMOND("flake.armor.diamond.title", 3, 8, 6, 3, 2.0f),
-		OBSIDIAN("flake.armor.obsidian.title", 3, 8, 6, 3, 3.0f);
+		OBSIDIAN("flake.armor.obsidian.title", 3, 8, 6, 3, 3.0f),
+		STORM_BERSERKER("flake.armor.storm_berserker.title", 2, 6, 5, 2, 1.0f);
 
 		private final String titleKey;
 		private final int helmetArmor;
@@ -292,7 +312,10 @@ public record Loadout(
 		/** Джунглеве спис: 6 шкоди, довший випад, ПКМ — ривок. */
 		JUNGLE_SPEAR("flake.weapon.jungle_spear.title", "flake.weapon.jungle_spear.cat", 6.0f, "flake.weapon.jungle_spear.info"),
 		/** Хаотичний палаш: 9 шкоди, повільна атака, ПКМ — розмах із послабленням. */
-		CHAOS_BROADSWORD("flake.weapon.chaos_broadsword.title", "flake.weapon.chaos_broadsword.cat", 9.0f, "flake.weapon.chaos_broadsword.info");
+		CHAOS_BROADSWORD("flake.weapon.chaos_broadsword.title", "flake.weapon.chaos_broadsword.cat", 9.0f, "flake.weapon.chaos_broadsword.info"),
+		CHAIN_BLADE("flake.weapon.chain_blade.title", "flake.weapon.chain_blade.cat", 6.5f, "flake.weapon.chain_blade.info"),
+		STORM_STAFF("flake.weapon.storm_staff.title", "flake.weapon.storm_staff.cat", 5.0f, "flake.weapon.storm_staff.info"),
+		MIRROR_DAGGER("flake.weapon.mirror_dagger.title", "flake.weapon.mirror_dagger.cat", 5.5f, "flake.weapon.mirror_dagger.info");
 
 		private final String titleKey;
 		private final String categoryKey;
@@ -352,7 +375,12 @@ public record Loadout(
 		THORNS("flake.passive.thorns.title", "flake.passive.thorns.desc"),
 		FURY("flake.passive.fury.title", "flake.passive.fury.desc"),
 		/** Пасивно скорочує перезарядку класових здібностей і здібності зброї на 20%. */
-		MELTING_AMETHYST("flake.passive.melting_amethyst.title", "flake.passive.melting_amethyst.desc");
+		MELTING_AMETHYST("flake.passive.melting_amethyst.title", "flake.passive.melting_amethyst.desc"),
+		BLOODY_SEAL("flake.passive.bloody_seal.title", "flake.passive.bloody_seal.desc"),
+		MIRROR_SCALE("flake.passive.mirror_scale.title", "flake.passive.mirror_scale.desc"),
+		HUNTER_COMPASS("flake.passive.hunter_compass.title", "flake.passive.hunter_compass.desc"),
+		STORM_CHARGE("flake.passive.storm_charge.title", "flake.passive.storm_charge.desc"),
+		SILENT_STEP("flake.passive.silent_step.title", "flake.passive.silent_step.desc");
 
 		private final String titleKey;
 		private final String descriptionKey;
@@ -388,7 +416,13 @@ public record Loadout(
 		MATADORA("flake.active.matadora.title", "flake.active.matadora.desc", "flake.category.buff"),
 		CRYSTAL_CLAW("flake.active.crystal_claw.title", "flake.active.crystal_claw.desc", "flake.category.buff"),
 		AXE_OF_CUMSHOT("flake.active.axe_of_cumshot.title", "flake.active.axe_of_cumshot.desc", "flake.category.control"),
-		CHRONO_TRIDENT("flake.active.chrono_trident.title", "flake.active.chrono_trident.desc", "flake.category.control");
+		CHRONO_TRIDENT("flake.active.chrono_trident.title", "flake.active.chrono_trident.desc", "flake.category.control"),
+		VOID_ANCHOR("flake.active.void_anchor.title", "flake.active.void_anchor.desc", "flake.category.control"),
+		MIRROR_TRAP("flake.active.mirror_trap.title", "flake.active.mirror_trap.desc", "flake.category.defense"),
+		SPARK_SYRINGE("flake.active.spark_syringe.title", "flake.active.spark_syringe.desc", "flake.category.buff"),
+		HUNTER_MARK("flake.active.hunter_mark.title", "flake.active.hunter_mark.desc", "flake.category.control"),
+		STORM_HARPOON("flake.active.storm_harpoon.title", "flake.active.storm_harpoon.desc", "flake.category.control"),
+		PHASE_CRYSTAL("flake.active.phase_crystal.title", "flake.active.phase_crystal.desc", "flake.category.mobility");
 
 		private final String titleKey, descriptionKey, categoryKey;
 		ActiveItem(String titleKey, String descriptionKey, String categoryKey) {

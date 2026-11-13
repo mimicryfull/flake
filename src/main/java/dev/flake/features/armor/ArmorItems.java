@@ -3,6 +3,7 @@ package dev.flake.features.armor;
 import dev.flake.features.loadout.Loadout.ArmorMaterial;
 import dev.flake.features.loadout.Loadout.ArmorSlot;
 import dev.flake.features.obsidianarmor.ObsidianArmor;
+import dev.flake.features.stormberserker.StormBerserkerArmor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -11,6 +12,7 @@ public final class ArmorItems {
 	private ArmorItems() {}
 
 	public static ItemStack create(ArmorMaterial material, ArmorSlot slot) {
+		if (material == ArmorMaterial.STORM_BERSERKER) return StormBerserkerArmor.createPiece(slot);
 		var item = switch (material) {
 			case NONE -> null;
 			case CHAINMAIL -> switch (slot) {
@@ -30,6 +32,7 @@ public final class ArmorItems {
 				case LEGGINGS -> Items.DIAMOND_LEGGINGS; case BOOTS -> Items.DIAMOND_BOOTS;
 			};
 			case OBSIDIAN -> ObsidianArmor.itemFor(slot);
+			case STORM_BERSERKER -> null;
 		};
 		return item == null ? ItemStack.EMPTY : new ItemStack(item);
 	}

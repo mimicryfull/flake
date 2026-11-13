@@ -14,6 +14,15 @@ import dev.flake.features.deadlybleed.DeadlyBleedDefinition;
 import dev.flake.features.junglespear.JungleSpearDefinition;
 import dev.flake.features.chaosbroadsword.ChaosBroadswordDefinition;
 import dev.flake.features.passives.PassivesDefinition;
+import dev.flake.features.chainblade.ChainBladeDefinition;
+import dev.flake.features.stormstaff.StormStaffDefinition;
+import dev.flake.features.mirrordagger.MirrorDaggerDefinition;
+import dev.flake.features.voidanchor.VoidAnchorDefinition;
+import dev.flake.features.mirrortrap.MirrorTrapDefinition;
+import dev.flake.features.sparksyringe.SparkSyringeDefinition;
+import dev.flake.features.huntermark.HunterMarkDefinition;
+import dev.flake.features.stormharpoon.StormHarpoonDefinition;
+import dev.flake.features.phasecrystal.PhaseCrystalDefinition;
 
 /** The explicit composition root. Only this package needs to know every installed feature. */
 public final class Features {
@@ -40,7 +49,18 @@ public final class Features {
 			new Feature(dev.flake.features.bastion.BastionRuntime::install),
 			new Feature(dev.flake.features.vampire.VampireRuntime::install),
 			new Feature(dev.flake.features.demolitionist.DemolitionistRuntime::install),
-			new Feature(ObsidianArmor::install, ObsidianArmor::registerItems));
+			new Feature(ObsidianArmor::install, ObsidianArmor::registerItems),
+			new Feature(ChainBladeDefinition::install, ChainBladeDefinition::registerItems),
+			new Feature(StormStaffDefinition::install, StormStaffDefinition::registerItems),
+			new Feature(MirrorDaggerDefinition::install, MirrorDaggerDefinition::registerItems),
+			new Feature(VoidAnchorDefinition::install, VoidAnchorDefinition::registerItems),
+			new Feature(MirrorTrapDefinition::install, MirrorTrapDefinition::registerItems),
+			new Feature(SparkSyringeDefinition::install, SparkSyringeDefinition::registerItems),
+			new Feature(HunterMarkDefinition::install, HunterMarkDefinition::registerItems),
+			new Feature(StormHarpoonDefinition::install, StormHarpoonDefinition::registerItems),
+			new Feature(PhaseCrystalDefinition::install, PhaseCrystalDefinition::registerItems),
+			new Feature(dev.flake.features.shaman.ShamanRuntime::install),
+			new Feature(dev.flake.features.stormberserker.StormBerserkerArmor::install));
 
 	private Features() {}
 

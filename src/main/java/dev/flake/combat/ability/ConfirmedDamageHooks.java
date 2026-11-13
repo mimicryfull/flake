@@ -18,6 +18,7 @@ public final class ConfirmedDamageHooks {
 
 	void afterDamage(LivingEntity victim, DamageSource source, float taken, boolean blocked) {
 		if (blocked || taken <= 0 || reflecting) return;
+		CombatModifiers.notifyAfterDamage(victim, source, taken, false);
 		int now = victim.level().getServer().getTickCount();
 		for (var runtime : abilities.runtimes()) runtime.afterDamage(victim, source, now);
 		if (source.getEntity() instanceof ServerPlayer attacker && source.getDirectEntity() == attacker

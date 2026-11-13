@@ -2,6 +2,6 @@
   "required": true,
   "package": "dev.flake.features.duel.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": ["DuelPlayerSafetyMixin", "DuelDeathSafetyMixin", "DuelPacketSafetyMixin", "DuelPickupSafetyMixin", "DuelArrowSafetyMixin"],
+  "mixins": ["DuelPlayerSafetyMixin", "DuelDeathSafetyMixin", "DuelPacketSafetyMixin", "DuelPickupSafetyMixin", "DuelArrowSafetyMixin", "CombatDamageMixin", "EntityStepSoundMixin", "ProjectileTrapMixin"],
   "injectors": { "defaultRequire": 1 }
 }

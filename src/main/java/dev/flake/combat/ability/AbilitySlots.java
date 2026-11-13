@@ -18,6 +18,8 @@ public final class AbilitySlots {
 		BLOODLUST("flake.ability.bloodlust", 20, dev.flake.features.vampire.VampireRuntime.BLOODLUST_TICKS, true),
 		PROXIMITY_MINE("flake.ability.proximity_mine", 20, dev.flake.features.demolitionist.DemolitionistRuntime.MINE_LIFE_TICKS, true),
 		BLAST_JUMP("flake.ability.blast_jump", 20, 0, true),
+		TOTEM_OF_PAIN("flake.ability.totem_of_pain", 20, 120, true),
+		SPIRIT_WARD("flake.ability.spirit_ward", 20, 80, true),
 		UNIMPLEMENTED("flake.ability.unassigned", 0, 0, false);
 
 		private final String titleKey;

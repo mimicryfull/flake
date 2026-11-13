@@ -22,11 +22,15 @@ public final class Stuns {
 	private record Stun(int until, Vec3 anchor, int totalTicks, boolean anchorMovement) {}
 	private static final ServerState<Map<UUID, Stun>> STATES = new ServerState<>(HashMap::new);
 	private static final List<Consumer<ServerPlayer>> INTERRUPTS = new ArrayList<>();
+	private static final List<java.util.function.Predicate<LivingEntity>> IMMUNITIES = new ArrayList<>();
+	private static final List<java.util.function.BiConsumer<LivingEntity, Integer>> STUN_LISTENERS = new ArrayList<>();
 	private static boolean installed;
 
 	private Stuns() {}
 
 	public static void onInterrupt(Consumer<ServerPlayer> interrupt) { INTERRUPTS.add(interrupt); }
+	public static void registerImmunity(java.util.function.Predicate<LivingEntity> immunity) { IMMUNITIES.add(immunity); }
+	public static void registerOnStun(java.util.function.BiConsumer<LivingEntity, Integer> listener) { STUN_LISTENERS.add(listener); }
 
 	public static void apply(LivingEntity target, int ticks) {
 		applyInternal(target, ticks, true);
@@ -38,6 +42,7 @@ public final class Stuns {
 	}
 
 	private static void applyInternal(LivingEntity target, int ticks, boolean anchorMovement) {
+		for (var immunity : IMMUNITIES) if (immunity.test(target)) return;
 		if (target instanceof ServerPlayer player) for (var interrupt : INTERRUPTS) interrupt.accept(player);
 		int now = target.level().getServer().getTickCount();
 		STATES.of(target.level().getServer()).put(target.getUUID(), new Stun(now + ticks, target.position(), ticks, anchorMovement));
@@ -47,6 +52,7 @@ public final class Stuns {
 			target.setDeltaMovement(Vec3.ZERO);
 			target.syncVelocity = true;
 		}
+		for (var listener : STUN_LISTENERS) listener.accept(target, ticks);
 	}
 
 	public static void clearSlowStun(LivingEntity target) {

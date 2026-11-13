@@ -156,6 +156,14 @@ public final class DuelRuntime {
 		return match != null && match.opponents(first, second);
 	}
 
+	public static boolean allies(UUID first, UUID second) {
+		if (first == null || second == null) return false;
+		if (first.equals(second)) return true;
+		var match = of(first);
+		return match != null && match.fighting(first) && match.fighting(second)
+				&& match.participants().contains(second) && !match.opponents(first, second);
+	}
+
 	public static dev.flake.features.loadout.Loadout.PassiveItem passiveOf(UUID id) {
 		var match = of(id);
 		return match == null ? dev.flake.features.loadout.Loadout.PassiveItem.NONE : match.passiveOf(id);

@@ -166,6 +166,12 @@ public final class UiIcons {
 				g.fill(cx + 1, cy - 7, cx + 4, cy - 5, spark);
 				g.fill(cx - 2, cy - 1, cx, cy + 1, UiTheme.TEXT);
 			}
+			case "SHAMAN" -> {
+				g.fill(cx - 2, cy - 6, cx + 2, cy + 6, accent);
+				g.fill(cx - 5, cy - 2, cx + 5, cy + 1, accent);
+				g.fill(cx - 1, cy - 4, cx + 1, cy - 2, UiTheme.TEXT);
+				g.fill(cx - 1, cy + 1, cx + 1, cy + 3, UiTheme.TEXT);
+			}
 			default -> g.fill(cx - 3, cy - 3, cx + 3, cy + 3, accent);
 		}
 	}
@@ -193,6 +199,11 @@ public final class UiIcons {
 				g.fill(x + 2, y + 3, x + 8, y + 9, color);
 				g.fill(x + 4, y + 1, x + 6, y + 3, UiTheme.MUTED);
 				g.fill(x + 6, y, x + 8, y + 2, UiTheme.AMBER);
+			}
+			case "SHAMAN" -> {
+				g.fill(x + 4, y + 1, x + 6, y + 9, color);
+				g.fill(x + 2, y + 3, x + 8, y + 5, color);
+				g.fill(x + 4, y + 2, x + 6, y + 3, UiTheme.TEXT);
 			}
 			default -> g.fill(x + 2, y + 2, x + 8, y + 8, color);
 		}

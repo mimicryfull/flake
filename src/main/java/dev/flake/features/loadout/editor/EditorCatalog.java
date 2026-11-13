@@ -90,6 +90,10 @@ public final class EditorCatalog {
 					setSuffix = FlakeI18n.tr(candidate.hasFullObsidianSet()
 							? "flake.armor.obsidian.desc_set"
 							: "flake.armor.obsidian.desc_piece");
+				} else if (item == Loadout.ArmorMaterial.STORM_BERSERKER) {
+					setSuffix = FlakeI18n.tr(candidate.hasFullStormBerserkerSet()
+							? "flake.armor.storm_berserker.desc_set"
+							: "flake.armor.storm_berserker.desc_piece");
 				} else {
 					setSuffix = FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.armor.desc.full_set" : "flake.armor.desc.single");
 				}

@@ -28,6 +28,7 @@
 #include <flake:classes/vampire/blood_lunge.glsl>
 #include <flake:classes/vampire/bloodlust.glsl>
 #include <flake:classes/demolitionist/demolition_blast.glsl>
+#include <flake:classes/hunter_highlight.glsl>
 
 void main() {
     vec4 original = texture(InSampler, texCoord);
@@ -76,6 +77,10 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 16.5) {
+            hunterHighlight(ray, sceneDistance, i, light);
+            continue;
+        }
         if (charging > 15.5) {
             demolitionBlast(ray, sceneDistance, i, light, distortion);
             continue;

@@ -22,6 +22,18 @@ import dev.flake.features.junglespear.client.SpearDashActor;
 import dev.flake.features.matadora.client.MatadoraActor;
 import dev.flake.features.vampire.client.GhoulRenderState;
 import dev.flake.features.voidpaladin.client.CritActor;
+import dev.flake.features.passives.client.HunterCompassActor;
+import dev.flake.features.passives.client.StormArcActor;
+import dev.flake.features.voidanchor.client.VoidAnchorActor;
+import dev.flake.features.mirrortrap.client.MirrorTrapActor;
+import dev.flake.features.sparksyringe.client.SparkSyringeActor;
+import dev.flake.features.huntermark.client.HunterMarkActor;
+import dev.flake.features.stormharpoon.client.StormHarpoonActor;
+import dev.flake.features.phasecrystal.client.PhaseCrystalActor;
+import dev.flake.features.chainblade.client.ChainBladeActor;
+import dev.flake.features.stormstaff.client.StormStaffActor;
+import dev.flake.features.shaman.client.TotemOfPainActor;
+import dev.flake.features.shaman.client.SpiritWardActor;
 import net.minecraft.client.multiplayer.ClientLevel;
 
 /** Composition root only: no animation math, geometry, or feature state. */
@@ -32,9 +44,10 @@ public final class EffectActors {
 
 	public static Admission admission(CombatVfxPayload.Phase phase) {
 		return switch (phase) {
-			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON -> Admission.COALESCE;
-			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF -> Admission.UPDATE_ALL;
-			case BULWARK_HIT, MINE_DISARM -> Admission.UPDATE_FIRST;
+			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON,
+					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT -> Admission.COALESCE;
+			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF -> Admission.UPDATE_ALL;
+			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
 	}
@@ -58,6 +71,18 @@ public final class EffectActors {
 			case MINE_DETONATE, BLAST_JUMP -> new DemolitionExplosionActor(payload);
 			case HAMMER_STUN -> new HammerStunActor(payload);
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOOD_SIPHON -> new GhoulRenderState.Actor(payload);
+			case HUNTER_HIGHLIGHT -> new HunterCompassActor(payload);
+			case STORM_ARC -> new StormArcActor(payload);
+			case VOID_ANCHOR_CAST, VOID_ANCHOR_PULL -> new VoidAnchorActor(payload);
+			case MIRROR_TRAP_ON, MIRROR_TRAP_REFLECT -> new MirrorTrapActor(payload);
+			case SPARK_SYRINGE -> new SparkSyringeActor(payload);
+			case HUNTER_MARK -> new HunterMarkActor(payload);
+			case STORM_HARPOON -> new StormHarpoonActor(payload);
+			case PHASE_CRYSTAL_ON -> new PhaseCrystalActor(payload);
+			case CHAIN_BLADE_PULL -> new ChainBladeActor(payload);
+			case STORM_STAFF_RAY -> new StormStaffActor(payload);
+			case SHAMAN_TOTEM -> new TotemOfPainActor(payload);
+			case SHAMAN_WARD -> new SpiritWardActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}

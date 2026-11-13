@@ -42,10 +42,10 @@ public final class AxeOfCumshotRuntime {
 	private static SoundEvent sound;
 
 	private static final class ThrownAxe {
-		final UUID ownerId;
+		UUID ownerId;
 		final ServerLevel level;
 		Vec3 pos;
-		final Vec3 dir;
+		Vec3 dir;
 		int ticksLeft;
 
 		ThrownAxe(UUID ownerId, ServerLevel level, Vec3 pos, Vec3 dir, int ticksLeft) {
@@ -133,6 +133,17 @@ public final class AxeOfCumshotRuntime {
 			}
 
 			if (bestTarget != null) {
+				if (bestTarget instanceof ServerPlayer sp
+						&& dev.flake.combat.CombatModifiers.interceptCustomProjectile(sp, owner, bestHitPos)) {
+					Vec3 reflectedDir = owner.getEyePosition().subtract(bestHitPos);
+					Vec3 dir = reflectedDir.lengthSqr() > 0.001 ? reflectedDir.normalize() : axe.dir.scale(-1);
+					axe.ownerId = sp.getUUID();
+					axe.dir = dir;
+					axe.pos = bestHitPos.add(dir.scale(0.6));
+					axe.ticksLeft = MAX_FLIGHT_TICKS;
+					AxeOfCumshotVisuals.launchAxe(sp, axe.pos, axe.pos.add(dir.scale(RANGE)), (float) SPEED_PER_TICK, MAX_FLIGHT_TICKS);
+					continue;
+				}
 				Stuns.apply(bestTarget, STUN_TICKS);
 				bestTarget.hurtServer(axe.level, owner.damageSources().playerAttack(owner), DAMAGE);
 				AxeOfCumshotVisuals.impact(owner, bestHitPos, bestTarget.getId());

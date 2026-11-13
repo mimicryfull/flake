@@ -18,7 +18,7 @@ class EditorTest {
 	}
 	@Test void localizedCaseInsensitiveSearchAndCategoryFilters() {
 		var weapons = EditorCatalog.choices(Slot.WEAPON, Loadout.defaultLoadout());
-		assertEquals(5, weapons.stream().filter(c -> c.matches("МЕЧ", "Усі")).count());
+		assertEquals(6, weapons.stream().filter(c -> c.matches("МЕЧ", "Усі")).count());
 		assertEquals(2, weapons.stream().filter(c -> c.matches("", "Дальній бій")).count());
 		assertEquals(1, weapons.stream().filter(c -> c.matches("DIAMOND SWORD", "Усі")).count());
 		assertEquals(1, weapons.stream().filter(c -> c.matches("diamond_sword", "Усі")).count());

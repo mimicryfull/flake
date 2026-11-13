@@ -25,6 +25,7 @@ public final class PassivesDefinition implements Lifecycle {
 	public static void registerItems() {
 		MeltingAmethyst.bind(dev.flake.content.ItemRegistration.register(MeltingAmethyst.ID,
 				key -> new net.minecraft.world.item.Item(new net.minecraft.world.item.Item.Properties().setId(key))));
+		NewPassivesRuntime.registerItems();
 	}
 
 	public static void install() {
@@ -90,9 +91,34 @@ public final class PassivesDefinition implements Lifecycle {
 		}));
 		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.MELTING_AMETHYST, "flake.passive.melting_amethyst.short", "flake.category.utility",
 				() -> MeltingAmethyst.stack(), new PassiveHandler() {}));
+		NewPassivesRuntime.install();
+		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.BLOODY_SEAL, "flake.passive.bloody_seal.short", "flake.category.attack",
+				NewPassivesRuntime::bloodyHandStack, new PassiveHandler() {}));
+		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.MIRROR_SCALE, "flake.passive.mirror_scale.short", "flake.category.defense",
+				NewPassivesRuntime::mirrorScaleStack, new PassiveHandler() {
+			@Override public void onApplyKit(ServerPlayer player) { NewPassivesRuntime.resetMirrorScale(player); }
+		}));
+		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.HUNTER_COMPASS, "flake.passive.hunter_compass.short", "flake.category.utility",
+				() -> new ItemStack(Items.RECOVERY_COMPASS), new PassiveHandler() {
+			@Override public void onApplyKit(ServerPlayer player) { NewPassivesRuntime.resetHunterCompass(player); }
+			@Override public void onFightTick(ServerPlayer player, int nowTick) { NewPassivesRuntime.tickHunterCompass(player, nowTick); }
+		}));
+		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.STORM_CHARGE, "flake.passive.storm_charge.short", "flake.category.attack",
+				NewPassivesRuntime::stormBoltStack, new PassiveHandler() {
+			@Override public void onApplyKit(ServerPlayer player) { NewPassivesRuntime.resetStormCharge(player); }
+		}));
+		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.SILENT_STEP, "flake.passive.silent_step.short", "flake.category.mobility",
+				() -> new ItemStack(Items.PHANTOM_MEMBRANE), new PassiveHandler() {
+			@Override public void onApplyKit(ServerPlayer player) { NewPassivesRuntime.initSilentStep(player); }
+			@Override public void onFightTick(ServerPlayer player, int nowTick) { NewPassivesRuntime.tickSilentStep(player, nowTick); }
+		}));
 		ContentCatalog.registerLifecycle(new PassivesDefinition());
 	}
 
-	@Override public void register() { }
-	@Override public void reset(ServerPlayer player) { PvpVitals.remove(player); REGEN.of(player).reset(player.getUUID()); }
+	@Override public void register() { NewPassivesRuntime.register(); }
+	@Override public void reset(ServerPlayer player) {
+		PvpVitals.remove(player);
+		REGEN.of(player).reset(player.getUUID());
+		NewPassivesRuntime.reset(player);
+	}
 }
