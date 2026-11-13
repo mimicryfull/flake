@@ -18,43 +18,42 @@ void main() {
     float pulse = vertexColor.b;
     float alpha = vertexColor.a;
 
-    float t = GameTime * 420.0;
+    float t = GameTime * 180.0;
 
-    vec3 abyssCrimson = vec3(0.08, 0.002, 0.008);
-    vec3 deepBlood    = vec3(0.36, 0.008, 0.025);
-    vec3 richCrimson  = vec3(0.68, 0.020, 0.050);
-    vec3 rubyEdge     = vec3(0.92, 0.070, 0.105);
+    vec3 obsidianBlood   = vec3(0.06, 0.002, 0.007);
+    vec3 driedCrimson    = vec3(0.26, 0.006, 0.018);
+    vec3 arterialCrimson = vec3(0.56, 0.016, 0.042);
+    vec3 rubyAccent      = vec3(0.84, 0.065, 0.095);
 
     vec3 rgb;
     float outAlpha;
 
     if (kind >= 0.90) {
-        // Soft fog-like crimson glow enveloping the voxels
+        // Subtle dark-crimson fog glow behind the voxel silhouette
         vec2 p = texCoord0 * 2.0 - 1.0;
         float r2 = dot(p, p);
         if (r2 >= 1.0) discard;
         float r = sqrt(r2);
         float angle = atan(p.y, p.x);
-        float mist = 0.78 + 0.22 * sin(angle * 2.0 - t * 0.22 + r * 3.2 + seed * 6.28318);
-        float falloff = exp(-r2 * 2.7) * (1.0 - smoothstep(0.55, 1.0, r));
-        rgb = mix(abyssCrimson, deepBlood, falloff * 0.85) + richCrimson * (falloff * mist * (0.45 + 0.12 * pulse));
+        float mist = 0.85 + 0.15 * sin(angle * 2.0 - t * 0.25 + r * 3.0 + seed * 6.28318);
+        float falloff = exp(-r2 * 2.6) * (1.0 - smoothstep(0.50, 1.0, r));
+        rgb = mix(obsidianBlood, driedCrimson, falloff) + arterialCrimson * (falloff * mist * 0.45);
         outAlpha = alpha * falloff * mist;
     } else {
-        // Deep, dark blood voxel face with subtle inner depth & soft ruby rim
+        // Crisp dark-crimson voxel face with subtle ruby edge highlight (no strobing)
         vec2 d = abs(texCoord0 - 0.5) * 2.0;
         float boxDist = max(d.x, d.y);
         float radial = length(d);
 
-        float shimmer = 0.5 + 0.5 * sin(t * 0.45 + seed * 12.56637);
-        float core = exp(-radial * radial * 2.4);
-        float rim = smoothstep(0.62, 0.96, boxDist);
+        float core = exp(-radial * radial * 2.6);
+        float rim = smoothstep(0.68, 0.97, boxDist);
 
-        float energy = clamp(kind * 0.85 + pulse * 0.10 + shimmer * 0.06, 0.0, 1.0);
-        rgb = mix(abyssCrimson, deepBlood, clamp(0.30 + energy * 0.70, 0.0, 1.0));
-        rgb = mix(rgb, richCrimson, clamp(core * (0.35 + energy * 0.50), 0.0, 1.0));
-        rgb += rubyEdge * (rim * (0.20 + energy * 0.32) + core * core * energy * 0.18);
+        float tier = clamp(kind, 0.0, 1.0);
+        rgb = mix(obsidianBlood, driedCrimson, clamp(0.25 + tier * 0.75, 0.0, 1.0));
+        rgb = mix(rgb, arterialCrimson, clamp(tier * 0.85 * (0.45 + 0.55 * core), 0.0, 1.0));
+        rgb += rubyAccent * (rim * (0.14 + tier * 0.36) + core * tier * tier * 0.28);
 
-        outAlpha = alpha * (0.88 + 0.12 * rim);
+        outAlpha = alpha * (0.90 + 0.10 * rim);
     }
 
     if (outAlpha <= 0.01) discard;
