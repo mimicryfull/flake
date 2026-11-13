@@ -13,7 +13,7 @@ public final class JungleSpearVisuals {
 	public static void dash(ServerPlayer source, Vec3 start, Vec3 end) {
 		var from = start.add(0, source.getBbHeight() * 0.55, 0);
 		var to = end.add(0, source.getBbHeight() * 0.55, 0);
-		CombatVisuals.broadcast(source, new CombatVfxPayload(from, -1,
+		CombatVisuals.broadcast(source, new CombatVfxPayload(from, source.getId(),
 				CombatVfxPayload.Phase.SPEAR_DASH, 0.0f, -1, to), from, DURATION);
 	}
 }

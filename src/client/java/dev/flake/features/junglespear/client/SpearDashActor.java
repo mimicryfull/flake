@@ -31,6 +31,7 @@ public final class SpearDashActor implements EffectActor {
 
 	public SpearDashActor(CombatVfxPayload payload) {
 		this.sourceId = payload.sourceId();
+		SpearLungePose.start(this.sourceId);
 		this.start = payload.origin();
 		Vec3 delta = payload.aim().subtract(start);
 		double len = delta.length();
