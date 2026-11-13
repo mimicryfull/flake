@@ -64,6 +64,8 @@ void main() {
     float ghoulHeartbeat = 0.0;
     vec3 chipColor = vec3(0.0);
     vec2 distortion = vec2(0.0);
+    vec3 skyOverride = vec3(0.0);
+    float skyOverrideAlpha = 0.0;
 
     for (int i = 0; i < 4; i++) {
         float alpha = WaveStyles[i].x;
@@ -72,7 +74,7 @@ void main() {
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
         if (charging > 14.5) {
-            chronosphereWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
+            chronosphereWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion, skyOverride, skyOverrideAlpha);
             continue;
         }
         if (charging > 13.5) {
@@ -202,7 +204,8 @@ void main() {
             texture(InSampler, clamp(uv - split, lower, upper)).b
         );
     }
-    vec3 color = mix(refracted, CYAN, min(tint, 0.68)) * (1.0 - min(darkness, 0.9)) + min(light, vec3(0.85));
+    vec3 worldColor = mix(refracted, CYAN, min(tint, 0.68)) * (1.0 - min(darkness, 0.9));
+    vec3 color = mix(worldColor, skyOverride, clamp(skyOverrideAlpha, 0.0, 1.0)) + min(light, vec3(0.85));
     color = mix(color, chipColor / max(chipAlpha, 0.00001), min(chipAlpha, 1.0));
 
     applyMaskAndCrystalOverlay(maskStrength, maskScale, maskAge, maskCrystal, maskField, maskParams, maskUv, color);

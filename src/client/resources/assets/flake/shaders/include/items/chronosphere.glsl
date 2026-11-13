@@ -5,9 +5,83 @@ const vec3 CHRONO_PURPLE = vec3(0.58, 0.14, 0.96);
 const vec3 CHRONO_NEON = vec3(0.86, 0.44, 1.00);
 const vec3 CHRONO_CORE = vec3(0.96, 0.82, 1.00);
 
+float chronoHash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float chronoNoise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float n000 = chronoHash31(i + vec3(0.0, 0.0, 0.0));
+    float n100 = chronoHash31(i + vec3(1.0, 0.0, 0.0));
+    float n010 = chronoHash31(i + vec3(0.0, 1.0, 0.0));
+    float n110 = chronoHash31(i + vec3(1.0, 1.0, 0.0));
+    float n001 = chronoHash31(i + vec3(0.0, 0.0, 1.0));
+    float n101 = chronoHash31(i + vec3(1.0, 0.0, 1.0));
+    float n011 = chronoHash31(i + vec3(0.0, 1.0, 1.0));
+    float n111 = chronoHash31(i + vec3(1.0, 1.0, 1.0));
+    float nx00 = mix(n000, n100, f.x);
+    float nx10 = mix(n010, n110, f.x);
+    float nx01 = mix(n001, n101, f.x);
+    float nx11 = mix(n011, n111, f.x);
+    return mix(mix(nx00, nx10, f.y), mix(nx01, nx11, f.y), f.z);
+}
+
+float chronoFbm3D(vec3 p) {
+    float sum = 0.0;
+    float amp = 0.5;
+    for (int i = 0; i < 4; i++) {
+        sum += amp * chronoNoise3D(p);
+        p = p * 2.07 + vec3(13.1, 7.7, 19.3);
+        amp *= 0.5;
+    }
+    return sum;
+}
+
+vec3 chronoSkyMaelstrom(vec3 ray, float age) {
+    float swirl = age * 0.14 + (1.0 - abs(ray.y)) * 0.85;
+    float cs = cos(swirl);
+    float sn = sin(swirl);
+    vec3 dir = vec3(ray.x * cs - ray.z * sn, ray.y, ray.x * sn + ray.z * cs);
+
+    vec3 p = dir * 2.7 + vec3(0.0, age * 0.08, 0.0);
+    vec3 warp1 = vec3(
+        chronoFbm3D(p),
+        chronoFbm3D(p + vec3(5.2, 1.3, 2.8)),
+        chronoFbm3D(p + vec3(2.1, 8.4, 4.7))
+    );
+    vec3 warp2 = vec3(
+        chronoFbm3D(p + 2.35 * warp1 + vec3(1.7, 9.2, -age * 0.12)),
+        chronoFbm3D(p + 2.35 * warp1 + vec3(8.3, 2.8, age * 0.10)),
+        chronoFbm3D(p + 2.35 * warp1 + vec3(4.5, 6.1, 3.2))
+    );
+    float density = chronoFbm3D(p + 2.65 * warp2);
+
+    // Ridged plasma filaments & deep void pockets for an abyssal purple time-pocket sky
+    float riftRaw = abs(chronoFbm3D(dir * 5.4 + warp2 * 2.2 + vec3(age * 0.09)) * 2.0 - 1.0);
+    float filaments = pow(clamp(1.0 - riftRaw, 0.0, 1.0), 3.3);
+    float depthMask = smoothstep(0.20, 0.84, density);
+    float stars = pow(clamp(chronoNoise3D(dir * 44.0 + warp1 * 1.35), 0.0, 1.0), 14.0) * 1.45;
+
+    vec3 abyss = vec3(0.025, 0.004, 0.068);
+    vec3 nebula = vec3(0.26, 0.035, 0.56);
+    vec3 violet = vec3(0.58, 0.13, 0.95);
+    vec3 magentaCore = vec3(0.92, 0.50, 1.00);
+
+    vec3 sky = mix(abyss, nebula, depthMask);
+    sky = mix(sky, violet, smoothstep(0.42, 0.90, warp2.x) * 0.68);
+    sky += mix(violet, magentaCore, filaments) * filaments * 0.88;
+    sky += CHRONO_CORE * stars;
+    return sky;
+}
+
 void chronoShell(vec3 ray, float sceneDistance, vec3 origin, float radius, float alpha,
-                 float age, float detail, float collapse,
-                 inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
+                 float age, float detail, float collapse, bool isSky,
+                 inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor,
+                 inout vec2 distortion, inout vec3 skyOverride, inout float skyOverrideAlpha) {
     vec3 axes = vec3(1.0 + 0.022 * sin(age * 4.5),
                      1.0 + 0.032 * cos(age * 4.0 - 0.7), 1.0);
     vec3 r = ray / axes;
@@ -33,7 +107,16 @@ void chronoShell(vec3 ray, float sceneDistance, vec3 origin, float radius, float
     float fresnel = pow(1.0 - facing, 2.7) * visible;
     float border = exp(-facing * facing * 11.5) * visible;
 
-    // Gravitational caustics + subtle cosmic chrono spirals + 12 clock-face meridian ticks
+    // Deep swirling purple void sky when viewing sky inside (or through) the Chronosphere dome
+    if (detail > 0.5 && isSky) {
+        float skyFactor = inside ? alpha * 0.96 : alpha * 0.56 * visible;
+        if (skyFactor > skyOverrideAlpha) {
+            skyOverride = chronoSkyMaelstrom(ray, age);
+            skyOverrideAlpha = skyFactor;
+        }
+    }
+
+    // Gravitational caustics + cosmic chrono spirals + 12 clock-face meridian ticks
     float flow = sin(normal.x * 16.0 + normal.z * 11.0 - age * 4.2)
                * sin(normal.y * 19.0 - normal.x * 8.0 + age * 2.8);
     float az = atan(normal.z, normal.x);
@@ -119,30 +202,35 @@ void chronoSingularity(vec3 ray, float sceneDistance, vec3 origin, float collaps
 }
 
 void chronosphereWave(vec3 ray, float sceneDistance, vec3 scenePoint, float depth, int wave,
-                      inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
+                      inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor,
+                      inout vec2 distortion, inout vec3 skyOverride, inout float skyOverrideAlpha) {
     float alpha = WaveStyles[wave].x;
     vec3 origin = WaveOrigins[wave].xyz;
     float radius = WaveOrigins[wave].w;
     float age = WaveStyles[wave].y;
     float collapse = WaveStyles[wave].w;
+    bool isSky = depth <= 0.000001;
 
     if (alpha < 0.005 || radius <= 0.01) return;
     if (!intersectsBound(ray, sceneDistance, origin, radius * 1.2 + 0.4)) return;
 
     chronoFragments(ray, sceneDistance, wave, light);
-    chronoShell(ray, sceneDistance, origin, radius, alpha, age, 1.0, collapse, light, darkness, chipAlpha, chipColor, distortion);
+    chronoShell(ray, sceneDistance, origin, radius, alpha, age, 1.0, collapse, isSky,
+                light, darkness, chipAlpha, chipColor, distortion, skyOverride, skyOverrideAlpha);
     chronoCorona(ray, sceneDistance, origin, radius, alpha, light);
 
     // Subtle inner harmonic resonance shell (like Gravitational Dissonance echo)
     float innerScale = 0.86 + 0.02 * sin(age * 5.0);
     float dummyDark = 0.0;
-    chronoShell(ray, sceneDistance, origin, radius * innerScale, alpha * 0.24, age * 1.15, 0.0, collapse,
-                light, dummyDark, chipAlpha, chipColor, distortion);
+    vec3 dummySky = vec3(0.0);
+    float dummySkyA = 0.0;
+    chronoShell(ray, sceneDistance, origin, radius * innerScale, alpha * 0.24, age * 1.15, 0.0, collapse, false,
+                light, dummyDark, chipAlpha, chipColor, distortion, dummySky, dummySkyA);
 
     // Ground ring & world-geometry intersection contact trace
     goldenFloorRing(ray, sceneDistance, origin - vec3(0.0, 0.86, 0.0), radius, 0.095, alpha * 0.65, CHRONO_NEON, light);
     goldenFloorRing(ray, sceneDistance, origin - vec3(0.0, 0.86, 0.0), radius * 0.72, 0.045, alpha * 0.28, CHRONO_PURPLE, light);
-    if (depth > 0.000001) {
+    if (!isSky) {
         vec3 p = scenePoint - origin;
         float band = exp(-pow((length(p) - radius) / 0.09, 2.0));
         light += CHRONO_NEON * band * alpha * 0.42;
