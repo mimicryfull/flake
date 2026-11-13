@@ -32,11 +32,6 @@ public final class FlakeClient implements ClientModInitializer {
 		FocusOverlaySettings.load();
 		BattleModeSettings.load();
 		dev.flake.features.hud.client.FlakePlayerHud.register();
-		// No inventory in PvP: the kit is used from the hotbar / item panel only.
-		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
-			if (dev.flake.features.hud.client.FlakePlayerHud.active() && screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)
-				client.execute(() -> client.setScreenAndShow(null));
-		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> dev.flake.render.vfx.VfxRenderState.clear());
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(context ->
 				dev.flake.render.vfx.VfxRenderState.submitGeometry(
