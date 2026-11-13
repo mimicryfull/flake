@@ -411,6 +411,8 @@ public final class GhoulRenderState {
 		public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
 			if (!meshVisible) return;
 			collector.submitCustomGeometry(poseStack, GhoulMeshRenderer.GHOUL_RENDER_TYPE, (pose, vc) -> {
+				final double cX = cameraPos.x, cY = cameraPos.y, cZ = cameraPos.z;
+				final double G = 1.0 / 32.0;
 				float bx = (float) (bodyX - cameraPos.x);
 				float by = (float) (bodyY - cameraPos.y);
 				float bz = (float) (bodyZ - cameraPos.z);
@@ -451,30 +453,35 @@ public final class GhoulRenderState {
 
 						// Tier 1: Razor-thin spline spine (0.025..0.045 blocks, tapering to 0.012 at tips)
 						float spineBase = isWing ? (0.042f * (1f - u * 0.68f)) : (0.032f * (1f - u * 0.55f));
-						float spineSize = Math.max(0.012f, spineBase * (0.85f + 0.30f * h1));
+						float spineSteps = Math.max(1f, Math.round(spineBase * (0.85f + 0.30f * h1) / (float) (G * 0.5)));
+						float spineHalf = spineSteps * (float) (G * 0.5);
 						float spineTone = u > 0.78f ? 0.72f : 0.14f + 0.16f * h2;
+						// True voxel look: snap centers to a world-space 1/32 grid
+						float sPx = (float) (Math.round((px + cX) / G) * G - cX);
+						float sPy = (float) (Math.round((py + cY) / G) * G - cY);
+						float sPz = (float) (Math.round((pz + cZ) / G) * G - cZ);
 						GhoulMeshRenderer.emitVoxelCube(pose, vc,
-								px, py, pz, spineSize, spineSize * (1.0f + 0.35f * h1), spineSize,
-								spineTone, h1, 0f, a);
+								sPx, sPy, sPz, spineHalf, spineHalf, spineHalf,
+								spineTone, h1, meshHeartbeat, a);
 
 						// Subtle fog halo on wing midpoint
 						if (i == midIdx && isWing && !meshInside) {
 							GhoulMeshRenderer.emitGlowHalo(pose, vc,
-									px, py, pz, 0.52f, 0.52f, seed, 0f, a * 0.14f);
+									px, py, pz, 0.52f, 0.52f, seed, meshHeartbeat, a * 0.18f);
 						}
 
 						// Tier 2: Fragmented shard barbs staggered outward with gaps (every 2nd/3rd point)
 						if ((i + p) % 2 == 0 && u > 0.08f && u < 0.94f) {
 							double ang = seed * 12.0 + i * 2.39996 + age * 0.35;
 							float dist = 0.045f + 0.065f * h2;
-							float sx = px + (float) Math.cos(ang) * dist;
-							float sy = py + (h1 - 0.35f) * 0.08f;
-							float sz = pz + (float) Math.sin(ang) * dist;
-							float shardSize = 0.018f + 0.014f * h1;
+							float sx = (float) (Math.round((px + (float) Math.cos(ang) * dist + cX) / G) * G - cX);
+							float sy = (float) (Math.round((py + (h1 - 0.35f) * 0.08f + cY) / G) * G - cY);
+							float sz = (float) (Math.round((pz + (float) Math.sin(ang) * dist + cZ) / G) * G - cZ);
+							float shardSize = (float) (G * 0.5) * (h1 > 0.6f ? 1f : 0.75f);
 							float shardTone = h2 > 0.78f ? 0.68f : 0.32f + 0.20f * h1;
 							GhoulMeshRenderer.emitVoxelCube(pose, vc,
 									sx, sy, sz, shardSize, shardSize * (1.1f + 0.6f * h2), shardSize,
-									shardTone, h2, 0f, a * 0.88f);
+									shardTone, h2, meshHeartbeat, a * 0.88f);
 						}
 
 						// Tier 3: Tiny blood-ash ember motes detaching and drifting upward
@@ -487,7 +494,7 @@ public final class GhoulRenderState {
 							float emberSize = (0.010f + 0.010f * h1) * (1.0f - driftPhase * 0.4f);
 							GhoulMeshRenderer.emitVoxelCube(pose, vc,
 									ex, ey, ez, emberSize, emberSize, emberSize,
-									0.74f, h1, 0f, a * driftFade * 0.82f);
+									0.74f, h1, meshHeartbeat, a * driftFade * 0.82f);
 						}
 					}
 				}
@@ -508,7 +515,7 @@ public final class GhoulRenderState {
 									bx + (float) Math.cos(ang) * rMid,
 									by + 0.025f + meshAuraAge * 0.12f * h1,
 									bz + (float) Math.sin(ang) * rMid,
-									vs, vs * 0.8f, vs, 0.45f + 0.35f * h1, h1, 0f, ringEnv * 0.88f);
+									vs, vs * 0.8f, vs, 0.45f + 0.35f * h1, h1, meshHeartbeat, ringEnv * 0.88f);
 						}
 					}
 					int dropCount = quality == 0 ? 8 : (quality == 1 ? 14 : 18);
@@ -526,7 +533,7 @@ public final class GhoulRenderState {
 						GhoulMeshRenderer.emitVoxelCube(pose, vc,
 								bx + (float) Math.cos(ang) * rad, by + dy, bz + (float) Math.sin(ang) * rad,
 								sz, sz * (1.0f + 0.4f * h2), sz,
-								h2 > 0.75f ? 0.74f : 0.28f + 0.25f * h1, h1, 0f, envScale * env * 0.90f);
+								h2 > 0.75f ? 0.74f : 0.28f + 0.25f * h1, h1, meshHeartbeat, envScale * env * 0.90f);
 					}
 				}
 
@@ -536,12 +543,12 @@ public final class GhoulRenderState {
 					if (knotExt[kIdx + 3] > 0.005f) {
 						float a = Math.min(1f, knotExt[kIdx + 3]);
 						GhoulMeshRenderer.emitGlowHalo(pose, vc, knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2], 0.28f, 0.28f, 0.45f, 0f, a * 0.24f);
-						GhoulMeshRenderer.emitVoxelCube(pose, vc, knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2], 0.045f, 0.055f, 0.045f, 0.72f, 0.45f, 0f, a);
+						GhoulMeshRenderer.emitVoxelCube(pose, vc, knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2], 0.045f, 0.055f, 0.045f, 0.72f, 0.45f, meshHeartbeat, a);
 					}
 					if (knotIng[kIdx + 3] > 0.005f) {
 						float a = Math.min(1f, knotIng[kIdx + 3]);
 						GhoulMeshRenderer.emitGlowHalo(pose, vc, knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2], 0.32f, 0.32f, 0.35f, 0f, a * 0.24f);
-						GhoulMeshRenderer.emitVoxelCube(pose, vc, knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2], 0.055f, 0.070f, 0.055f, 0.75f, 0.35f, 0f, a);
+						GhoulMeshRenderer.emitVoxelCube(pose, vc, knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2], 0.055f, 0.070f, 0.055f, 0.75f, 0.35f, meshHeartbeat, a);
 					}
 				}
 			});

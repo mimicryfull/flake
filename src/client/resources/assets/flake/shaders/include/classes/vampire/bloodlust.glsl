@@ -113,15 +113,53 @@ void ghoulBlood(vec3 ray, float sceneDistance, int wave,
                     light, darkness, chipAlpha, chipColor, distortion);
 }
 
+float ghoulHash21(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
+float ghoulNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(ghoulHash21(i), ghoulHash21(i + vec2(1.0, 0.0)), f.x),
+               mix(ghoulHash21(i + vec2(0.0, 1.0)), ghoulHash21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
 void applyBloodlustScreenOverlay(float ghoulStrength, float ghoulScale, float ghoulAge,
                                  float ghoulHeartbeat, float ghoulBurst, float aspectRatio, inout vec3 color) {
     if (ghoulStrength <= 0.0) return;
     float s = ghoulStrength * ghoulScale;
-    vec2 bloodUv = (texCoord - 0.5) * vec2(aspectRatio, 1.0);
-    float radius = length(bloodUv);
-    float edge = smoothstep(0.28, 1.10, radius);
-    float vein = 0.5 + 0.5 * sin(atan(bloodUv.y, bloodUv.x) * 7.0 + sin(radius * 12.0 - ghoulAge * 4.5));
-    float pulse = 0.032 + 0.024 * ghoulHeartbeat + 0.035 * ghoulBurst;
-    color *= 1.0 - min(edge * 0.24 * s, 0.45);
-    color += mix(GHOUL_BLOOD, GHOUL_RUBY, 0.45 + 0.35 * vein) * edge * pulse * s;
+    vec2 uv = (texCoord - 0.5) * vec2(aspectRatio, 1.0);
+    float radius = length(uv);
+    float hb = ghoulHeartbeat;
+
+    // Vignette that breathes with the heartbeat
+    float edge = smoothstep(0.26 - hb * 0.07, 1.05, radius);
+
+    // Blocky voxel crawl on the vignette boundary
+    vec2 cell = floor(texCoord * vec2(aspectRatio, 1.0) * 44.0);
+    float blocky = smoothstep(0.0, 0.12, edge * 1.30 - ghoulHash21(cell + floor(ghoulAge * 2.0)) * 0.32);
+
+    // Capillary veins creeping from the corners
+    float n = ghoulNoise(uv * 5.5 + vec2(ghoulAge * 0.22, -ghoulAge * 0.15));
+    float n2 = ghoulNoise(uv * 11.0 - vec2(ghoulAge * 0.10, ghoulAge * 0.18));
+    float veinA = 1.0 - smoothstep(0.0, 0.045, abs(n - 0.5));
+    float veinB = 1.0 - smoothstep(0.0, 0.030, abs(n2 - 0.5));
+    float veins = (veinA + veinB * 0.6) * smoothstep(0.42, 0.95, radius);
+
+    // Burst ring sweeping inward from the screen edges
+    float ringR = mix(1.25, 0.10, clamp(ghoulBurst * 1.4, 0.0, 1.0));
+    float ring = exp(-pow((radius - ringR) * 9.0, 2.0)) * clamp(ghoulBurst * 2.0, 0.0, 1.0);
+
+    float luma = dot(color, vec3(0.299, 0.587, 0.114));
+    color = mix(color, vec3(luma) * vec3(1.0, 0.80, 0.80), min(edge * 0.40 * s, 0.55));
+    color *= 1.0 - min(edge * 0.30 * s, 0.55);
+
+    float pulse = 0.040 + 0.040 * hb + 0.060 * ghoulBurst;
+    vec3 deep = GHOUL_BLOOD;
+    vec3 hot = GHOUL_RUBY;
+    color += mix(deep, hot, 0.35 + 0.45 * hb) * blocky * edge * pulse * s * 1.6;
+    color += hot * veins * (0.05 + 0.10 * hb) * s;
+    color += mix(hot, vec3(1.0, 0.35, 0.28), 0.5) * ring * 0.22 * s;
 }
