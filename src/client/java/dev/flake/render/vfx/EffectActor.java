@@ -1,5 +1,8 @@
 package dev.flake.render.vfx;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.world.phys.Vec3;
 
 /** A bounded actor owns only its feature's state, while the renderer owns slot admission. */
 public interface EffectActor {
@@ -11,4 +14,6 @@ public interface EffectActor {
 	default boolean charging() { return false; }
 	/** True after all animation tails have expired. */
 	boolean write(RenderFrame frame, SlotWriter slot);
+	/** Optional world-space mesh submission during level rendering. */
+	default void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {}
 }

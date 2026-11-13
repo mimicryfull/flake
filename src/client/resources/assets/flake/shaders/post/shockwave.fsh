@@ -86,7 +86,6 @@ void main() {
                 ghoulBurst = max(ghoulBurst, QuakeMaterials[i * 32 + 10].x);
                 ghoulHeartbeat = max(ghoulHeartbeat, QuakeMaterials[i * 32 + 10].y);
             }
-            ghoulBlood(ray, sceneDistance, i, light, darkness, chipAlpha, chipColor, distortion);
             continue;
         }
         if (charging > 9.5) {

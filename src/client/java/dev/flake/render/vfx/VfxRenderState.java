@@ -84,6 +84,16 @@ public final class VfxRenderState {
 		Arrays.fill(values, 0);
 	}
 
+	/** Submits any world-space VFX meshes owned by active actors. */
+	public static void submitGeometry(com.mojang.blaze3d.vertex.PoseStack poseStack,
+			net.minecraft.client.renderer.SubmitNodeCollector collector,
+			net.minecraft.world.phys.Vec3 cameraPos) {
+		if (actors.isEmpty()) return;
+		for (int i = 0; i < actors.size(); i++) {
+			actors.get(i).submitGeometry(poseStack, collector, cameraPos);
+		}
+	}
+
 	/** One reusable CPU array, one PostPass-owned UBO, and no per-frame slot objects. */
 	public static float[] uniforms() {
 		Arrays.fill(values, 0);

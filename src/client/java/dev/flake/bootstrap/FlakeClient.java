@@ -38,6 +38,11 @@ public final class FlakeClient implements ClientModInitializer {
 				client.execute(() -> client.setScreenAndShow(null));
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> dev.flake.render.vfx.VfxRenderState.clear());
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(context ->
+				dev.flake.render.vfx.VfxRenderState.submitGeometry(
+						context.poseStack(),
+						context.submitNodeCollector(),
+						context.levelState().cameraRenderState.pos));
 		ClientPlayNetworking.registerGlobalReceiver(CombatVfxPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> dev.flake.render.vfx.VfxRenderState.receive(payload)));
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "controls"));

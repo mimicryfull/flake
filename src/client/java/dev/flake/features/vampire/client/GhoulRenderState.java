@@ -1,5 +1,6 @@
 package dev.flake.features.vampire.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.flake.render.vfx.EffectActor;
 import dev.flake.render.vfx.RenderFrame;
 import dev.flake.render.vfx.SlotWriter;
@@ -8,10 +9,11 @@ import dev.flake.render.vfx.CombatVfxPayload;
 import dev.flake.render.vfx.VfxTimeline;
 import java.util.Arrays;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
-/** Bounded procedural blood rig in the existing depth-aware post pass. Zero per-frame heap allocations. */
+/** Hybrid mesh-based blood rig rendered in world space, with only a lightweight 2D edge pulse in post. */
 public final class GhoulRenderState {
 	private GhoulRenderState() {}
 	public static boolean handles(CombatVfxPayload.Phase phase) {
@@ -27,7 +29,8 @@ public final class GhoulRenderState {
 		private final GhoulAnimation.Trail trail = new GhoulAnimation.Trail();
 		private final double[] sampled = new double[4];
 		private final Siphon[] siphons = {new Siphon(), new Siphon()};
-		private final float[] minimum = new float[24], maximum = new float[24], widths = new float[8];
+		private final float[] segA = new float[64 * 4], segB = new float[64 * 4];
+		private final float[] knotExt = new float[2 * 4], knotIng = new float[2 * 4];
 		private double bodyX, bodyY, bodyZ;
 		private double prevX, prevY, prevZ;
 		private double velX, velY, velZ;
@@ -44,6 +47,8 @@ public final class GhoulRenderState {
 		private double camX, camY, camZ;
 		private double rightX, rightZ, forwardX, forwardZ;
 		private float height = 1.8f;
+		private boolean meshVisible, meshInside;
+		private float meshAuraAge, meshAura, meshSwing, meshLungeAge, meshLungeFlash, meshLungeCompression, meshFeeding, meshHeartbeat;
 
 		public Actor(CombatVfxPayload payload) {
 			sourceId = payload.sourceId();
@@ -130,10 +135,11 @@ public final class GhoulRenderState {
 			for (var siphon : siphons) {
 				if (age < siphon.at + siphon.duration + 0.28f && sqDist(siphon.ox, siphon.oy, siphon.oz, camX, camY, camZ) < 56 * 56) near = true;
 			}
-			if (!near) return false;
+			if (!near) { meshVisible = false; return false; }
 			rightX = Math.cos(yaw); rightZ = Math.sin(yaw);
 			forwardX = -rightZ; forwardZ = rightX;
-			Arrays.fill(minimum, Float.POSITIVE_INFINITY); Arrays.fill(maximum, Float.NEGATIVE_INFINITY); Arrays.fill(widths, 0);
+			Arrays.fill(segA, 0); Arrays.fill(segB, 0);
+			Arrays.fill(knotExt, 0); Arrays.fill(knotIng, 0);
 
 			float auraAge = age - auraAt, lungeAge = age - lungeAt;
 			float aura = GhoulAnimation.aura(auraAge, offAt - auraAt);
@@ -146,26 +152,28 @@ public final class GhoulRenderState {
 			float burst = GhoulAnimation.burst(auraAge) + Math.min(0.85f, absorbed * 0.75f) + flash * 0.55f;
 			boolean inside = client.getCameraEntity() == client.player && client.player != null
 					&& client.player.getId() == sourceId && client.options.getCameraType().isFirstPerson();
+			float heartbeat = GhoulAnimation.heartbeat(age);
 
+			meshVisible = true;
+			meshInside = inside;
+			meshAuraAge = auraAge;
+			meshAura = aura;
+			meshSwing = swing;
+			meshLungeAge = lungeAge;
+			meshLungeFlash = flash;
+			meshLungeCompression = compression;
+			meshFeeding = Math.min(1f, absorbed);
+			meshHeartbeat = heartbeat;
+
+			// Post-pass only runs the cheap 2D screen-edge vignette when in 1st person.
 			int style = slot.style;
 			u[style] = 1;
 			u[style + 1] = age;
 			u[style + 2] = 12;
 			u[style + 3] = inside ? Math.max(aura, Math.max(compression * 0.8f, Math.min(1f, absorbed))) : 0f;
-
-			point(material, bodyX, bodyY, bodyZ, height);
-			u[material + 4] = (float) velX; u[material + 5] = (float) velY; u[material + 6] = (float) velZ;
-			u[material + 7] = (float) Math.min(1, Math.sqrt(velX * velX + velY * velY + velZ * velZ) / 8);
-			u[material + 8] = auraAge; u[material + 9] = release; u[material + 10] = aura; u[material + 11] = swing;
-			u[material + 12] = lungeAge; u[material + 13] = confirmed ? 1 : 0;
-			u[material + 14] = flash;
-			u[material + 15] = compression;
-			point(material + 16, contactX, contactY, contactZ, flash);
-			point(material + 32, launchX, launchY, launchZ, (float) lungeYaw);
-			u[material + 36] = detail; u[material + 37] = sourceId * 0.73f; u[material + 38] = inside ? 1 : 0;
 			u[material + 39] = client.options.screenEffectScale().get().floatValue();
 			u[material + 40] = burst;
-			u[material + 41] = GhoulAnimation.heartbeat(age);
+			u[material + 41] = heartbeat;
 
 			if (aura > 0.001 || compression > 0.001) drawAura(auraAge, aura, release, swing, absorbed, compression);
 			if (lungeAge >= 0 && lungeAge < GhoulAnimation.LUNGE_SECONDS) {
@@ -173,34 +181,6 @@ public final class GhoulRenderState {
 				if (confirmed) drawImpact(lungeAge);
 			}
 			for (int i = 0; i < siphons.length; i++) drawSiphon(siphons[i], i);
-
-			float minX = (float) (bodyX - camX) - 1.6f, maxX = (float) (bodyX - camX) + 1.6f;
-			float minY = (float) (bodyY - camY) - 0.4f, maxY = (float) (bodyY - camY) + height + 0.8f;
-			float minZ = (float) (bodyZ - camZ) - 1.6f, maxZ = (float) (bodyZ - camZ) + 1.6f;
-			if (lungeAge >= 0 && lungeAge < GhoulAnimation.LUNGE_SECONDS) {
-				float cx = (float) (contactX - camX), cy = (float) (contactY - camY), cz = (float) (contactZ - camZ);
-				float lx = (float) (launchX - camX), ly = (float) (launchY - camY), lz = (float) (launchZ - camZ);
-				minX = Math.min(minX, Math.min(cx - 2.0f, lx - 1.8f)); maxX = Math.max(maxX, Math.max(cx + 2.0f, lx + 1.8f));
-				minY = Math.min(minY, Math.min(cy - 1.6f, ly - 0.5f)); maxY = Math.max(maxY, Math.max(cy + 1.6f, ly + 2.0f));
-				minZ = Math.min(minZ, Math.min(cz - 2.0f, lz - 1.8f)); maxZ = Math.max(maxZ, Math.max(cz + 2.0f, lz + 1.8f));
-			}
-			for (int group = 0; group < 8; group++) {
-				if (widths[group] == 0) continue;
-				int entry = slot.bounds + group * 4, b = group * 3;
-				float x = (minimum[b] + maximum[b]) * 0.5f, y = (minimum[b + 1] + maximum[b + 1]) * 0.5f, z = (minimum[b + 2] + maximum[b + 2]) * 0.5f;
-				u[entry] = x; u[entry + 1] = y; u[entry + 2] = z;
-				float dx = maximum[b] - x, dy = maximum[b + 1] - y, dz = maximum[b + 2] - z;
-				float r = (float) Math.sqrt(dx * dx + dy * dy + dz * dz) + widths[group] * 3.5f;
-				u[entry + 3] = r;
-				minX = Math.min(minX, x - r); maxX = Math.max(maxX, x + r);
-				minY = Math.min(minY, y - r); maxY = Math.max(maxY, y + r);
-				minZ = Math.min(minZ, z - r); maxZ = Math.max(maxZ, z + r);
-			}
-			int originOffset = slot.position;
-			float midX = (minX + maxX) * 0.5f, midY = (minY + maxY) * 0.5f, midZ = (minZ + maxZ) * 0.5f;
-			float rx = maxX - midX, ry = maxY - midY, rz = maxZ - midZ;
-			u[originOffset] = midX; u[originOffset + 1] = midY; u[originOffset + 2] = midZ;
-			u[originOffset + 3] = (float) Math.sqrt(rx * rx + ry * ry + rz * rz) + 0.5f;
 			return false;
 		}
 
@@ -349,8 +329,15 @@ public final class GhoulRenderState {
 				recX += incX * inv; recY += incY * inv; recZ += incZ * inv;
 			}
 			float extraction = (1 - GhoulAnimation.smooth(0.035f, 0.16f, elapsed)) * siphon.strength;
-			point(material + 20 + slot * 4, siphon.ox, siphon.oy, siphon.oz, extraction);
-			point(material + 28 + slot * 4, recX, recY, recZ, GhoulAnimation.absorption(elapsed, duration) * siphon.strength);
+			int kIdx = slot * 4;
+			knotExt[kIdx] = (float) (siphon.ox - camX);
+			knotExt[kIdx + 1] = (float) (siphon.oy - camY);
+			knotExt[kIdx + 2] = (float) (siphon.oz - camZ);
+			knotExt[kIdx + 3] = extraction;
+			knotIng[kIdx] = (float) (recX - camX);
+			knotIng[kIdx + 1] = (float) (recY - camY);
+			knotIng[kIdx + 2] = (float) (recZ - camZ);
+			knotIng[kIdx + 3] = GhoulAnimation.absorption(elapsed, duration) * siphon.strength;
 			double dx = recX - siphon.ox, dy = recY - siphon.oy, dz = recZ - siphon.oz;
 			double span = Math.sqrt(dx * dx + dy * dy + dz * dz);
 			// Cross with (0, 1, 0) -> (-dz, 0, dx)
@@ -409,16 +396,92 @@ public final class GhoulRenderState {
 		private void segment(int local, double ax, double ay, double az, double bx, double by, double bz, float width, float alpha) {
 			double dx = ax - bx, dy = ay - by, dz = az - bz;
 			if (alpha < 0.001 || width < 0.001 || dx * dx + dy * dy + dz * dz < 0.00002) return;
-			int offset = slot.segment + local * 4;
-			point(offset, ax, ay, az, width);
-			point(slot.segmentEnd + local * 4, bx, by, bz, alpha);
-			int group = local / 8, g = group * 3;
-			for (int axis = 0; axis < 3; axis++) {
-				float x = u[offset + axis], y = u[slot.segmentEnd + local * 4 + axis];
-				minimum[g + axis] = Math.min(minimum[g + axis], Math.min(x, y));
-				maximum[g + axis] = Math.max(maximum[g + axis], Math.max(x, y));
-			}
-			widths[group] = Math.max(widths[group], width);
+			int offset = local * 4;
+			segA[offset] = (float) (ax - camX);
+			segA[offset + 1] = (float) (ay - camY);
+			segA[offset + 2] = (float) (az - camZ);
+			segA[offset + 3] = width;
+			segB[offset] = (float) (bx - camX);
+			segB[offset + 1] = (float) (by - camY);
+			segB[offset + 2] = (float) (bz - camZ);
+			segB[offset + 3] = alpha;
+		}
+
+		@Override
+		public void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cameraPos) {
+			if (!meshVisible) return;
+			collector.submitCustomGeometry(poseStack, GhoulMeshRenderer.GHOUL_RENDER_TYPE, (pose, vc) -> {
+				float bx = (float) (bodyX - cameraPos.x);
+				float by = (float) (bodyY - cameraPos.y);
+				float bz = (float) (bodyZ - cameraPos.z);
+
+				// 1. Living blood ribbons, predatory claws, lunge wake, and siphon strands
+				for (int group = 0; group < 8; group++) {
+					int kindIdx = group < 2 ? 0 : (group < 5 ? 1 : (group < 7 ? 2 : 3));
+					if (group == 7 && !(confirmed && meshLungeAge >= 0.055f && meshLungeAge < 0.435f)) kindIdx = 0;
+					float viewScale = kindIdx == 0 && meshInside ? 0.38f : 1.0f;
+					float kind = kindIdx / 3.0f;
+					int pathCount = group >= 5 ? 4 : 8;
+					for (int j = 0; j < 8; j++) {
+						int idx = (group * 8 + j) * 4;
+						float wa = segA[idx + 3] * viewScale;
+						float alpha = segB[idx + 3];
+						if (wa <= 0.001f || alpha <= 0.001f) continue;
+						float wb = wa * 0.88f;
+						int node = j % pathCount;
+						float u0 = (float) node / pathCount;
+						float u1 = (float) (node + 1) / pathCount;
+						float seed = ((group * 0.13f) % 1.0f);
+						GhoulMeshRenderer.emitCrossRibbonSegment(pose, vc,
+								segA[idx], segA[idx + 1], segA[idx + 2],
+								segB[idx], segB[idx + 1], segB[idx + 2],
+								wa, wb, u0, u1, kind, seed, meshHeartbeat, Math.min(1f, alpha));
+					}
+				}
+
+				// 2. Arterial floor pulse ring + orbiting 3D blood droplets during Bloodlust
+				float mistAlpha = Math.max(meshAura, meshLungeCompression * 0.65f) * (meshInside ? 0.35f : 1.0f);
+				if (mistAlpha > 0.005f) {
+					if (meshAuraAge >= 0f && meshAuraAge < 0.45f) {
+						float ringEnv = (1f - GhoulAnimation.smooth(0.08f, 0.45f, meshAuraAge)) * mistAlpha;
+						float rMid = 0.25f + meshAuraAge * 2.8f;
+						GhoulMeshRenderer.emitFloorRing(pose, vc, bx, by + 0.04f, bz,
+								Math.max(0.05f, rMid - 0.08f), rMid + 0.08f, 28,
+								0.85f, 0.2f, meshHeartbeat, ringEnv * 0.85f);
+					}
+					int dropCount = quality == 0 ? 5 : (quality == 1 ? 8 : 10);
+					for (int k = 0; k < dropCount; k++) {
+						float fk = k;
+						float h1 = (fk * 0.618034f + 0.17f) % 1.0f;
+						float h2 = (fk * 0.381966f + 0.53f) % 1.0f;
+						float speed = 0.72f + 0.42f * h1 + meshFeeding * 0.35f;
+						float phase = (age * speed + fk / 10.0f) % 1.0f;
+						float env = (float) Math.sin(phase * Math.PI);
+						float ang = fk * 2.39996f + age * (1.35f + 0.8f * (h2 - 0.5f) + meshSwing * 1.2f) + phase * 1.5f;
+						float rad = (meshInside ? 0.62f : 0.36f) + 0.24f * h2 + 0.06f * (float) Math.sin(phase * 6.28318 + fk);
+						float dy = 0.10f + 0.25f * h1 + phase * (height * 0.90f + 0.25f);
+						float sz = (0.028f + 0.018f * h1) * (0.45f + 0.55f * env) * (1.0f + meshFeeding * 0.25f);
+						GhoulMeshRenderer.emitOctahedron(pose, vc,
+								bx + (float) Math.cos(ang) * rad, by + dy, bz + (float) Math.sin(ang) * rad,
+								sz, sz * 1.55f, sz, 0.9f, h1, meshHeartbeat, mistAlpha * env * 0.95f);
+					}
+				}
+
+				// 3. Blood Siphon extraction & ingestion knots
+				for (int i = 0; i < 2; i++) {
+					int kIdx = i * 4;
+					if (knotExt[kIdx + 3] > 0.005f) {
+						GhoulMeshRenderer.emitOctahedron(pose, vc,
+								knotExt[kIdx], knotExt[kIdx + 1], knotExt[kIdx + 2],
+								0.12f, 0.16f, 0.11f, 0.75f, 0.45f, meshHeartbeat, Math.min(1f, knotExt[kIdx + 3]));
+					}
+					if (knotIng[kIdx + 3] > 0.005f) {
+						GhoulMeshRenderer.emitOctahedron(pose, vc,
+								knotIng[kIdx], knotIng[kIdx + 1], knotIng[kIdx + 2],
+								0.16f, 0.25f, 0.15f, 0.75f, 0.35f, meshHeartbeat, Math.min(1f, knotIng[kIdx + 3]));
+					}
+				}
+			});
 		}
 	}
 
