@@ -546,5 +546,6 @@
   "flake.armor.storm_berserker.helmet": "Шолом Грозового Берсерка",
   "flake.armor.storm_berserker.chestplate": "Нагрудник Грозового Берсерка",
   "flake.armor.storm_berserker.leggings": "Поножі Грозового Берсерка",
-  "flake.armor.storm_berserker.boots": "Черевики Грозового Берсерка"
+  "flake.armor.storm_berserker.boots": "Черевики Грозового Берсерка",
+  "block.flake.portal_vortex": "Паралакс-Вортекс Портал"
 }

@@ -24,6 +24,7 @@ import dev.flake.features.stormharpoon.StormHarpoonDefinition;
 import dev.flake.features.phasecrystal.PhaseCrystalDefinition;
 import dev.flake.features.combatdrone.CombatDroneDefinition;
 import dev.flake.features.kolobok.KolobokDefinition;
+import dev.flake.features.portal.PortalVortexFeature;
 
 /** The explicit composition root. Only this package needs to know every installed feature. */
 public final class Features {
@@ -61,6 +62,7 @@ public final class Features {
 			new Feature(PhaseCrystalDefinition::install, PhaseCrystalDefinition::registerItems),
 			new Feature(CombatDroneDefinition::install, CombatDroneDefinition::registerItems),
 			new Feature(KolobokDefinition::install, KolobokDefinition::registerItems),
+			new Feature(PortalVortexFeature::install, PortalVortexFeature::registerItems),
 			new Feature(dev.flake.features.shaman.ShamanRuntime::install),
 			new Feature(dev.flake.features.technician.TechnicianRuntime::install),
 			new Feature(dev.flake.features.stormberserker.StormBerserkerArmor::install));

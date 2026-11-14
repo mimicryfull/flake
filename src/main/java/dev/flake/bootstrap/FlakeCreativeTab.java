@@ -4,6 +4,7 @@ import dev.flake.Flake;
 import dev.flake.content.ContentCatalog;
 import dev.flake.features.armor.ArmorItems;
 import dev.flake.features.chronotrident.ChronoTridentRuntime;
+import dev.flake.features.portal.PortalVortexFeature;
 import dev.flake.features.loadout.Loadout.ActiveItem;
 import dev.flake.features.loadout.Loadout.ArmorMaterial;
 import dev.flake.features.loadout.Loadout.ArmorSlot;
@@ -105,6 +106,7 @@ public final class FlakeCreativeTab {
 			var spec = ContentCatalog.passive(passive);
 			if (spec != null) acceptSingle(output, spec.createIcon());
 		}
+		acceptSingle(output, PortalVortexFeature.createStack());
 	}
 
 	private static void acceptSingle(CreativeModeTab.Output output, ItemStack stack) {

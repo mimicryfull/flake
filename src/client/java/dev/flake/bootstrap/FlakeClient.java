@@ -7,8 +7,12 @@ import dev.flake.client.settings.FocusOverlaySettings;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.flake.Flake;
 import dev.flake.combat.ability.AbilitySlotPayload;
+import dev.flake.features.portal.PortalVortexBlockEntity;
+import dev.flake.features.portal.client.PortalVortexRenderer;
+import dev.flake.features.portal.client.PortalVortexTracker;
 import dev.flake.render.vfx.CombatVfxPayload;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -32,12 +36,28 @@ public final class FlakeClient implements ClientModInitializer {
 		FocusOverlaySettings.load();
 		BattleModeSettings.load();
 		dev.flake.features.hud.client.FlakePlayerHud.register();
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> dev.flake.render.vfx.VfxRenderState.clear());
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(context ->
-				dev.flake.render.vfx.VfxRenderState.submitGeometry(
-						context.poseStack(),
-						context.submitNodeCollector(),
-						context.levelState().cameraRenderState.pos));
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			dev.flake.render.vfx.VfxRenderState.clear();
+			PortalVortexTracker.clear();
+			PortalVortexRenderer.clearMotes();
+		});
+		ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register((be, level) -> {
+			if (be instanceof PortalVortexBlockEntity pbe) PortalVortexTracker.onLoad(pbe, level);
+		});
+		ClientBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register((be, level) -> {
+			if (be instanceof PortalVortexBlockEntity pbe) PortalVortexTracker.onUnload(pbe);
+		});
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
+			var camPos = context.levelState().cameraRenderState.pos;
+			dev.flake.render.vfx.VfxRenderState.submitGeometry(
+					context.poseStack(),
+					context.submitNodeCollector(),
+					camPos);
+			PortalVortexRenderer.submitGeometry(
+					context.poseStack(),
+					context.submitNodeCollector(),
+					camPos);
+		});
 		ClientPlayNetworking.registerGlobalReceiver(CombatVfxPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> dev.flake.render.vfx.VfxRenderState.receive(payload)));
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(Flake.MOD_ID, "controls"));
@@ -47,6 +67,7 @@ public final class FlakeClient implements ClientModInitializer {
 		battleModeKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.flake.battle_mode", InputConstants.KEY_B, category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			dev.flake.render.vfx.VfxRenderState.checkWorld(client.level);
+			PortalVortexTracker.checkWorld(client.level);
 			while (openKey.consumeClick()) {
 				if (client.player != null && client.canInterruptScreen()) client.setScreenAndShow(new FlakeScreen());
 			}

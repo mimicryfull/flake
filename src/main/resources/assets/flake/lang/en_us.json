@@ -546,5 +546,6 @@
   "flake.armor.storm_berserker.helmet": "Storm Berserker Helmet",
   "flake.armor.storm_berserker.chestplate": "Storm Berserker Chestplate",
   "flake.armor.storm_berserker.leggings": "Storm Berserker Leggings",
-  "flake.armor.storm_berserker.boots": "Storm Berserker Boots"
+  "flake.armor.storm_berserker.boots": "Storm Berserker Boots",
+  "block.flake.portal_vortex": "Parallax Vortex Portal"
 }
