@@ -44,8 +44,9 @@ public final class EffectActors {
 	public static Admission admission(CombatVfxPayload.Phase phase) {
 		return switch (phase) {
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON,
-					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT -> Admission.COALESCE;
-			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF -> Admission.UPDATE_ALL;
+					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT, COMBAT_DRONE_HIT -> Admission.COALESCE;
+			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF,
+					COMBAT_DRONE_OFF -> Admission.UPDATE_ALL;
 			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
@@ -81,6 +82,7 @@ public final class EffectActors {
 			case STORM_STAFF_RAY -> new StormStaffActor(payload);
 			case SHAMAN_TOTEM -> new TotemOfPainActor(payload);
 			case SHAMAN_WARD -> new SpiritWardActor(payload);
+			case COMBAT_DRONE_ON, COMBAT_DRONE_HIT -> new dev.flake.features.combatdrone.client.CombatDroneActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}

@@ -7,6 +7,10 @@ const vec3 LASH_ROSE_CORE = vec3(1.00, 0.72, 0.60);
 const vec3 PURIFY_CYAN = vec3(0.36, 0.96, 1.00);
 const vec3 PURIFY_GOLD = vec3(1.00, 0.88, 0.42);
 
+const vec3 DRONE_ORANGE = vec3(1.00, 0.44, 0.08);
+const vec3 DRONE_AMBER  = vec3(1.00, 0.72, 0.16);
+const vec3 DRONE_YELLOW = vec3(1.00, 0.94, 0.48);
+
 void vfxClosestRaySegment(vec3 ray, vec3 a, vec3 b, out float rayDist, out float segT, out float perpDist) {
     vec3 u = b - a;
     vec3 w0 = -a;
@@ -240,4 +244,68 @@ void sparkSyringeWave(vec3 ray, float sceneDistance, int slotIndex,
     vfxPointFlash(ray, sceneDistance, coreCenter, 1.1, alpha * (1.0 - t * 0.65) * 0.72, PURIFY_GOLD, PURIFY_CYAN, light, chipAlpha, chipColor);
     shamanSmoothShell(ray, sceneDistance, origin + vec3(0.0, 0.95, 0.0), mix(0.4, 1.65, t), 0.16,
                       alpha * (1.0 - t) * 0.55, PURIFY_CYAN, PURIFY_GOLD, light, distortion);
+}
+
+// Style 24: Combat Drone orange-yellow deployment shockwave, antenna beacon halo & melee strike bursts.
+void combatDroneWave(vec3 ray, float sceneDistance, vec3 scenePoint, float depth, int slotIndex,
+                     inout vec3 light, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
+    float alpha = WaveStyles[slotIndex].x;
+    float age = WaveStyles[slotIndex].y;
+    float hitAge = WaveStyles[slotIndex].w;
+    vec3 origin = WaveOrigins[slotIndex].xyz;
+    float radius = max(WaveOrigins[slotIndex].w, 1.5);
+    if (!intersectsBound(ray, sceneDistance, origin + vec3(0.0, 0.45, 0.0), radius + 2.0)) return;
+
+    // Warm orange-yellow activation shockwave over first 0.72s
+    if (age < 0.72) {
+        float spawnT = clamp(age / 0.72, 0.0, 1.0);
+        float easeOut = 1.0 - pow(1.0 - spawnT, 2.6);
+        float fade = (1.0 - spawnT) * alpha;
+        float ringR = mix(0.28, 2.35, easeOut);
+        float innerR = mix(0.18, 1.55, easeOut);
+        shamanSceneRing(scenePoint, depth, origin, ringR, 0.24, fade * 0.95, DRONE_ORANGE, light);
+        shamanSceneRing(scenePoint, depth, origin, innerR, 0.16, fade * 0.85, DRONE_YELLOW, light);
+
+        vec3 burstCore = origin + vec3(0.0, 0.34, 0.0);
+        vfxPointFlash(ray, sceneDistance, burstCore, 1.35, fade * 1.10, DRONE_YELLOW, DRONE_ORANGE,
+                      light, chipAlpha, chipColor);
+        shamanSmoothShell(ray, sceneDistance, burstCore, mix(0.25, 1.85, easeOut), 0.16,
+                          fade * 0.62, DRONE_ORANGE, DRONE_YELLOW, light, distortion);
+    }
+
+    // Persistent pulsing antenna beacon halo & subtle amber ground underglow
+    float pulse = 0.78 + 0.22 * sin(age * 12.0);
+    vec3 beaconPos = origin + vec3(0.0, 0.62, 0.0);
+    vfxPointFlash(ray, sceneDistance, beaconPos, 0.58, alpha * 0.48 * pulse, DRONE_YELLOW, DRONE_AMBER,
+                  light, chipAlpha, chipColor);
+    if (depth > 0.000001) {
+        vec3 rel = scenePoint - origin;
+        float rXZ = length(rel.xz);
+        if (rXZ < 1.25 && abs(rel.y) < 1.35) {
+            float gGlow = exp(-rXZ * rXZ * 3.2) * exp(-rel.y * rel.y * 4.5);
+            light += mix(DRONE_ORANGE, DRONE_AMBER, 0.55) * gGlow * (0.20 * pulse) * alpha;
+        }
+    }
+
+    // Orange-yellow melee hit burst & shock ripple when the drone strikes
+    if (hitAge >= 0.0 && hitAge < 0.42) {
+        float hT = clamp(hitAge / 0.42, 0.0, 1.0);
+        float hFade = (1.0 - hT) * alpha;
+        int segBase = slotIndex * 64;
+        vec3 hitCenter = QuakeStarts[segBase].x > 0.5 ? QuakeEnds[segBase].xyz : (origin + vec3(0.0, 0.45, 0.0));
+        vfxPointFlash(ray, sceneDistance, hitCenter, 1.25, hFade * 1.15, DRONE_YELLOW, DRONE_ORANGE,
+                      light, chipAlpha, chipColor);
+        float hitRingR = mix(0.20, 1.45, 1.0 - pow(1.0 - hT, 2.2));
+        shamanSceneRing(scenePoint, depth, vec3(hitCenter.x, origin.y, hitCenter.z),
+                        hitRingR, 0.18, hFade * 0.90, DRONE_AMBER, light);
+
+        float hAlong = dot(ray, hitCenter);
+        if (hAlong > 0.0 && hAlong < sceneDistance + 0.5) {
+            vec2 delta = screenPosition(hitCenter) - texCoord;
+            float dl = length(delta);
+            if (dl > 0.0001 && dl < 0.18) {
+                distortion += normalize(delta) * exp(-dl * dl * 110.0) * hFade * 0.20;
+            }
+        }
+    }
 }

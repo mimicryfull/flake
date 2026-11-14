@@ -79,6 +79,10 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 23.5) {
+            combatDroneWave(ray, sceneDistance, scenePoint, depth, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
         if (charging > 22.5) {
             sparkSyringeWave(ray, sceneDistance, i, light, chipAlpha, chipColor, distortion);
             continue;

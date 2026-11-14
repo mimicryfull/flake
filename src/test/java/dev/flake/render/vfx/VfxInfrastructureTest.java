@@ -88,7 +88,8 @@ class VfxInfrastructureTest {
 				"void stormBeamWave(",
 				"void chainLashWave(",
 				"void voidAnchorWave(",
-				"void sparkSyringeWave("
+				"void sparkSyringeWave(",
+				"void combatDroneWave("
 		}) {
 			assertTrue(full.contains(requiredSymbol), "Missing GLSL symbol in assembled shader: " + requiredSymbol);
 		}

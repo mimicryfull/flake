@@ -57,7 +57,9 @@ public final class FlakeCreativeTab {
 			ActiveItem.CRYSTAL_CLAW,
 			ActiveItem.MATADORA,
 			// Mobility
-			ActiveItem.PHASE_CRYSTAL);
+			ActiveItem.PHASE_CRYSTAL,
+			// Offense
+			ActiveItem.COMBAT_DRONE);
 
 	public static final List<PassiveItem> PASSIVES = List.of(
 			PassiveItem.BLOODY_SEAL,

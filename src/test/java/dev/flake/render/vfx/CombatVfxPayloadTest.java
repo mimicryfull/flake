@@ -33,7 +33,8 @@ class CombatVfxPayloadTest {
 				"SPARK_SYRINGE", "STORM_HARPOON",
 				"PHASE_CRYSTAL_ON", "PHASE_CRYSTAL_OFF",
 				"CHAIN_BLADE_PULL", "STORM_STAFF_RAY",
-				"SHAMAN_TOTEM", "SHAMAN_TOTEM_OFF", "SHAMAN_WARD"),
+				"SHAMAN_TOTEM", "SHAMAN_TOTEM_OFF", "SHAMAN_WARD",
+				"COMBAT_DRONE_ON", "COMBAT_DRONE_HIT", "COMBAT_DRONE_OFF"),
 				java.util.Arrays.stream(CombatVfxPayload.Phase.values()).map(Enum::name).toList());
 	}
 }

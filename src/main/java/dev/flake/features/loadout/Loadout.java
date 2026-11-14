@@ -419,7 +419,8 @@ public record Loadout(
 		MIRROR_TRAP("flake.active.mirror_trap.title", "flake.active.mirror_trap.desc", "flake.category.defense"),
 		SPARK_SYRINGE("flake.active.spark_syringe.title", "flake.active.spark_syringe.desc", "flake.category.buff"),
 		STORM_HARPOON("flake.active.storm_harpoon.title", "flake.active.storm_harpoon.desc", "flake.category.control"),
-		PHASE_CRYSTAL("flake.active.phase_crystal.title", "flake.active.phase_crystal.desc", "flake.category.mobility");
+		PHASE_CRYSTAL("flake.active.phase_crystal.title", "flake.active.phase_crystal.desc", "flake.category.mobility"),
+		COMBAT_DRONE("flake.active.combat_drone.title", "flake.active.combat_drone.desc", "flake.category.attack");
 
 		private final String titleKey, descriptionKey, categoryKey;
 		ActiveItem(String titleKey, String descriptionKey, String categoryKey) {

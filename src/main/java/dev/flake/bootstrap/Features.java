@@ -22,6 +22,7 @@ import dev.flake.features.mirrortrap.MirrorTrapDefinition;
 import dev.flake.features.sparksyringe.SparkSyringeDefinition;
 import dev.flake.features.stormharpoon.StormHarpoonDefinition;
 import dev.flake.features.phasecrystal.PhaseCrystalDefinition;
+import dev.flake.features.combatdrone.CombatDroneDefinition;
 
 /** The explicit composition root. Only this package needs to know every installed feature. */
 public final class Features {
@@ -57,6 +58,7 @@ public final class Features {
 			new Feature(SparkSyringeDefinition::install, SparkSyringeDefinition::registerItems),
 			new Feature(StormHarpoonDefinition::install, StormHarpoonDefinition::registerItems),
 			new Feature(PhaseCrystalDefinition::install, PhaseCrystalDefinition::registerItems),
+			new Feature(CombatDroneDefinition::install, CombatDroneDefinition::registerItems),
 			new Feature(dev.flake.features.shaman.ShamanRuntime::install),
 			new Feature(dev.flake.features.stormberserker.StormBerserkerArmor::install));
 
