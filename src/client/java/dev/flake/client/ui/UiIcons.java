@@ -172,6 +172,24 @@ public final class UiIcons {
 				g.fill(cx - 1, cy - 4, cx + 1, cy - 2, UiTheme.TEXT);
 				g.fill(cx - 1, cy + 1, cx + 1, cy + 3, UiTheme.TEXT);
 			}
+			case "TECHNICIAN" -> {
+				// Missile nosecone + swept fins + amber exhaust flare
+				g.fill(cx - 1, cy - 6, cx + 1, cy - 4, UiTheme.AMBER);
+				g.fill(cx - 2, cy - 4, cx + 2, cy + 2, UiTheme.TEXT);
+				g.fill(cx - 5, cy, cx - 2, cy + 3, accent);
+				g.fill(cx + 2, cy, cx + 5, cy + 3, accent);
+				int thrust = ((int) (timeSec * 12f) % 2 == 0) ? UiTheme.AMBER : UiTheme.RED;
+				g.fill(cx - 1, cy + 2, cx + 1, cy + 6, thrust);
+			}
+			case "TECHNICIAN_UAV" -> {
+				// Delta-wing UAV silhouette + laser targeting reticle
+				g.fill(cx - 1, cy - 6, cx + 1, cy - 2, UiTheme.TEXT);
+				g.fill(cx - 4, cy - 2, cx + 4, cy + 1, UiTheme.TEXT);
+				g.fill(cx - 7, cy + 1, cx + 7, cy + 3, accent);
+				g.fill(cx - 2, cy + 3, cx + 2, cy + 5, UiTheme.AMBER);
+				int pulseCol = ((int) (timeSec * 6f) % 2 == 0) ? UiTheme.CYAN : UiTheme.AMBER;
+				g.fill(cx - 1, cy - 1, cx + 1, cy + 1, pulseCol);
+			}
 			default -> g.fill(cx - 3, cy - 3, cx + 3, cy + 3, accent);
 		}
 	}
@@ -204,6 +222,13 @@ public final class UiIcons {
 				g.fill(x + 4, y + 1, x + 6, y + 9, color);
 				g.fill(x + 2, y + 3, x + 8, y + 5, color);
 				g.fill(x + 4, y + 2, x + 6, y + 3, UiTheme.TEXT);
+			}
+			case "TECHNICIAN" -> {
+				g.fill(x + 4, y + 1, x + 6, y + 3, UiTheme.AMBER);
+				g.fill(x + 3, y + 3, x + 7, y + 7, color);
+				g.fill(x + 1, y + 5, x + 3, y + 8, UiTheme.TEXT);
+				g.fill(x + 7, y + 5, x + 9, y + 8, UiTheme.TEXT);
+				g.fill(x + 4, y + 7, x + 6, y + 9, UiTheme.AMBER);
 			}
 			default -> g.fill(x + 2, y + 2, x + 8, y + 8, color);
 		}

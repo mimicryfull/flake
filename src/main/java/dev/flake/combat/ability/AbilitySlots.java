@@ -20,6 +20,8 @@ public final class AbilitySlots {
 		BLAST_JUMP("flake.ability.blast_jump", 20, 0, true),
 		TOTEM_OF_PAIN("flake.ability.totem_of_pain", 20, 120, true),
 		SPIRIT_WARD("flake.ability.spirit_ward", 20, 80, true),
+		HOMING_MISSILE("flake.ability.homing_missile", 20, 45, true),
+		ATTACK_UAV("flake.ability.attack_uav", 20, 75, true),
 		UNIMPLEMENTED("flake.ability.unassigned", 0, 0, false);
 
 		private final String titleKey;

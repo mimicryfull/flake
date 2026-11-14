@@ -31,6 +31,7 @@
 #include <flake:classes/hunter_highlight.glsl>
 #include <flake:classes/shaman/shaman_vfx.glsl>
 #include <flake:items/vfx_beams_and_orbs.glsl>
+#include <flake:classes/technician/technician_vfx.glsl>
 
 void main() {
     vec4 original = texture(InSampler, texCoord);
@@ -79,6 +80,10 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 24.5) {
+            technicianWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
+            continue;
+        }
         if (charging > 23.5) {
             combatDroneWave(ray, sceneDistance, scenePoint, depth, i, light, chipAlpha, chipColor, distortion);
             continue;

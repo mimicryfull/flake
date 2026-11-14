@@ -44,9 +44,10 @@ public final class EffectActors {
 	public static Admission admission(CombatVfxPayload.Phase phase) {
 		return switch (phase) {
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON,
-					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT, COMBAT_DRONE_HIT -> Admission.COALESCE;
+					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT, COMBAT_DRONE_HIT,
+					TECHNICIAN_MISSILE_SYNC, TECHNICIAN_UAV_SYNC -> Admission.COALESCE;
 			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF,
-					COMBAT_DRONE_OFF -> Admission.UPDATE_ALL;
+					COMBAT_DRONE_OFF, TECHNICIAN_MISSILE_OFF, TECHNICIAN_UAV_OFF -> Admission.UPDATE_ALL;
 			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
@@ -83,6 +84,10 @@ public final class EffectActors {
 			case SHAMAN_TOTEM -> new TotemOfPainActor(payload);
 			case SHAMAN_WARD -> new SpiritWardActor(payload);
 			case COMBAT_DRONE_ON, COMBAT_DRONE_HIT -> new dev.flake.features.combatdrone.client.CombatDroneActor(payload);
+			case TECHNICIAN_MISSILE_ON, TECHNICIAN_MISSILE_SYNC -> new dev.flake.features.technician.client.TechnicianMissileActor(payload);
+			case TECHNICIAN_UAV_ON, TECHNICIAN_UAV_SYNC -> new dev.flake.features.technician.client.TechnicianUavActor(payload);
+			case TECHNICIAN_MISSILE_BOOM, TECHNICIAN_UAV_STRIKE, TECHNICIAN_UAV_BOOM ->
+					new dev.flake.features.technician.client.TechnicianExplosionActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}

@@ -259,7 +259,11 @@ public final class FlakeHudOverlay {
 			else if (previousStates[i] == SkillState.COOLDOWN && state == SkillState.READY) readyFlashes[i] = 1f;
 			previousStates[i] = state;
 			readyFlashes[i] = Math.max(0f, readyFlashes[i] - dt * 2.4f);
-			String icon = ability == AbilitySlots.Ability.ELECTRIC_QUAKE ? "CONCUSSED_QUAKE" : hud.fighterClass();
+			String icon = switch (ability) {
+				case ELECTRIC_QUAKE -> "CONCUSSED_QUAKE";
+				case ATTACK_UAV -> "TECHNICIAN_UAV";
+				default -> hud.fighterClass();
+			};
 			skillBars[i] = drawSkillCard(g, client, x, baseY - i * (h + 5), w, h,
 					icon, AbilitySlots.title(hud.fighterClass(), slot), FlakeClient.abilityKeyLabel(slot),
 					state, cooldown, Math.max(0.05f, hud.slotCooldownTotal(slot) / 20f), active, activeTotal,

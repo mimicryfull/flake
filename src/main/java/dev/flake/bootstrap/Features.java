@@ -60,6 +60,7 @@ public final class Features {
 			new Feature(PhaseCrystalDefinition::install, PhaseCrystalDefinition::registerItems),
 			new Feature(CombatDroneDefinition::install, CombatDroneDefinition::registerItems),
 			new Feature(dev.flake.features.shaman.ShamanRuntime::install),
+			new Feature(dev.flake.features.technician.TechnicianRuntime::install),
 			new Feature(dev.flake.features.stormberserker.StormBerserkerArmor::install));
 
 	private Features() {}
