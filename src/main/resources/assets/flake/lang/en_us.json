@@ -541,7 +541,7 @@
   "flake.active.combat_drone.desc": "RMB: deploys a 4s voxel drone that chases enemies and deals 2.0 HP melee damage/s (target CD 16s)",
   "flake.active.kolobok.title": "Kolobok Gunner",
   "flake.active.kolobok.short": "Kolobok",
-  "flake.active.kolobok.desc": "RMB: summons a 4s dual-AK Kolobok firing rapid full-auto bullet streams (0.9 HP per burst; target CD 18s)",
+  "flake.active.kolobok.desc": "RMB: summons a 4s 50-AK-47 Kolobok firing a full-auto bullet storm (0.9 HP per burst; target CD 18s)",
   "itemGroup.flake.items": "Flake PvP",
   "flake.armor.storm_berserker.helmet": "Storm Berserker Helmet",
   "flake.armor.storm_berserker.chestplate": "Storm Berserker Chestplate",

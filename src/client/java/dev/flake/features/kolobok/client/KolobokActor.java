@@ -26,18 +26,53 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
- * Large smooth matte-yellow Kolobok matching the screenshot silhouette (oval black eyes,
- * wide thin U-smile with cheek creases) wielding dual full-auto AK-47 rifles with flying
- * bullet streams, muzzle flashes and brass shell casings (`style = 26`).
+ * Large smooth matte-yellow Kolobok wielding a 50-AK-47 war halo around his body
+ * while keeping his oval eyes and wide thin smile crystal clear, unleashing dense full-auto bullet storms.
  */
 public final class KolobokActor implements EffectActor {
+	public static final int AK_COUNT = 50;
 	private static final float DURATION_SEC = KolobokRuntime.DURATION_TICKS / 20.0f;
 	private static final float FADE_OUT_SEC = 0.25f;
 	private static final float SPEED_PER_SEC = (float) (KolobokRuntime.MOVE_SPEED * 20.0);
 	private static final float BODY_RADIUS = 0.56f;
 	private static final float BODY_CENTER_Y = 0.56f;
-	private static final float HAND_X = 0.68f;
-	private static final float HAND_Y = 0.44f;
+
+	private static final float[] AK_X = new float[AK_COUNT];
+	private static final float[] AK_Y = new float[AK_COUNT];
+	private static final float[] AK_Z = new float[AK_COUNT];
+	private static final float[] AK_FAN_YAW = new float[AK_COUNT];
+	private static final float[] AK_FAN_PITCH = new float[AK_COUNT];
+
+	static {
+		// 3 concentric halo arcs (14 + 18 + 18 = 50 AK-47s) framing Kolobok without blocking his front face
+		int[] ringCounts = {14, 18, 18};
+		float[] ringRadii = {0.72f, 0.96f, 1.20f};
+		float[] ringZ = {0.06f, -0.06f, -0.18f};
+		int idx = 0;
+		for (int ring = 0; ring < ringCounts.length; ring++) {
+			int count = ringCounts[ring];
+			float rad = ringRadii[ring];
+			float baseZ = ringZ[ring];
+			for (int k = 0; k < count && idx < AK_COUNT; k++) {
+				// Arc from -118 deg (lower-left) over top (+90 deg) down to -62 deg? Wait:
+				// Angle measured from top (+Y = 0): sweep [-132 deg .. +132 deg] cleanly around sides & crown!
+				float t = count == 1 ? 0.5f : k / (float) (count - 1);
+				float angDeg = -126.0f + t * 252.0f + (ring == 1 ? 5.0f : (ring == 2 ? -4.0f : 0.0f));
+				float ang = (float) Math.toRadians(angDeg);
+				float x = Mth.sin(ang) * rad;
+				float y = BODY_CENTER_Y + Mth.cos(ang) * (rad * 0.88f);
+				// Keep clear of terrain under y=0.18
+				if (y < 0.22f) y = 0.22f;
+				AK_X[idx] = x;
+				AK_Y[idx] = y;
+				AK_Z[idx] = baseZ;
+				// Slight inward convergence toward target + slight outward radial fan
+				AK_FAN_YAW[idx] = -x * 0.08f;
+				AK_FAN_PITCH[idx] = (y - BODY_CENTER_Y) * 0.04f;
+				idx++;
+			}
+		}
+	}
 
 	private static final class BulletTracer {
 		final Vec3 start;
@@ -67,6 +102,7 @@ public final class KolobokActor implements EffectActor {
 
 	private final int sourceId;
 	private final VfxTimeline timeline = new VfxTimeline();
+	private final float[] lastFiredAt = new float[AK_COUNT];
 	private final List<BulletTracer> bullets = new ArrayList<>();
 	private final List<BrassCasing> casings = new ArrayList<>();
 	private float ageSec;
@@ -79,10 +115,9 @@ public final class KolobokActor implements EffectActor {
 	private float yaw;
 	private int targetId;
 
-	private float lastLeftShotAt = -10.0f;
-	private float lastRightShotAt = -10.0f;
-	private boolean lastShotLeft = true;
-	private int tracerSeed;
+	private float lastShotAt = -10.0f;
+	private int muzzleBarrelIdx;
+	private int burstCounter;
 
 	public KolobokActor(CombatVfxPayload payload) {
 		this.sourceId = payload.sourceId();
@@ -90,48 +125,49 @@ public final class KolobokActor implements EffectActor {
 		this.serverPos = payload.origin();
 		this.impactPos = payload.aim();
 		this.targetId = payload.targetId();
+		java.util.Arrays.fill(lastFiredAt, -10.0f);
 		if (payload.phase() == CombatVfxPayload.Phase.KOLOBOK_SHOT) {
-			decodeShotYawAndSide(payload.yaw());
-			spawnTracerAndCasing();
+			decodeShotYaw(payload.yaw());
+			triggerFiftyAkVolley();
 		} else {
 			this.yaw = payload.yaw();
 		}
 	}
 
-	private void decodeShotYawAndSide(float encodedYaw) {
-		if (encodedYaw >= 360.0f) {
-			this.yaw = encodedYaw - 720.0f;
-			this.lastShotLeft = true;
-			this.lastLeftShotAt = this.ageSec;
-		} else {
-			this.yaw = encodedYaw + 720.0f;
-			this.lastShotLeft = false;
-			this.lastRightShotAt = this.ageSec;
-		}
+	private void decodeShotYaw(float encodedYaw) {
+		this.yaw = encodedYaw >= 360.0f ? (encodedYaw - 720.0f) : (encodedYaw + 720.0f);
+		this.lastShotAt = this.ageSec;
 	}
 
-	private void spawnTracerAndCasing() {
-		Vec3 muzzle = muzzleWorldPos(lastShotLeft);
-		float s = ++tracerSeed;
-		// Slight full-auto spread + 2 rapid visual rounds per burst for dense bullet stream
-		for (int round = 0; round < 2; round++) {
-			float sx = ((float) Math.sin(s * 7.3 + round * 3.1)) * 0.14f;
-			float sy = ((float) Math.cos(s * 5.1 + round * 2.7)) * 0.10f;
-			float sz = ((float) Math.sin(s * 11.7 + round * 1.9)) * 0.14f;
-			Vec3 spreadHit = impactPos.add(sx, sy, sz);
-			double dist = Math.max(1.5, muzzle.distanceTo(spreadHit));
-			float flightSec = (float) Math.clamp(dist / 36.0, 0.08, 0.30);
-			bullets.add(new BulletTracer(muzzle, spreadHit, ageSec + round * 0.045f, flightSec));
-		}
-		while (bullets.size() > 20) bullets.removeFirst();
+	private void triggerFiftyAkVolley() {
+		int step = ++burstCounter;
+		// Fire 6 different AKs per 3-tick packet with staggered timing for continuous bullet wall
+		for (int n = 0; n < 6; n++) {
+			int ak = (step * 7 + n * 9) % AK_COUNT;
+			float fireTime = ageSec + n * 0.024f;
+			lastFiredAt[ak] = fireTime;
+			if (n == 0) muzzleBarrelIdx = ak;
 
-		float sideSign = lastShotLeft ? 1.0f : -1.0f;
-		float yawRad = (float) Math.toRadians(-yaw);
-		Vector3f breechLocal = new Vector3f(sideSign * HAND_X, HAND_Y + 0.04f, 0.12f).rotateY(yawRad);
-		Vector3f ejectVel = new Vector3f(sideSign * (1.8f + (s % 3) * 0.35f), 2.1f + (s % 2) * 0.3f, -0.4f).rotateY(yawRad);
-		casings.add(new BrassCasing(pos.add(breechLocal.x, breechLocal.y, breechLocal.z),
-				new Vec3(ejectVel.x, ejectVel.y, ejectVel.z), ageSec));
-		while (casings.size() > 14) casings.removeFirst();
+			Vec3 muzzle = akMuzzleWorldPos(ak);
+			float spreadX = ((float) Math.sin(step * 5.3 + n * 2.9)) * 0.24f;
+			float spreadY = ((float) Math.cos(step * 3.7 + n * 4.1)) * 0.18f;
+			float spreadZ = ((float) Math.sin(step * 8.1 + n * 1.7)) * 0.24f;
+			Vec3 hitPt = impactPos.add(spreadX, spreadY, spreadZ);
+			double dist = Math.max(1.5, muzzle.distanceTo(hitPt));
+			float flightSec = (float) Math.clamp(dist / 34.0, 0.09, 0.30);
+			bullets.add(new BulletTracer(muzzle, hitPt, fireTime, flightSec));
+
+			if (n % 2 == 0) {
+				float sideSign = AK_X[ak] >= 0.0f ? 1.0f : -1.0f;
+				float yawRad = (float) Math.toRadians(-yaw);
+				Vector3f breech = new Vector3f(AK_X[ak], AK_Y[ak] + 0.03f, AK_Z[ak] + 0.10f).rotateY(yawRad);
+				Vector3f vel = new Vector3f(sideSign * (1.8f + (n % 3) * 0.4f), 2.0f + (step % 2) * 0.3f, -0.35f).rotateY(yawRad);
+				casings.add(new BrassCasing(pos.add(breech.x, breech.y, breech.z),
+						new Vec3(vel.x, vel.y, vel.z), fireTime));
+			}
+		}
+		while (bullets.size() > 60) bullets.removeFirst();
+		while (casings.size() > 28) casings.removeFirst();
 	}
 
 	@Override public int sourceId() { return sourceId; }
@@ -146,10 +182,10 @@ public final class KolobokActor implements EffectActor {
 			} else {
 				this.pos = this.pos.lerp(payload.origin(), 0.60);
 			}
-			decodeShotYawAndSide(payload.yaw());
+			decodeShotYaw(payload.yaw());
 			this.targetId = payload.targetId();
 			this.impactPos = payload.aim();
-			spawnTracerAndCasing();
+			triggerFiftyAkVolley();
 			return true;
 		}
 		if (payload.phase() == CombatVfxPayload.Phase.KOLOBOK_OFF) {
@@ -196,10 +232,10 @@ public final class KolobokActor implements EffectActor {
 
 		for (Iterator<BulletTracer> it = bullets.iterator(); it.hasNext();) {
 			BulletTracer b = it.next();
-			if (nowSec > b.bornAtSec + b.flightSec + 0.05f) it.remove();
+			if (nowSec > b.bornAtSec + b.flightSec + 0.04f) it.remove();
 		}
 		for (Iterator<BrassCasing> it = casings.iterator(); it.hasNext();) {
-			if (nowSec > it.next().bornAtSec + 0.55f) it.remove();
+			if (nowSec > it.next().bornAtSec + 0.50f) it.remove();
 		}
 	}
 
@@ -217,11 +253,9 @@ public final class KolobokActor implements EffectActor {
 		return in * out;
 	}
 
-	private Vec3 muzzleWorldPos(boolean leftHand) {
-		float sideX = leftHand ? HAND_X : -HAND_X;
+	private Vec3 akMuzzleWorldPos(int ak) {
 		float yawRad = (float) Math.toRadians(-yaw);
-		Vector3f local = new Vector3f(sideX, HAND_Y + 0.03f, 0.76f);
-		local.rotateY(yawRad);
+		Vector3f local = new Vector3f(AK_X[ak], AK_Y[ak] + 0.02f, AK_Z[ak] + 0.62f).rotateY(yawRad);
 		return pos.add(local.x, local.y, local.z);
 	}
 
@@ -232,14 +266,13 @@ public final class KolobokActor implements EffectActor {
 		if (expired()) return true;
 
 		float alpha = opacity();
-		float recentShotAt = Math.max(lastLeftShotAt, lastRightShotAt);
-		float shotAge = recentShotAt >= -1.0f ? Math.max(0.0f, ageSec - recentShotAt) : 10.0f;
+		float shotAge = lastShotAt >= -1.0f ? Math.max(0.0f, ageSec - lastShotAt) : 10.0f;
 
 		float[] values = slot.values;
 		values[slot.position] = (float) (pos.x - frame.camera.x);
 		values[slot.position + 1] = (float) (pos.y - frame.camera.y);
 		values[slot.position + 2] = (float) (pos.z - frame.camera.z);
-		values[slot.position + 3] = 14.0f;
+		values[slot.position + 3] = 15.0f;
 
 		values[slot.style] = alpha;
 		values[slot.style + 1] = ageSec;
@@ -247,7 +280,7 @@ public final class KolobokActor implements EffectActor {
 		values[slot.style + 3] = shotAge;
 
 		if (shotAge < 0.16f) {
-			Vec3 muzzle = muzzleWorldPos(lastShotLeft);
+			Vec3 muzzle = akMuzzleWorldPos(muzzleBarrelIdx);
 			values[slot.segment] = (float) (muzzle.x - frame.camera.x);
 			values[slot.segment + 1] = (float) (muzzle.y - frame.camera.y);
 			values[slot.segment + 2] = (float) (muzzle.z - frame.camera.z);
@@ -285,17 +318,11 @@ public final class KolobokActor implements EffectActor {
 		float scale = spawnScale * despawnScale;
 
 		float bob = Math.abs(Mth.sin(ageSec * 8.0f)) * 0.032f;
-		float waddleRoll = Mth.sin(ageSec * 8.0f) * 0.045f;
-
-		float leftShotAge = lastLeftShotAt >= -1.0f ? Math.max(0.0f, ageSec - lastLeftShotAt) : 10.0f;
-		float rightShotAge = lastRightShotAt >= -1.0f ? Math.max(0.0f, ageSec - lastRightShotAt) : 10.0f;
-		float leftRecoil = leftShotAge < 0.13f ? Mth.sin((leftShotAge / 0.13f) * Mth.PI) * 0.10f : 0.0f;
-		float rightRecoil = rightShotAge < 0.13f ? Mth.sin((rightShotAge / 0.13f) * Mth.PI) * 0.10f : 0.0f;
+		float waddleRoll = Mth.sin(ageSec * 8.0f) * 0.042f;
 
 		poseStack.pushPose();
 		poseStack.translate((float) dx, (float) dy + bob, (float) dz);
 
-		// World-space flying brass casings & glowing full-auto bullet stream
 		if (!casings.isEmpty()) {
 			collector.submitCustomGeometry(poseStack, SmoothMeshRenderer.CORE_RENDER_TYPE,
 					(pose, vc) -> emitCasings(pose, vc, alpha, bob));
@@ -309,89 +336,85 @@ public final class KolobokActor implements EffectActor {
 		poseStack.scale(scale, scale, scale);
 
 		collector.submitCustomGeometry(poseStack, SmoothMeshRenderer.CORE_RENDER_TYPE,
-				(pose, vc) -> emitKolobokAndRifles(pose, vc, alpha, leftRecoil, rightRecoil));
-
-		if (leftShotAge < 0.12f || rightShotAge < 0.12f) {
-			collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE,
-					(pose, vc) -> emitMuzzleFlashes(pose, vc, alpha, leftShotAge, rightShotAge, leftRecoil, rightRecoil));
-		}
+				(pose, vc) -> emitKolobokAndFiftyAks(pose, vc, alpha));
+		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.GLOW_RENDER_TYPE,
+				(pose, vc) -> emitMuzzleFlashes(pose, vc, alpha));
 
 		poseStack.popPose();
 	}
 
-	private void emitKolobokAndRifles(PoseStack.Pose pose, VertexConsumer vc,
-			float alpha, float leftRecoil, float rightRecoil) {
-		// Large smooth golden-yellow Kolobok sphere matching screenshot (32x48 smooth mesh + SDF face)
-		SmoothMeshRenderer.emitSphere(pose, vc, 0.0f, BODY_CENTER_Y, 0.0f, BODY_RADIUS, 32, 48,
+	private void emitKolobokAndFiftyAks(PoseStack.Pose pose, VertexConsumer vc, float alpha) {
+		// Smooth golden-yellow Kolobok sphere unobstructed in front
+		SmoothMeshRenderer.emitSphere(pose, vc, 0.0f, BODY_CENTER_Y, 0.0f, BODY_RADIUS, 30, 44,
 				0.96f, 0.78f, 0.06f, alpha, true);
 
-		// Smooth little yellow hands gripping the AK-47s on left and right sides
-		SmoothMeshRenderer.emitSphere(pose, vc, HAND_X - 0.02f, HAND_Y - 0.02f, 0.10f - leftRecoil * 0.6f,
-				0.095f, 10, 14, 0.96f, 0.76f, 0.06f, alpha, false);
-		SmoothMeshRenderer.emitSphere(pose, vc, -HAND_X + 0.02f, HAND_Y - 0.02f, 0.10f - rightRecoil * 0.6f,
-				0.095f, 10, 14, 0.96f, 0.76f, 0.06f, alpha, false);
+		// Two small golden hands gripping the lowest side rifles
+		SmoothMeshRenderer.emitSphere(pose, vc, AK_X[0] - 0.04f, AK_Y[0] - 0.02f, AK_Z[0] + 0.06f,
+				0.088f, 8, 12, 0.96f, 0.76f, 0.06f, alpha, false);
+		SmoothMeshRenderer.emitSphere(pose, vc, AK_X[13] + 0.04f, AK_Y[13] - 0.02f, AK_Z[13] + 0.06f,
+				0.088f, 8, 12, 0.96f, 0.76f, 0.06f, alpha, false);
 
-		// Two large detailed smooth polygonal AK-47s
-		emitSmoothAk47(pose, vc, HAND_X, HAND_Y, 0.04f - leftRecoil, leftRecoil * 1.4f, alpha);
-		emitSmoothAk47(pose, vc, -HAND_X, HAND_Y, 0.04f - rightRecoil, rightRecoil * 1.4f, alpha);
+		// 50 sleek polygonal AK-47s arrayed around sides and halo
+		for (int i = 0; i < AK_COUNT; i++) {
+			float sAge = ageSec - lastFiredAt[i];
+			float recoil = (sAge >= 0.0f && sAge < 0.11f) ? Mth.sin((sAge / 0.11f) * Mth.PI) * 0.09f : 0.0f;
+			emitCompactSmoothAk47(pose, vc, AK_X[i], AK_Y[i], AK_Z[i] - recoil,
+					AK_FAN_YAW[i], AK_FAN_PITCH[i], alpha);
+		}
 	}
 
-	private void emitSmoothAk47(PoseStack.Pose pose, VertexConsumer vc,
-			float ox, float oy, float oz, float recoilPitch, float alpha) {
+	private void emitCompactSmoothAk47(PoseStack.Pose pose, VertexConsumer vc,
+			float ox, float oy, float oz, float fanYaw, float fanPitch, float alpha) {
 		float sr = 0.17f, sg = 0.19f, sb = 0.23f;
 		float dr = 0.30f, dg = 0.34f, db = 0.40f;
 		float wr = 0.56f, wg = 0.30f, wb = 0.13f;
 		float mr = 0.13f, mg = 0.13f, mb = 0.16f;
 
-		float lift = recoilPitch * 0.32f;
+		float dX = fanYaw * 0.45f;
+		float dY = fanPitch * 0.35f;
 
-		// Tapered wooden AK-47 buttstock (-Z)
+		// Tapered wooden buttstock (-Z)
 		SmoothMeshRenderer.emitTaperedBoxZ(pose, vc,
-				ox, oy - 0.028f, oz - 0.30f, 0.025f, 0.060f,
-				ox, oy + 0.006f, oz - 0.05f, 0.028f, 0.035f, wr, wg, wb, alpha);
+				ox - dX * 0.3f, oy - 0.022f - dY * 0.2f, oz - 0.24f, 0.020f, 0.046f,
+				ox, oy + 0.005f, oz - 0.04f, 0.022f, 0.028f, wr, wg, wb, alpha);
 
-		// Slanted wooden pistol grip
+		// Slanted pistol grip
 		SmoothMeshRenderer.emitLoftedY(pose, vc,
-				ox, oy - 0.018f, oz + 0.005f, 0.020f, 0.026f,
-				ox, oy - 0.128f, oz - 0.042f, 0.018f, 0.020f, wr * 0.85f, wg * 0.85f, wb * 0.85f, alpha);
+				ox, oy - 0.015f, oz + 0.004f, 0.016f, 0.020f,
+				ox, oy - 0.102f, oz - 0.032f, 0.014f, 0.016f, wr * 0.85f, wg * 0.85f, wb * 0.85f, alpha);
 
-		// Receiver body + beveled upper dust cover
+		// Steel receiver + beveled dust cover
 		SmoothMeshRenderer.emitTaperedBoxZ(pose, vc,
-				ox, oy + 0.005f, oz - 0.05f, 0.028f, 0.035f,
-				ox, oy + 0.008f + lift * 0.3f, oz + 0.25f, 0.026f, 0.032f, sr, sg, sb, alpha);
+				ox, oy + 0.005f, oz - 0.04f, 0.022f, 0.028f,
+				ox + dX * 0.2f, oy + 0.006f + dY * 0.2f, oz + 0.20f, 0.021f, 0.026f, sr, sg, sb, alpha);
 		SmoothMeshRenderer.emitTaperedBoxZ(pose, vc,
-				ox, oy + 0.042f, oz - 0.04f, 0.022f, 0.014f,
-				ox, oy + 0.045f + lift * 0.3f, oz + 0.24f, 0.021f, 0.014f, dr, dg, db, alpha);
+				ox, oy + 0.034f, oz - 0.03f, 0.017f, 0.011f,
+				ox + dX * 0.2f, oy + 0.035f + dY * 0.2f, oz + 0.19f, 0.016f, 0.011f, dr, dg, db, alpha);
 
-		// Smooth wooden forearm / handguard (+Z)
+		// Smooth wooden handguard
 		SmoothMeshRenderer.emitTaperedBoxZ(pose, vc,
-				ox, oy + 0.006f + lift * 0.3f, oz + 0.25f, 0.029f, 0.032f,
-				ox, oy + 0.006f + lift * 0.55f, oz + 0.45f, 0.023f, 0.028f, wr, wg, wb, alpha);
+				ox + dX * 0.2f, oy + 0.005f + dY * 0.2f, oz + 0.20f, 0.023f, 0.025f,
+				ox + dX * 0.4f, oy + 0.005f + dY * 0.4f, oz + 0.36f, 0.018f, 0.022f, wr, wg, wb, alpha);
 
-		// 10-sided cylindrical barrel + gas tube + front sight + compensator
-		SmoothMeshRenderer.emitCylinderZ(pose, vc, ox, oy + 0.010f + lift * 0.65f,
-				oz + 0.25f, oz + 0.68f, 0.016f, 0.014f, 10, dr, dg, db, alpha);
-		SmoothMeshRenderer.emitCylinderZ(pose, vc, ox, oy + 0.040f + lift * 0.5f,
-				oz + 0.25f, oz + 0.49f, 0.014f, 0.013f, 8, sr, sg, sb, alpha);
-		SmoothMeshRenderer.emitTaperedBoxZ(pose, vc,
-				ox, oy + 0.034f + lift * 0.7f, oz + 0.58f, 0.009f, 0.026f,
-				ox, oy + 0.034f + lift * 0.7f, oz + 0.61f, 0.008f, 0.026f, sr, sg, sb, alpha);
-		SmoothMeshRenderer.emitCylinderZ(pose, vc, ox, oy + 0.010f + lift * 0.8f,
-				oz + 0.68f, oz + 0.74f, 0.019f, 0.018f, 8, sr, sg, sb, alpha);
+		// 6-sided sleek cylindrical barrel + upper gas tube
+		SmoothMeshRenderer.emitCylinderZ(pose, vc, ox + dX * 0.55f, oy + 0.008f + dY * 0.55f,
+				oz + 0.20f, oz + 0.58f, 0.013f, 0.011f, 6, dr, dg, db, alpha);
+		SmoothMeshRenderer.emitCylinderZ(pose, vc, ox + dX * 0.4f, oy + 0.032f + dY * 0.4f,
+				oz + 0.20f, oz + 0.40f, 0.011f, 0.010f, 5, sr, sg, sb, alpha);
 
-		// Signature curved AK-47 banana magazine ("ріжок")
-		float mz = oz + 0.135f;
-		float my = oy - 0.024f;
-		for (int seg = 0; seg < 6; seg++) {
-			float t0 = seg / 6.0f;
-			float t1 = (seg + 1) / 6.0f;
-			float y0 = my - t0 * 0.205f;
-			float y1 = my - t1 * 0.205f;
-			float z0 = mz + t0 * t0 * 0.145f;
-			float z1 = mz + t1 * t1 * 0.145f;
+		// Curved banana magazine ("ріжок", 3 curved segments)
+		float mz = oz + 0.105f;
+		float my = oy - 0.020f;
+		for (int seg = 0; seg < 3; seg++) {
+			float t0 = seg / 3.0f;
+			float t1 = (seg + 1) / 3.0f;
+			float y0 = my - t0 * 0.165f;
+			float y1 = my - t1 * 0.165f;
+			float z0 = mz + t0 * t0 * 0.115f;
+			float z1 = mz + t1 * t1 * 0.115f;
 			SmoothMeshRenderer.emitLoftedY(pose, vc,
-					ox, y0, z0, 0.018f, 0.027f,
-					ox, y1, z1, 0.017f, 0.025f, mr, mg, mb, alpha);
+					ox, y0, z0, 0.014f, 0.022f,
+					ox, y1, z1, 0.013f, 0.020f, mr, mg, mb, alpha);
 		}
 	}
 
@@ -403,50 +426,41 @@ public final class KolobokActor implements EffectActor {
 			float tTail = Mth.clamp((age - 0.055f) / b.flightSec, 0.0f, 1.0f);
 			Vec3 head = b.start.lerp(b.end, tHead).subtract(pos.x, pos.y + bob, pos.z);
 			Vec3 tail = b.start.lerp(b.end, tTail).subtract(pos.x, pos.y + bob, pos.z);
-			Vec3 dir = head.subtract(tail);
-			double len = dir.length();
-			if (len < 1e-4) continue;
-
-			// Emit elongated bright golden bullet slug + glowing tracer tail cubes along flight ray
-			for (int k = 0; k <= 3; k++) {
-				float u = k / 3.0f;
+			for (int k = 0; k <= 2; k++) {
+				float u = k / 2.0f;
 				Vec3 p = tail.lerp(head, u);
-				float r = k == 3 ? 0.030f : 0.018f;
-				float gCol = k == 3 ? 0.96f : 0.68f;
-				float bCol = k == 3 ? 0.55f : 0.14f;
+				float r = k == 2 ? 0.026f : 0.016f;
 				WeaponVoxelRenderer.emitCube(pose, vc, (float) p.x, (float) p.y, (float) p.z,
-						r, r, r, 1.00f, gCol, bCol, alpha * (0.45f + 0.55f * u));
+						r, r, r, 1.00f, k == 2 ? 0.96f : 0.68f, k == 2 ? 0.55f : 0.14f, alpha * (0.45f + 0.55f * u));
 			}
 			WeaponVoxelRenderer.emitGlowSprite(pose, vc, (float) head.x, (float) head.y, (float) head.z,
-					0.16f, 1.00f, 0.85f, 0.25f, alpha * 0.90f);
+					0.14f, 1.00f, 0.85f, 0.25f, alpha * 0.85f);
 		}
 	}
 
 	private void emitCasings(PoseStack.Pose pose, VertexConsumer vc, float alpha, float bob) {
 		for (BrassCasing c : casings) {
 			float age = ageSec - c.bornAtSec;
-			if (age < 0.0f || age > 0.55f) continue;
+			if (age < 0.0f || age > 0.50f) continue;
 			float x = (float) (c.origin.x + c.vel.x * age - pos.x);
 			float y = (float) (c.origin.y + c.vel.y * age - 4.9f * age * age - (pos.y + bob));
 			float z = (float) (c.origin.z + c.vel.z * age - pos.z);
 			if (y < -0.1f) continue;
-			float fade = 1.0f - age / 0.55f;
-			SmoothMeshRenderer.emitCylinderZ(pose, vc, x, y, z - 0.018f, z + 0.018f,
-					0.011f, 0.011f, 6, 0.94f, 0.74f, 0.22f, alpha * fade);
+			float fade = 1.0f - age / 0.50f;
+			SmoothMeshRenderer.emitCylinderZ(pose, vc, x, y, z - 0.016f, z + 0.016f,
+					0.010f, 0.010f, 5, 0.94f, 0.74f, 0.22f, alpha * fade);
 		}
 	}
 
-	private void emitMuzzleFlashes(PoseStack.Pose pose, VertexConsumer vc,
-			float alpha, float leftAge, float rightAge, float leftRecoil, float rightRecoil) {
-		if (leftAge < 0.12f) {
-			float f = (1.0f - leftAge / 0.12f) * alpha;
-			float z = 0.79f - leftRecoil;
-			WeaponVoxelRenderer.emitGlowSprite(pose, vc, HAND_X, HAND_Y + 0.02f, z, 0.42f * f, 1.00f, 0.80f, 0.22f, f);
-		}
-		if (rightAge < 0.12f) {
-			float f = (1.0f - rightAge / 0.12f) * alpha;
-			float z = 0.79f - rightRecoil;
-			WeaponVoxelRenderer.emitGlowSprite(pose, vc, -HAND_X, HAND_Y + 0.02f, z, 0.42f * f, 1.00f, 0.80f, 0.22f, f);
+	private void emitMuzzleFlashes(PoseStack.Pose pose, VertexConsumer vc, float alpha) {
+		for (int i = 0; i < AK_COUNT; i++) {
+			float sAge = ageSec - lastFiredAt[i];
+			if (sAge >= 0.0f && sAge < 0.095f) {
+				float f = (1.0f - sAge / 0.095f) * alpha;
+				WeaponVoxelRenderer.emitGlowSprite(pose, vc,
+						AK_X[i], AK_Y[i] + 0.01f, AK_Z[i] + 0.62f,
+						0.32f * f, 1.00f, 0.78f, 0.22f, f);
+			}
 		}
 	}
 }
