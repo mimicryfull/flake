@@ -80,6 +80,10 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 25.5) {
+            kolobokWave(ray, sceneDistance, scenePoint, depth, i, light, chipAlpha, chipColor, distortion);
+            continue;
+        }
         if (charging > 24.5) {
             technicianWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
             continue;

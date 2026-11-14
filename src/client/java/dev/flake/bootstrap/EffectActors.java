@@ -45,9 +45,9 @@ public final class EffectActors {
 		return switch (phase) {
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON,
 					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT, COMBAT_DRONE_HIT,
-					TECHNICIAN_MISSILE_SYNC, TECHNICIAN_UAV_SYNC -> Admission.COALESCE;
+					TECHNICIAN_MISSILE_SYNC, TECHNICIAN_UAV_SYNC, KOLOBOK_SHOT -> Admission.COALESCE;
 			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF,
-					COMBAT_DRONE_OFF, TECHNICIAN_MISSILE_OFF, TECHNICIAN_UAV_OFF -> Admission.UPDATE_ALL;
+					COMBAT_DRONE_OFF, TECHNICIAN_MISSILE_OFF, TECHNICIAN_UAV_OFF, KOLOBOK_OFF -> Admission.UPDATE_ALL;
 			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
@@ -88,6 +88,7 @@ public final class EffectActors {
 			case TECHNICIAN_UAV_ON, TECHNICIAN_UAV_SYNC -> new dev.flake.features.technician.client.TechnicianUavActor(payload);
 			case TECHNICIAN_MISSILE_BOOM, TECHNICIAN_UAV_STRIKE, TECHNICIAN_UAV_BOOM ->
 					new dev.flake.features.technician.client.TechnicianExplosionActor(payload);
+			case KOLOBOK_ON, KOLOBOK_SHOT -> new dev.flake.features.kolobok.client.KolobokActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}
