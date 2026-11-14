@@ -9,6 +9,6 @@ public final class SparkSyringeVisuals {
 
 	public static void cleanse(ServerPlayer source) {
 		CombatVisuals.broadcast(source, new CombatVfxPayload(source.position(), source.getId(),
-				CombatVfxPayload.Phase.SPARK_SYRINGE), source.position(), 15);
+				CombatVfxPayload.Phase.SPARK_SYRINGE), source.position(), 19);
 	}
 }

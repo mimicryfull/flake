@@ -13,7 +13,7 @@ public final class ShamanVisuals {
 	public static void totem(ServerPlayer owner, Vec3 pos) {
 		var payload = new CombatVfxPayload(pos, owner.getId(), CombatVfxPayload.Phase.SHAMAN_TOTEM,
 				(float) Math.toRadians(owner.getYRot()), -1, pos);
-		CombatVisuals.broadcast(owner, payload, pos, 0);
+		CombatVisuals.broadcast(owner, payload, pos, ShamanRuntime.TOTEM_LIFE_TICKS + 10);
 	}
 
 	public static void totemOff(ServerLevel level, ServerPlayer owner, int ownerId, Vec3 pos) {
@@ -27,6 +27,6 @@ public final class ShamanVisuals {
 		Vec3 origin = owner.position();
 		var payload = new CombatVfxPayload(origin, owner.getId(), CombatVfxPayload.Phase.SHAMAN_WARD,
 				(float) Math.toRadians(owner.getYRot()), -1, origin);
-		CombatVisuals.broadcast(owner, payload, origin, 0);
+		CombatVisuals.broadcast(owner, payload, origin, ShamanRuntime.WARD_TICKS + 10);
 	}
 }

@@ -99,7 +99,7 @@ public final class TotemOfPainActor implements EffectActor {
 		float tickPhase = ageSec % 1.0f;
 		float pulse = Math.max(0.0f, 1.0f - tickPhase / 0.35f);
 		float scale = (0.72f + 0.28f * spawnScale) * (0.35f + 0.65f * offFade);
-		float orbY = (1.38f + (float) Math.sin(ageSec * 3.2f) * 0.06f) * scale;
+		float orbY = (1.42f + (float) Math.sin(ageSec * 3.2f) * 0.06f) * scale;
 
 		poseStack.pushPose();
 		poseStack.translate((float) dx, (float) dy, (float) dz);

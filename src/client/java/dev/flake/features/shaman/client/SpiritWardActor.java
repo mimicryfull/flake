@@ -19,24 +19,25 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Emerald Spirit Ward aura (style = 19): projects green floor pulsation onto the ground below
- * the caster so jumps look crisp and natural, paired with rising spirit wisps around the player.
+ * Emerald Spirit Ward aura (style = 19): smoothly tracks entity XZ and finds stable ground Y across
+ * the player's footprint so jumps & ledge transitions look clean without flickering.
  */
 public final class SpiritWardActor implements EffectActor {
 	private static final float DURATION_SEC = ShamanRuntime.WARD_TICKS / 20.0f;
 	private static final float WARD_RADIUS = (float) ShamanRuntime.WARD_RADIUS;
 	private static final int EMBER_COUNT = 14;
+	private static final double[] SAMPLE_OFFSETS = {0.0, 0.0, 0.26, 0.26, -0.26, 0.26, 0.26, -0.26, -0.26, -0.26};
 
 	private final int sourceId;
 	private final VfxTimeline timeline = new VfxTimeline();
 	private Vec3 lastOrigin;
-	private float lastGroundY;
+	private float smoothedGroundY;
 	private float ageSec;
 
 	public SpiritWardActor(CombatVfxPayload payload) {
 		this.sourceId = payload.sourceId();
 		this.lastOrigin = payload.origin();
-		this.lastGroundY = (float) payload.origin().y;
+		this.smoothedGroundY = (float) payload.origin().y;
 	}
 
 	@Override public int sourceId() { return sourceId; }
@@ -56,15 +57,23 @@ public final class SpiritWardActor implements EffectActor {
 			Entity entity = level.getEntity(sourceId);
 			if (entity != null) {
 				lastOrigin = entity.getPosition(partial);
-				BlockHitResult hit = level.clip(new ClipContext(
-						lastOrigin.add(0.0, 0.35, 0.0),
-						lastOrigin.subtract(0.0, 8.0, 0.0),
-						ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
-				if (hit.getType() == HitResult.Type.BLOCK) {
-					lastGroundY = (float) hit.getLocation().y;
+				float targetGroundY;
+				if (entity.onGround()) {
+					targetGroundY = (float) lastOrigin.y;
 				} else {
-					lastGroundY = (float) lastOrigin.y;
+					double bestY = Double.NEGATIVE_INFINITY;
+					for (int i = 0; i < SAMPLE_OFFSETS.length; i += 2) {
+						Vec3 probe = lastOrigin.add(SAMPLE_OFFSETS[i], 0.35, SAMPLE_OFFSETS[i + 1]);
+						BlockHitResult hit = level.clip(new ClipContext(
+								probe, probe.subtract(0.0, 6.0, 0.0),
+								ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
+						if (hit.getType() == HitResult.Type.BLOCK && hit.getLocation().y <= lastOrigin.y + 0.15) {
+							bestY = Math.max(bestY, hit.getLocation().y);
+						}
+					}
+					targetGroundY = bestY > Double.NEGATIVE_INFINITY ? (float) bestY : (float) lastOrigin.y;
 				}
+				smoothedGroundY += (targetGroundY - smoothedGroundY) * 0.35f;
 			}
 		}
 		return lastOrigin;
@@ -86,11 +95,11 @@ public final class SpiritWardActor implements EffectActor {
 		float opacity = computeOpacity();
 		float spawnRaw = Math.clamp(ageSec / 0.18f, 0f, 1f);
 		float radius = WARD_RADIUS * (0.85f + 0.15f * spawnRaw);
-		float jumpHeight = Math.max(0.0f, (float) (center.y - lastGroundY));
+		float jumpHeight = Math.max(0.0f, (float) (center.y - smoothedGroundY));
 
 		float[] values = slot.values;
 		values[slot.position] = (float) (center.x - frame.camera.x);
-		values[slot.position + 1] = (float) (lastGroundY - frame.camera.y);
+		values[slot.position + 1] = (float) (smoothedGroundY - frame.camera.y);
 		values[slot.position + 2] = (float) (center.z - frame.camera.z);
 		values[slot.position + 3] = radius;
 
@@ -119,16 +128,14 @@ public final class SpiritWardActor implements EffectActor {
 
 		float healPhase = ageSec % 1.0f;
 		float pulse = Math.max(0.0f, 1.0f - healPhase / 0.38f);
-		float groundDy = (float) (lastGroundY - cameraPos.y);
+		float groundDy = (float) (smoothedGroundY - cameraPos.y);
 
-		// Ground-projected perimeter accent motes (remain flush on floor even while jumping)
 		poseStack.pushPose();
 		poseStack.translate((float) dx, groundDy, (float) dz);
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
 				(pose, vc) -> emitGroundEmbers(pose, vc, pulse, opacity));
 		poseStack.popPose();
 
-		// Lightweight rising emerald motes tracking player body smoothly through jumps
 		poseStack.pushPose();
 		poseStack.translate((float) dx, (float) dy, (float) dz);
 		collector.submitCustomGeometry(poseStack, WeaponVoxelRenderer.SOFT_RENDER_TYPE,
