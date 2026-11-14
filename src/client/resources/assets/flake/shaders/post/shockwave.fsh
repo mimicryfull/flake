@@ -81,7 +81,7 @@ void main() {
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
         if (charging > 25.5) {
-            kolobokWave(ray, sceneDistance, scenePoint, depth, i, light, chipAlpha, chipColor, distortion);
+            kolobokWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
             continue;
         }
         if (charging > 24.5) {

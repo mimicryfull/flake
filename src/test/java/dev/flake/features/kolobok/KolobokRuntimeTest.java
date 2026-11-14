@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class KolobokRuntimeTest {
 	@Test void specAndTimingMatchArtifactDesign() {
 		assertEquals(80, KolobokRuntime.DURATION_TICKS);
-		assertEquals(12, KolobokRuntime.FIRE_INTERVAL_TICKS);
-		assertEquals(1.0f, KolobokRuntime.SHOT_DAMAGE);
+		assertEquals(3, KolobokRuntime.FIRE_INTERVAL_TICKS);
+		assertEquals(0.9f, KolobokRuntime.SHOT_DAMAGE);
 		assertEquals(ActiveItem.KOLOBOK_GUNNER, KolobokDefinition.SPEC.id());
 		assertEquals("kolobok", KolobokDefinition.SPEC.buffStatusId());
 	}

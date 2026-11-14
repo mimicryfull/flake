@@ -36,8 +36,9 @@ public final class KolobokRuntime {
 	public static final int TARGET_COOLDOWN_TICKS = 360;
 	public static final int COOLDOWN_TICKS = 20;
 	public static final int DURATION_TICKS = 80;
-	public static final int FIRE_INTERVAL_TICKS = 12;
-	public static final float SHOT_DAMAGE = 1.0f;
+	public static final int FIRE_INTERVAL_TICKS = 3;
+	public static final int DAMAGE_EVERY_N_SHOTS = 4;
+	public static final float SHOT_DAMAGE = 0.9f;
 	public static final double SEARCH_RADIUS = 12.0;
 	public static final double PREFERRED_RANGE = 5.2;
 	public static final double MOVE_SPEED = 0.24;
@@ -171,16 +172,19 @@ public final class KolobokRuntime {
 				runner.yaw = yawTowards(runner.pos, tPos);
 
 				Vec3 targetCenter = target.position().add(0.0, target.getBbHeight() * 0.55, 0.0);
-				if (now >= runner.nextShotTick && hasLineOfSight(runner.level, runner.pos.add(0.0, 0.35, 0.0), targetCenter)) {
+				if (now >= runner.nextShotTick && hasLineOfSight(runner.level, runner.pos.add(0.0, 0.55, 0.0), targetCenter)) {
 					runner.nextShotTick = now + FIRE_INTERVAL_TICKS;
-					boolean leftHand = (runner.shotCount++ % 2) == 0;
-					float damage = CombatModifiers.skillDamage(owner, target, SHOT_DAMAGE);
-					target.hurtServer(runner.level, owner.damageSources().playerAttack(owner), damage);
+					int shotIndex = runner.shotCount++;
+					boolean leftHand = (shotIndex % 2) == 0;
+					if (shotIndex % DAMAGE_EVERY_N_SHOTS == 0) {
+						float damage = CombatModifiers.skillDamage(owner, target, SHOT_DAMAGE);
+						target.hurtServer(runner.level, owner.damageSources().playerAttack(owner), damage);
+					}
 
 					runner.level.playSound(null, runner.pos.x, runner.pos.y, runner.pos.z,
-							SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 0.78f, leftHand ? 1.55f : 1.72f);
+							SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 0.62f, leftHand ? 1.65f : 1.85f);
 					runner.level.playSound(null, runner.pos.x, runner.pos.y, runner.pos.z,
-							SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 0.48f, 1.35f);
+							SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 0.35f, 1.50f);
 					KolobokVisuals.shoot(owner, runner.pos, runner.yaw, leftHand, target.getId(), targetCenter);
 				}
 			} else {

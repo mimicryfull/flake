@@ -310,50 +310,51 @@ void combatDroneWave(vec3 ray, float sceneDistance, vec3 scenePoint, float depth
     }
 }
 
-// Style 26: Kolobok golden spawn pulse & AK-47 gunfire muzzle/tracer/impact bursts.
+// Style 26: Kolobok golden spawn pulse, ground contact shadow & AK-47 gunfire muzzle/tracer/impact bursts.
 void kolobokWave(vec3 ray, float sceneDistance, vec3 scenePoint, float depth, int slotIndex,
-                 inout vec3 light, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
+                 inout vec3 light, inout float darkness, inout float chipAlpha, inout vec3 chipColor, inout vec2 distortion) {
     float alpha = WaveStyles[slotIndex].x;
     float age = WaveStyles[slotIndex].y;
     float shotAge = WaveStyles[slotIndex].w;
     vec3 origin = WaveOrigins[slotIndex].xyz;
     float radius = max(WaveOrigins[slotIndex].w, 2.0);
-    if (!intersectsBound(ray, sceneDistance, origin + vec3(0.0, 0.4, 0.0), radius + 2.0)) return;
+    if (!intersectsBound(ray, sceneDistance, origin + vec3(0.0, 0.55, 0.0), radius + 2.0)) return;
 
     if (age < 0.55) {
         float spawnT = clamp(age / 0.55, 0.0, 1.0);
         float fade = (1.0 - spawnT) * alpha;
-        float ringR = mix(0.22, 1.75, 1.0 - pow(1.0 - spawnT, 2.4));
-        shamanSceneRing(scenePoint, depth, origin, ringR, 0.20, fade * 0.88, DRONE_YELLOW, light);
+        float ringR = mix(0.35, 2.10, 1.0 - pow(1.0 - spawnT, 2.4));
+        shamanSceneRing(scenePoint, depth, origin, ringR, 0.22, fade * 0.88, DRONE_YELLOW, light);
     }
 
+    // Soft grounded shadow under the large yellow sphere + warm rim glow on rapid fire
     if (depth > 0.000001) {
         vec3 rel = scenePoint - origin;
         float rXZ = length(rel.xz);
-        if (rXZ < 1.15 && abs(rel.y) < 1.2) {
-            light += DRONE_AMBER * exp(-rXZ * rXZ * 3.5) * exp(-rel.y * rel.y * 4.5) * 0.16 * alpha;
+        if (rXZ < 0.95 && abs(rel.y) < 0.65) {
+            darkness += exp(-rXZ * rXZ * 3.8) * exp(-rel.y * rel.y * 8.0) * 0.52 * alpha;
         }
     }
 
-    if (shotAge >= 0.0 && shotAge < 0.24) {
-        float sT = clamp(shotAge / 0.24, 0.0, 1.0);
+    if (shotAge >= 0.0 && shotAge < 0.16) {
+        float sT = clamp(shotAge / 0.16, 0.0, 1.0);
         float sFade = (1.0 - sT) * alpha;
         int segBase = slotIndex * 64;
         if (QuakeStarts[segBase].w > 0.5) {
             vec3 muzzle = QuakeStarts[segBase].xyz;
             vec3 hitPos = QuakeEnds[segBase].xyz;
-            vfxPointFlash(ray, sceneDistance, muzzle, 0.85, sFade * 1.10, DRONE_YELLOW, DRONE_ORANGE,
+            vfxPointFlash(ray, sceneDistance, muzzle, 0.95, sFade * 1.15, DRONE_YELLOW, DRONE_ORANGE,
                           light, chipAlpha, chipColor);
-            vfxPointFlash(ray, sceneDistance, hitPos, 0.90, sFade * 0.95, DRONE_YELLOW, DRONE_ORANGE,
+            vfxPointFlash(ray, sceneDistance, hitPos, 0.85, sFade * 0.90, DRONE_YELLOW, DRONE_ORANGE,
                           light, chipAlpha, chipColor);
 
             float rDist, segT, perp;
             vfxClosestRaySegment(ray, muzzle, hitPos, rDist, segT, perp);
             if (rDist <= sceneDistance + 0.15) {
-                float core = exp(-(perp * perp) / 0.0012);
-                float halo = exp(-(perp * perp) / 0.018);
-                light += (DRONE_YELLOW * core * 0.90 + DRONE_ORANGE * halo * 0.55) * sFade;
-                float c = core * sFade * 0.65;
+                float core = exp(-(perp * perp) / 0.0014);
+                float halo = exp(-(perp * perp) / 0.020);
+                light += (DRONE_YELLOW * core * 0.95 + DRONE_ORANGE * halo * 0.55) * sFade;
+                float c = core * sFade * 0.70;
                 chipColor += DRONE_YELLOW * c;
                 chipAlpha += c;
             }

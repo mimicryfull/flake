@@ -541,7 +541,7 @@
   "flake.active.combat_drone.desc": "ПКМ: випускає на 4 с воксельного дрона, що б’є ворогів у ближньому бою по 2.0 HP/с (цільовий КД 16 с)",
   "flake.active.kolobok.title": "Колобок-стрілець",
   "flake.active.kolobok.short": "Колобок",
-  "flake.active.kolobok.desc": "ПКМ: на 4 с випускає колобка з двома АК-47, що стріляє по ворогах на дистанції (1.0 HP кожні 0.6 с; цільовий КД 18 с)",
+  "flake.active.kolobok.desc": "ПКМ: на 4 с випускає колобка з двома АК-47, що стріляє по ворогах чергою патронів (0.9 HP/залп; цільовий КД 18 с)",
   "itemGroup.flake.items": "Flake PvP",
   "flake.armor.storm_berserker.helmet": "Шолом Грозового Берсерка",
   "flake.armor.storm_berserker.chestplate": "Нагрудник Грозового Берсерка",

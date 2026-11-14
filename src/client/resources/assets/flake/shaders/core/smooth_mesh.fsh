@@ -25,40 +25,52 @@ void main() {
         float theta = texCoord0.x;
         float phi   = texCoord0.y;
         vec3 Nlocal = normalize(vec3(cos(phi) * sin(theta), sin(phi), cos(phi) * cos(theta)));
-        vec3 Llocal = normalize(vec3(0.32, 0.78, 0.54));
-        vec3 Vlocal = normalize(vec3(0.0, 0.15, 1.0));
-        vec3 Hlocal = normalize(Llocal + Vlocal);
+        vec3 Llocal = normalize(vec3(0.28, 0.84, 0.46));
 
         float ndl = clamp(dot(Nlocal, Llocal), 0.0, 1.0);
         float wrap = clamp(dot(Nlocal, Llocal) * 0.5 + 0.5, 0.0, 1.0);
-        float spec = pow(max(dot(Nlocal, Hlocal), 0.0), 28.0) * 0.24;
-        float rim = pow(1.0 - clamp(dot(Nlocal, normalize(-relPos * 0.001 + vec3(0.0, 0.0, 1.0))), 0.0, 1.0), 2.5);
+        float bottomAO = smoothstep(-1.45, -0.35, phi) * 0.24 + 0.76;
+        float rim = pow(1.0 - clamp(dot(Nlocal, vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.8);
 
-        vec3 baseCol = vertexColor.rgb * (0.62 + 0.42 * wrap + 0.14 * ndl) + vec3(1.0, 0.96, 0.72) * spec;
+        // Warm matte golden-yellow shading matching the reference Kolobok
+        vec3 baseCol = vertexColor.rgb * (0.64 + 0.34 * wrap + 0.12 * ndl) * bottomAO;
 
-        // Paint crisp anti-aliased oval eyes & ultra-wide narrow black smile onto front face
+        // Paint crisp anti-aliased oval eyes, wide narrow smile & cheek crease ticks
         float faceMask = 0.0;
         if (abs(theta) < 1.35) {
-            float fw = max(length(vec2(dFdx(theta), dFdy(theta))), 0.006);
+            float fw = max(length(vec2(dFdx(theta), dFdy(theta))), 0.005);
 
-            // Two pure black vertical oval eyes
-            vec2 eL = vec2((theta + 0.34) / 0.088, (phi - 0.25) / 0.215);
-            vec2 eR = vec2((theta - 0.34) / 0.088, (phi - 0.25) / 0.215);
-            float eyeL = 1.0 - smoothstep(1.0 - fw * 6.5, 1.0 + fw * 6.5, length(eL));
-            float eyeR = 1.0 - smoothstep(1.0 - fw * 6.5, 1.0 + fw * 6.5, length(eR));
+            // Two centered vertical black oval eyes
+            vec2 eL = vec2((theta + 0.255) / 0.088, (phi - 0.155) / 0.168);
+            vec2 eR = vec2((theta - 0.255) / 0.088, (phi - 0.155) / 0.168);
+            float eyeL = 1.0 - smoothstep(1.0 - fw * 5.5, 1.0 + fw * 5.5, length(eL));
+            float eyeR = 1.0 - smoothstep(1.0 - fw * 5.5, 1.0 + fw * 5.5, length(eR));
             faceMask = max(faceMask, max(eyeL, eyeR));
 
-            // Very wide, narrow curved black smile sweeping across both cheeks
-            float smileSpan = 0.80;
+            // Wide narrow U-shaped black smile sweeping between both cheeks
+            float smileSpan = 0.70;
             float clampedT = clamp(theta, -smileSpan, smileSpan);
-            float smileCurve = -0.31 + 0.31 * (clampedT / smileSpan) * (clampedT / smileSpan);
+            float u = clampedT / smileSpan;
+            float smileCurve = -0.39 + 0.31 * u * u;
             float dSmile = length(vec2(theta - clampedT, phi - smileCurve));
-            float smile = 1.0 - smoothstep(0.024 - fw * 0.7, 0.024 + fw * 0.7, dSmile);
+            float smile = 1.0 - smoothstep(0.022 - fw * 0.7, 0.022 + fw * 0.7, dSmile);
             faceMask = max(faceMask, smile);
+
+            // Signature short diagonal crease ticks at both ends of the smile
+            for (int side = -1; side <= 1; side += 2) {
+                float sx = float(side);
+                vec2 p0 = vec2(sx * 0.655, -0.055);
+                vec2 p1 = vec2(sx * 0.735, -0.105);
+                vec2 seg = p1 - p0;
+                float h = clamp(dot(vec2(theta, phi) - p0, seg) / dot(seg, seg), 0.0, 1.0);
+                float dCrease = length(vec2(theta, phi) - (p0 + seg * h));
+                float crease = 1.0 - smoothstep(0.017 - fw * 0.7, 0.017 + fw * 0.7, dCrease);
+                faceMask = max(faceMask, crease);
+            }
         }
 
-        vec3 blackInk = vec3(0.035, 0.035, 0.04) * (0.85 + 0.15 * wrap) + vec3(0.18) * spec;
-        vec3 rgb = mix(baseCol, blackInk, faceMask) + vertexColor.rgb * (0.04 * rim * (1.0 - faceMask));
+        vec3 blackInk = vec3(0.032, 0.032, 0.036);
+        vec3 rgb = mix(baseCol, blackInk, faceMask) + vertexColor.rgb * (0.03 * rim * (1.0 - faceMask));
         fragColor = vec4(rgb, outAlpha);
         return;
     }
