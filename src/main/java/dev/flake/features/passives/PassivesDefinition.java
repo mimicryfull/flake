@@ -76,7 +76,7 @@ public final class PassivesDefinition implements Lifecycle {
 			@Override public void onApplyKit(ServerPlayer player) { REGEN.of(player).reset(player.getUUID()); }
 			@Override public void onFightTick(ServerPlayer player, int nowTick) {
 				if (!player.isAlive() || player.getHealth() >= player.getMaxHealth()) return;
-				if (REGEN.of(player).due(player.getUUID(), nowTick)) player.heal(REGEN_HEAL);
+				if (REGEN.of(player).due(player.getUUID(), nowTick)) player.heal(dev.flake.combat.CombatModifiers.scaleHealing(player, REGEN_HEAL));
 			}
 		}));
 		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.LEECH, "flake.passive.leech.short", "flake.category.attack",

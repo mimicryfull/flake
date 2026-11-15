@@ -57,6 +57,12 @@ public final class CombatModifiers {
 	@FunctionalInterface
 	public interface AfterDamageListener { void onAfterDamage(LivingEntity victim, DamageSource source, float taken, boolean blocked); }
 
+	@FunctionalInterface
+	public interface HealingScale { float scale(LivingEntity entity, float amount); }
+
+	@FunctionalInterface
+	public interface SkillMaxCharges { int maxCharges(ServerPlayer player, int slot); }
+
 	private static final List<SkillDamage> OUTGOING = new ArrayList<>();
 	private static final List<SkillDamage> INCOMING = new ArrayList<>();
 	private static final List<Cooldown> COOLDOWNS = new ArrayList<>();
@@ -70,6 +76,8 @@ public final class CombatModifiers {
 	private static final List<ProjectileTrap> PROJECTILE_TRAPS = new ArrayList<>();
 	private static final List<CustomProjectileTrap> CUSTOM_PROJECTILE_TRAPS = new ArrayList<>();
 	private static final List<AfterDamageListener> AFTER_DAMAGE = new ArrayList<>();
+	private static final List<HealingScale> HEALING_SCALES = new ArrayList<>();
+	private static final List<SkillMaxCharges> SKILL_MAX_CHARGES = new ArrayList<>();
 
 	private CombatModifiers() {}
 
@@ -86,6 +94,8 @@ public final class CombatModifiers {
 	public static void projectileTrap(ProjectileTrap trap) { PROJECTILE_TRAPS.add(trap); }
 	public static void customProjectileTrap(CustomProjectileTrap trap) { CUSTOM_PROJECTILE_TRAPS.add(trap); }
 	public static void afterDamage(AfterDamageListener listener) { AFTER_DAMAGE.add(listener); }
+	public static void healingScale(HealingScale scale) { HEALING_SCALES.add(scale); }
+	public static void skillMaxCharges(SkillMaxCharges charges) { SKILL_MAX_CHARGES.add(charges); }
 
 	public static float meleeHealing(ServerPlayer attacker, float taken) {
 		float healing = 0;
@@ -156,5 +166,18 @@ public final class CombatModifiers {
 
 	public static void notifyAfterDamage(LivingEntity victim, DamageSource source, float taken, boolean blocked) {
 		for (var listener : AFTER_DAMAGE) listener.onAfterDamage(victim, source, taken, blocked);
+	}
+
+	public static float scaleHealing(LivingEntity entity, float baseAmount) {
+		if (baseAmount <= 0f) return baseAmount;
+		float scale = 1.0f;
+		for (var mod : HEALING_SCALES) scale *= mod.scale(entity, baseAmount);
+		return Math.max(0f, baseAmount * scale);
+	}
+
+	public static int maxSkillCharges(ServerPlayer player, int slot) {
+		int max = 1;
+		for (var mod : SKILL_MAX_CHARGES) max = Math.max(max, mod.maxCharges(player, slot));
+		return Math.max(1, max);
 	}
 }

@@ -36,7 +36,11 @@ public final class FlakeCreativeTab {
 
 	public static final List<ArmorMaterial> ARMOR_SETS = List.of(
 			ArmorMaterial.OBSIDIAN,
-			ArmorMaterial.STORM_BERSERKER);
+			ArmorMaterial.STORM_BERSERKER,
+			ArmorMaterial.PHOENIX,
+			ArmorMaterial.BARREL,
+			ArmorMaterial.WIZARD,
+			ArmorMaterial.HYDRA);
 
 	public static final List<ArmorSlot> ARMOR_SLOTS = List.of(
 			ArmorSlot.HELMET,

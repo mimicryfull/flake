@@ -50,7 +50,11 @@ public record HudStatePayload(
 		String blockReason,
 		int blockRemainingTicks,
 		List<ItemCooldown> itemCooldowns,
-		List<Status> statuses
+		List<Status> statuses,
+		int slot1Charges,
+		int slot1MaxCharges,
+		int slot2Charges,
+		int slot2MaxCharges
 ) implements CustomPacketPayload {
 	public static final Type<HudStatePayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("flake", "hud_state_v2"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, HudStatePayload> CODEC = StreamCodec.ofMember(
@@ -72,6 +76,28 @@ public record HudStatePayload(
 		if (blockReason == null) blockReason = "";
 		itemCooldowns = sanitizeCooldowns(itemCooldowns);
 		statuses = sanitize(statuses);
+		slot1MaxCharges = Math.max(1, slot1MaxCharges);
+		slot1Charges = Math.clamp(slot1Charges, 0, slot1MaxCharges);
+		slot2MaxCharges = Math.max(1, slot2MaxCharges);
+		slot2Charges = Math.clamp(slot2Charges, 0, slot2MaxCharges);
+	}
+
+	public HudStatePayload(
+			String fighterClass, String helmet, String chestplate, String leggings, String boots,
+			String weapon, String passiveItem, String activeItem1, String activeItem2, boolean validBuild,
+			int cooldownRemainingTicks, int cooldownTotalTicks, int chargeElapsedTicks, int chargeTotalTicks,
+			int quakeCooldownRemainingTicks, int quakeCooldownTotalTicks, int quakeActiveTicks, int quakeTotalTicks,
+			boolean abilityBlocked, boolean effectsEnabled, String phase, int round, int timerTicks, int timerTotalTicks,
+			int firstWins, int secondWins, int winsNeeded, Fighter first, Fighter second, String lobbyTitle, int lobbyCount,
+			boolean inLobby, boolean ready, long buildRevision, Role viewerRole, LoadState loadState,
+			String blockReason, int blockRemainingTicks, List<ItemCooldown> itemCooldowns, List<Status> statuses) {
+		this(fighterClass, helmet, chestplate, leggings, boots, weapon, passiveItem, activeItem1, activeItem2, validBuild,
+				cooldownRemainingTicks, cooldownTotalTicks, chargeElapsedTicks, chargeTotalTicks,
+				quakeCooldownRemainingTicks, quakeCooldownTotalTicks, quakeActiveTicks, quakeTotalTicks,
+				abilityBlocked, effectsEnabled, phase, round, timerTicks, timerTotalTicks,
+				firstWins, secondWins, winsNeeded, first, second, lobbyTitle, lobbyCount, inLobby, ready,
+				buildRevision, viewerRole, loadState, blockReason, blockRemainingTicks, itemCooldowns, statuses,
+				1, 1, 1, 1);
 	}
 
 	public static HudStatePayload legacy(String fighterClass, String helmet, String chestplate, String leggings, String boots,
@@ -188,6 +214,10 @@ public record HudStatePayload(
 			buf.writeVarInt(status.amplifier());
 			buf.writeBoolean(status.infinite());
 		}
+		buf.writeVarInt(slot1Charges);
+		buf.writeVarInt(slot1MaxCharges);
+		buf.writeVarInt(slot2Charges);
+		buf.writeVarInt(slot2MaxCharges);
 	}
 
 	private static HudStatePayload read(RegistryFriendlyByteBuf buf) {
@@ -240,6 +270,10 @@ public record HudStatePayload(
 			statuses.add(new Status(buf.readUtf(48), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
 					buf.readVarInt(), buf.readBoolean()));
 		}
+		int slot1Charges = buf.readVarInt();
+		int slot1MaxCharges = buf.readVarInt();
+		int slot2Charges = buf.readVarInt();
+		int slot2MaxCharges = buf.readVarInt();
 		return new HudStatePayload(
 				fighterClass, helmet, chestplate, leggings, boots, weapon,
 				passiveItem, activeItem1, activeItem2, validBuild,
@@ -248,7 +282,7 @@ public record HudStatePayload(
 				abilityBlocked, effectsEnabled, phase, round, timerTicks, timerTotalTicks,
 				firstWins, secondWins, winsNeeded, first, second, lobbyTitle, lobbyCount, inLobby, ready,
 				buildRevision, Role.values()[roleOrdinal], LoadState.values()[loadOrdinal], blockReason, blockRemainingTicks,
-				itemCooldowns, statuses
+				itemCooldowns, statuses, slot1Charges, slot1MaxCharges, slot2Charges, slot2MaxCharges
 		);
 	}
 
@@ -269,10 +303,15 @@ public record HudStatePayload(
 	}
 
 	public static SkillState skillState(String fighterClass, int slot, boolean blocked, int chargeElapsedTicks, float cooldownRemainingSeconds) {
+		return skillState(fighterClass, slot, blocked, chargeElapsedTicks, cooldownRemainingSeconds,
+				cooldownRemainingSeconds > 0.02f ? 0 : 1);
+	}
+
+	public static SkillState skillState(String fighterClass, int slot, boolean blocked, int chargeElapsedTicks, float cooldownRemainingSeconds, int charges) {
 		if (!AbilitySlots.resolve(fighterClass, slot).implemented()) return SkillState.PASSIVE;
 		if (blocked) return SkillState.BLOCKED;
 		if (chargeElapsedTicks >= 0) return SkillState.CHARGING;
-		if (cooldownRemainingSeconds > 0.02f) return SkillState.COOLDOWN;
+		if (charges <= 0 && cooldownRemainingSeconds > 0.02f) return SkillState.COOLDOWN;
 		return SkillState.READY;
 	}
 
@@ -280,6 +319,8 @@ public record HudStatePayload(
 	public int slotCooldownTotal(int slot) { return slot == 1 ? cooldownTotalTicks : quakeCooldownTotalTicks; }
 	public int slotActiveElapsed(int slot) { return slot == 1 ? chargeElapsedTicks : quakeActiveTicks; }
 	public int slotActiveTotal(int slot) { return slot == 1 ? chargeTotalTicks : quakeTotalTicks; }
+	public int slotCharges(int slot) { return slot == 1 ? slot1Charges : slot2Charges; }
+	public int slotMaxCharges(int slot) { return slot == 1 ? slot1MaxCharges : slot2MaxCharges; }
 	public boolean participant() { return viewerRole == Role.PARTICIPANT; }
 	public boolean spectator() { return viewerRole == Role.SPECTATOR; }
 	public int itemCooldownTotal(String itemId) {

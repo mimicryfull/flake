@@ -274,7 +274,7 @@ public final class ShamanRuntime implements ClassAbilityRuntime {
 			UUID allyId = ally.getUUID();
 			insideNow.add(allyId);
 			ensureSpeedModifier(ally, WARD_SPEED_MOD, WARD_SPEED_MULTIPLIER);
-			if (healTick) ally.heal(WARD_HEAL_AMOUNT);
+			if (healTick) ally.heal(CombatModifiers.scaleHealing(ally, WARD_HEAL_AMOUNT));
 		}
 		for (UUID prevId : ward.buffedIds) {
 			if (!insideNow.contains(prevId)) candidatesForClear.add(prevId);

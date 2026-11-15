@@ -102,7 +102,9 @@ public final class HudProjection {
 				runtime == null ? 0 : runtime.timerTotalTicks(), firstWins, secondWins, winsNeeded, first, second,
 				room == null ? "" : room.title(), members.size(), members.containsKey(id), Boolean.TRUE.equals(members.get(id)),
 				builds.revision(id), role, loadState(builds.state(id)), blockReason, blockRemaining,
-				itemCooldowns(player), statuses(player, id, now));
+				itemCooldowns(player), statuses(player, id, now),
+				clsSpec.skillCharges(player, 1, now), clsSpec.skillMaxCharges(player, 1),
+				clsSpec.skillCharges(player, 2, now), clsSpec.skillMaxCharges(player, 2));
 	}
 
 	private static HudStatePayload.LoadState loadState(LoadoutStore.State state) {

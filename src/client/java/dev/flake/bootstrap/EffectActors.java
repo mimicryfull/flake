@@ -45,9 +45,11 @@ public final class EffectActors {
 		return switch (phase) {
 			case BLOOD_LUNGE, BLOODLUST_ON, BLOODLUST_OFF, BLOOD_SIPHON,
 					VOID_ANCHOR_PULL, MIRROR_TRAP_REFLECT, COMBAT_DRONE_HIT,
-					TECHNICIAN_MISSILE_SYNC, TECHNICIAN_UAV_SYNC, KOLOBOK_SHOT -> Admission.COALESCE;
+					TECHNICIAN_MISSILE_SYNC, TECHNICIAN_UAV_SYNC, KOLOBOK_SHOT,
+					PHOENIX_AURA, HYDRA_AURA -> Admission.COALESCE;
 			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF,
-					COMBAT_DRONE_OFF, TECHNICIAN_MISSILE_OFF, TECHNICIAN_UAV_OFF, KOLOBOK_OFF -> Admission.UPDATE_ALL;
+					COMBAT_DRONE_OFF, TECHNICIAN_MISSILE_OFF, TECHNICIAN_UAV_OFF, KOLOBOK_OFF,
+					PHOENIX_AURA_OFF, HYDRA_AURA_OFF -> Admission.UPDATE_ALL;
 			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
@@ -89,6 +91,9 @@ public final class EffectActors {
 			case TECHNICIAN_MISSILE_BOOM, TECHNICIAN_UAV_STRIKE, TECHNICIAN_UAV_BOOM ->
 					new dev.flake.features.technician.client.TechnicianExplosionActor(payload);
 			case KOLOBOK_ON, KOLOBOK_SHOT -> new dev.flake.features.kolobok.client.KolobokActor(payload);
+			case PHOENIX_AURA -> new dev.flake.features.armorsets.client.PhoenixAuraActor(payload);
+			case BARREL_PULSE -> new dev.flake.features.armorsets.client.BarrelPulseActor(payload);
+			case HYDRA_AURA -> new dev.flake.features.armorsets.client.HydraAuraActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}

@@ -26,6 +26,7 @@ public final class ConfirmedDamageHooks {
 			float heal = 0;
 			for (var runtime : abilities.runtimes()) heal += runtime.meleeHealing(attacker, taken);
 			heal += CombatModifiers.meleeHealing(attacker, taken);
+			heal = CombatModifiers.scaleHealing(attacker, heal);
 			if (heal > 0) {
 				float before = attacker.getHealth();
 				attacker.heal(heal); // Bloodlust + Leech intentionally share this single call.

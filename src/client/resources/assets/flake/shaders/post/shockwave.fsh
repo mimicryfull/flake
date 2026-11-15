@@ -32,6 +32,7 @@
 #include <flake:classes/shaman/shaman_vfx.glsl>
 #include <flake:items/vfx_beams_and_orbs.glsl>
 #include <flake:classes/technician/technician_vfx.glsl>
+#include <flake:armorsets/armor_auras.glsl>
 
 void main() {
     vec4 original = texture(InSampler, texCoord);
@@ -80,6 +81,18 @@ void main() {
         vec3 origin = WaveOrigins[i].xyz;
         float age = WaveStyles[i].y;
         float charging = WaveStyles[i].z;
+        if (charging > 28.5) {
+            hydraAuraWave(ray, sceneDistance, scenePoint, depth, i, light, darkness);
+            continue;
+        }
+        if (charging > 27.5) {
+            barrelPulseWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, distortion);
+            continue;
+        }
+        if (charging > 26.5) {
+            phoenixAuraWave(ray, sceneDistance, scenePoint, depth, i, light, darkness);
+            continue;
+        }
         if (charging > 25.5) {
             kolobokWave(ray, sceneDistance, scenePoint, depth, i, light, darkness, chipAlpha, chipColor, distortion);
             continue;

@@ -66,7 +66,7 @@ public final class VampireRuntime implements ClassAbilityRuntime {
 		Vec3 dir = AbilityMovement.horizontalDir(player.position(), target.position(), player);
 		AbilityMovement.launch(player, dir.scale(1.7).add(0, 0.22, 0));
 		boolean hit = target.hurtServer(level, player.damageSources().playerAttack(player), CombatModifiers.skillDamage(player, target, 4.0f));
-		player.heal(1.5f); // Independent of damage acceptance; not part of the combined melee lifesteal heal.
+		player.heal(CombatModifiers.scaleHealing(player, 1.5f)); // Independent of damage acceptance; not part of the combined melee lifesteal heal.
 		dev.flake.features.vampire.VampireVisuals.bloodLunge(player, target, dir, hit);
 		AbilityEffects.sound(level, player, SoundEvents.MACE_SMASH_AIR, 0.65f, 1.35f);
 		if (hit) {

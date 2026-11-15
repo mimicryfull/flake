@@ -1,5 +1,9 @@
 package dev.flake.features.armor;
 
+import dev.flake.features.armorsets.BarrelArmor;
+import dev.flake.features.armorsets.HydraArmor;
+import dev.flake.features.armorsets.PhoenixArmor;
+import dev.flake.features.armorsets.WizardArmor;
 import dev.flake.features.loadout.Loadout.ArmorMaterial;
 import dev.flake.features.loadout.Loadout.ArmorSlot;
 import dev.flake.features.obsidianarmor.ObsidianArmor;
@@ -33,6 +37,10 @@ public final class ArmorItems {
 			};
 			case OBSIDIAN -> ObsidianArmor.itemFor(slot);
 			case STORM_BERSERKER -> null;
+			case PHOENIX -> PhoenixArmor.itemFor(slot);
+			case BARREL -> BarrelArmor.itemFor(slot);
+			case WIZARD -> WizardArmor.itemFor(slot);
+			case HYDRA -> HydraArmor.itemFor(slot);
 		};
 		return item == null ? ItemStack.EMPTY : new ItemStack(item);
 	}

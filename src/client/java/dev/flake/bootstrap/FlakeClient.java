@@ -36,8 +36,10 @@ public final class FlakeClient implements ClientModInitializer {
 		FocusOverlaySettings.load();
 		BattleModeSettings.load();
 		dev.flake.features.hud.client.FlakePlayerHud.register();
+		dev.flake.features.armorsets.client.HydraOverlayRenderer.register();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			dev.flake.render.vfx.VfxRenderState.clear();
+			dev.flake.features.armorsets.client.HydraAuraActor.clearLocalOverlay();
 			PortalVortexTracker.clear();
 			PortalVortexRenderer.clearMotes();
 		});

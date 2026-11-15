@@ -254,7 +254,9 @@ public final class FlakeHudOverlay {
 			int activeTicks = hud.slotActiveElapsed(slot);
 			float activeTotal = Math.max(0.05f, hud.slotActiveTotal(slot) / 20f);
 			float active = activeTicks < 0 ? -1 : Math.min(activeTotal, activeTicks / 20f + elapsed);
-			var state = HudStatePayload.skillState(hud.fighterClass(), slot, hud.abilityBlocked(), activeTicks, cooldown);
+			int charges = hud.slotCharges(slot);
+			int maxCharges = hud.slotMaxCharges(slot);
+			var state = HudStatePayload.skillState(hud.fighterClass(), slot, hud.abilityBlocked(), activeTicks, cooldown, charges);
 			if (changed) { skillBars[i] = state == SkillState.READY ? 1f : 0f; readyFlashes[i] = 0f; }
 			else if (previousStates[i] == SkillState.COOLDOWN && state == SkillState.READY) readyFlashes[i] = 1f;
 			previousStates[i] = state;
@@ -267,6 +269,7 @@ public final class FlakeHudOverlay {
 			skillBars[i] = drawSkillCard(g, client, x, baseY - i * (h + 5), w, h,
 					icon, AbilitySlots.title(hud.fighterClass(), slot), FlakeClient.abilityKeyLabel(slot),
 					state, cooldown, Math.max(0.05f, hud.slotCooldownTotal(slot) / 20f), active, activeTotal,
+					charges, maxCharges,
 					hud.blockReason(), skillBars[i], readyFlashes[i], slot == 1 ? UiTheme.CYAN : 0xff689dff, dt, timeSec);
 		}
 		return baseY - (AbilitySlots.COUNT - 1) * (h + 5);
@@ -276,6 +279,7 @@ public final class FlakeHudOverlay {
 			GuiGraphicsExtractor g, Minecraft client, int x, int y, int w, int h,
 			String iconId, String title, String keyLabel,
 			SkillState state, float cooldownSec, float cooldownTotalSec, float activeElapsedSec, float activeTotalSec,
+			int charges, int maxCharges,
 			String blockReason, float smoothBar, float flash, int activeThemeColor, float dt, float timeSec
 	) {
 		boolean isQuake = "CONCUSSED_QUAKE".equals(iconId);
@@ -293,12 +297,22 @@ public final class FlakeHudOverlay {
 			case COOLDOWN -> {
 				accentColor = UiTheme.AMBER;
 				targetProgress = Math.clamp(1.0f - (cooldownSec / cooldownTotalSec), 0f, 1f);
-				statusText = HudStatePayload.formatShortSeconds(cooldownSec);
+				statusText = maxCharges > 1
+						? charges + "/" + maxCharges + " · " + HudStatePayload.formatShortSeconds(cooldownSec)
+						: HudStatePayload.formatShortSeconds(cooldownSec);
 			}
 			case READY -> {
-				accentColor = isQuake ? 0xff3898ff : UiTheme.GREEN;
-				targetProgress = 1.0f;
-				statusText = isQuake ? dev.flake.text.FlakeI18n.tr("flake.hud.quake_ready") : dev.flake.text.FlakeI18n.tr("flake.hud.skill_ready");
+				accentColor = maxCharges > 1 && charges >= maxCharges ? 0xffc07bff : (isQuake ? 0xff3898ff : UiTheme.GREEN);
+				targetProgress = maxCharges > 1 && charges < maxCharges
+						? Math.clamp(1.0f - (cooldownSec / cooldownTotalSec), 0f, 1f)
+						: 1.0f;
+				if (maxCharges > 1) {
+					statusText = charges < maxCharges && cooldownSec > 0.02f
+							? charges + "/" + maxCharges + " · +" + HudStatePayload.formatShortSeconds(cooldownSec)
+							: charges + "/" + maxCharges + " · " + dev.flake.text.FlakeI18n.tr("flake.hud.skill_ready");
+				} else {
+					statusText = isQuake ? dev.flake.text.FlakeI18n.tr("flake.hud.quake_ready") : dev.flake.text.FlakeI18n.tr("flake.hud.skill_ready");
+				}
 			}
 			case BLOCKED -> {
 				accentColor = UiTheme.RED;

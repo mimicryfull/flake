@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "flake:barrel"
+      }
+    ],
+    "humanoid_leggings": [
+      {
+        "texture": "flake:barrel"
+      }
+    ]
+  }
+}

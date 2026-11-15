@@ -97,5 +97,11 @@ public final class ContentSpec {
 		default int activeTotal(ServerPlayer player, int slot, int nowTick) {
 			return (slot == 1 ? slot1() : slot2()).activeTicks();
 		}
+		default int skillCharges(ServerPlayer player, int slot, int nowTick) {
+			return cooldownRemaining(player, slot, nowTick) > 0 ? 0 : 1;
+		}
+		default int skillMaxCharges(ServerPlayer player, int slot) {
+			return 1;
+		}
 	}
 }

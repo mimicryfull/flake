@@ -40,8 +40,10 @@ public final class ClassAbilityRuntimes {
 	private final Map<UUID, SlotCooldowns> cooldowns = new HashMap<>();
 	private final ConfirmedDamageHooks damageHooks = new ConfirmedDamageHooks(this);
 
-	private record SlotCooldowns(int[] readyAt, int[] totals) {
-		private SlotCooldowns() { this(new int[AbilitySlots.COUNT], new int[AbilitySlots.COUNT]); }
+	private record SlotCooldowns(SkillChargePool[] pools) {
+		private SlotCooldowns() {
+			this(new SkillChargePool[] { new SkillChargePool(), new SkillChargePool() });
+		}
 	}
 
 	private ClassAbilityRuntimes(MinecraftServer server) {
@@ -107,17 +109,18 @@ public final class ClassAbilityRuntimes {
 		if (state != null) state.cancelBuffs(player);
 	}
 
-	/** A failed target lookup does not spend a cooldown; cooldown scaling is snapshotted at cast. */
+	/** A failed target lookup does not spend a charge; cooldown scaling is snapshotted at cast. */
 	public int cast(ServerPlayer player, Ability ability, int slot) {
 		if (!AbilitySlots.valid(slot)) return 0;
 		int now = server.getTickCount();
-		int remaining = remaining(player.getUUID(), slot, now);
 		if (DuelRuntime.blocksAbility(player.getUUID())) {
 			CombatFeedback.blocked(player, ability);
 			return 0;
 		}
-		if (remaining > 0) {
-			CombatFeedback.onCooldown(player, ability, remaining);
+		int maxCharges = dev.flake.combat.CombatModifiers.maxSkillCharges(player, slot);
+		int cooldown = Cooldowns.ticks(player, ability.cooldownTicks());
+		if (charges(player, ability, slot, now) <= 0) {
+			CombatFeedback.onCooldown(player, ability, remaining(player, ability, slot, now));
 			return 0;
 		}
 		if (!(player.level() instanceof ServerLevel)) {
@@ -129,21 +132,48 @@ public final class ClassAbilityRuntimes {
 			CombatFeedback.noTarget(player, ability);
 			return 0;
 		}
-		int cooldown = Cooldowns.ticks(player, ability.cooldownTicks());
 		var slots = cooldowns.computeIfAbsent(player.getUUID(), k -> new SlotCooldowns());
-		slots.readyAt[slot - 1] = now + cooldown;
-		slots.totals[slot - 1] = cooldown;
+		slots.pools[slot - 1].consume(now, maxCharges, cooldown);
 		return 1;
 	}
 
-	public int remaining(UUID player, int slot, int now) {
-		var slots = cooldowns.get(player);
-		return slots == null || !AbilitySlots.valid(slot) ? 0 : Math.max(0, slots.readyAt[slot - 1] - now);
+	public int charges(ServerPlayer player, Ability ability, int slot, int now) {
+		if (!AbilitySlots.valid(slot)) return 1;
+		int maxCharges = dev.flake.combat.CombatModifiers.maxSkillCharges(player, slot);
+		var slots = cooldowns.get(player.getUUID());
+		if (slots == null && maxCharges <= 1) return 1;
+		if (slots == null) slots = cooldowns.computeIfAbsent(player.getUUID(), k -> new SlotCooldowns());
+		int cooldown = Cooldowns.ticks(player, ability.cooldownTicks());
+		return slots.pools[slot - 1].charges(now, maxCharges, cooldown);
+	}
+
+	public int remaining(ServerPlayer player, Ability ability, int slot, int now) {
+		if (!AbilitySlots.valid(slot)) return 0;
+		int maxCharges = dev.flake.combat.CombatModifiers.maxSkillCharges(player, slot);
+		var slots = cooldowns.get(player.getUUID());
+		if (slots == null && maxCharges <= 1) return 0;
+		if (slots == null) slots = cooldowns.computeIfAbsent(player.getUUID(), k -> new SlotCooldowns());
+		int cooldown = Cooldowns.ticks(player, ability.cooldownTicks());
+		return slots.pools[slot - 1].remaining(now, maxCharges, cooldown);
+	}
+
+	public int remaining(UUID playerId, int slot, int now) {
+		if (!AbilitySlots.valid(slot)) return 0;
+		var player = server.getPlayerList().getPlayer(playerId);
+		if (player != null) {
+			var slots = cooldowns.get(playerId);
+			if (slots == null) return 0;
+			int maxCharges = dev.flake.combat.CombatModifiers.maxSkillCharges(player, slot);
+			int storedTotal = Math.max(1, slots.pools[slot - 1].total());
+			return slots.pools[slot - 1].remaining(now, maxCharges, storedTotal);
+		}
+		var slots = cooldowns.get(playerId);
+		return slots == null ? 0 : slots.pools[slot - 1].remaining(now, 1, Math.max(1, slots.pools[slot - 1].total()));
 	}
 
 	public int cooldownTotal(UUID player, int slot) {
 		var slots = cooldowns.get(player);
-		return slots == null || !AbilitySlots.valid(slot) ? 0 : Math.max(0, slots.totals[slot - 1]);
+		return slots == null || !AbilitySlots.valid(slot) ? 0 : Math.max(0, slots.pools[slot - 1].total());
 	}
 
 	public int activeElapsed(UUID player, int slot, int now) {

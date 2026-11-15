@@ -124,14 +124,19 @@ public record Loadout(
 		return hasFullArmorSet() && helmet == ArmorMaterial.STORM_BERSERKER;
 	}
 
+	/** True when all 4 armor slots are equipped with {@code material}. */
+	public boolean hasFullSet(ArmorMaterial material) {
+		return material != ArmorMaterial.NONE && hasFullArmorSet() && helmet == material;
+	}
+
 	public Stats stats() {
 		int armorPoints = helmet.helmetArmor() + chestplate.chestArmor() + leggings.legsArmor() + boots.bootsArmor();
 		float toughness = helmet.toughness() + chestplate.toughness() + leggings.toughness() + boots.toughness();
 		var bonuses = passiveItem.bonuses();
-		float maxHp = BASE_HEALTH + bonuses.health();
+		float maxHp = BASE_HEALTH + bonuses.health() + (hasFullSet(ArmorMaterial.HYDRA) ? 20.0f : 0.0f);
 		float absorption = bonuses.absorption();
 		float attackDamage = weapon.ranged() ? Float.NaN : weapon.attackDamage() + bonuses.meleeDamage();
-		int speedPercent = 100 + bonuses.speedPercent() - obsidianPieces() * 3;
+		int speedPercent = 100 + bonuses.speedPercent() - obsidianPieces() * 3 + (hasFullSet(ArmorMaterial.BARREL) ? 20 : 0);
 		boolean fullSet = hasFullArmorSet();
 		// Armor-only upper estimate. Actual reduction depends on incoming damage and toughness.
 		float dmgReduction = armorPoints * 4.0f;
@@ -146,6 +151,10 @@ public record Loadout(
 		if (hasFullStormBerserkerSet()) {
 			passives.add(FlakeI18n.tr("flake.armor.storm_berserker.set_bonus"));
 		}
+		if (hasFullSet(ArmorMaterial.PHOENIX)) passives.add(FlakeI18n.tr("flake.armor.phoenix.set_bonus"));
+		if (hasFullSet(ArmorMaterial.BARREL)) passives.add(FlakeI18n.tr("flake.armor.barrel.set_bonus"));
+		if (hasFullSet(ArmorMaterial.WIZARD)) passives.add(FlakeI18n.tr("flake.armor.wizard.set_bonus"));
+		if (hasFullSet(ArmorMaterial.HYDRA)) passives.add(FlakeI18n.tr("flake.armor.hydra.set_bonus"));
 
 		var actives = new ArrayList<String>();
 		for (var key : fighterClass.activeDescriptionKeys()) actives.add(FlakeI18n.tr(key));
@@ -262,7 +271,11 @@ public record Loadout(
 		IRON("flake.armor.iron.title", 2, 6, 5, 2, 0.0f),
 		DIAMOND("flake.armor.diamond.title", 3, 8, 6, 3, 2.0f),
 		OBSIDIAN("flake.armor.obsidian.title", 3, 8, 6, 3, 3.0f),
-		STORM_BERSERKER("flake.armor.storm_berserker.title", 2, 6, 5, 2, 1.0f);
+		STORM_BERSERKER("flake.armor.storm_berserker.title", 2, 6, 5, 2, 1.0f),
+		PHOENIX("flake.armor.phoenix.title", 2, 6, 5, 2, 0.0f),
+		BARREL("flake.armor.barrel.title", 2, 6, 5, 2, 0.0f),
+		WIZARD("flake.armor.wizard.title", 2, 6, 5, 2, 0.0f),
+		HYDRA("flake.armor.hydra.title", 2, 6, 5, 2, 0.0f);
 
 		private final String titleKey;
 		private final int helmetArmor;

@@ -1,6 +1,7 @@
 package dev.flake.features.concussed;
 
 import dev.flake.combat.ability.AbilitySlots.Ability;
+import dev.flake.combat.ability.SkillChargePool;
 import dev.flake.features.loadout.Loadout;
 import dev.flake.combat.CombatModifiers;
 import dev.flake.combat.Cooldowns;
@@ -36,11 +37,9 @@ import net.minecraft.world.phys.Vec3;
 /** Owns Concussed casts, their delayed hits, cooldowns and cancellation lifecycle. */
 public final class ConcussedAbilities {
 	private static final Map<MinecraftServer, ConcussedAbilities> INSTANCES = new HashMap<>();
-	private final Map<UUID, Integer> COOLDOWNS = new HashMap<>();
+	private final Map<UUID, SkillChargePool> SHOCKWAVE_POOLS = new HashMap<>();
 	private final Map<UUID, PendingShockwave> CHARGES = new HashMap<>();
-	private final Map<UUID, Integer> QUAKE_COOLDOWNS = new HashMap<>();
-	private final Map<UUID, Integer> QUAKE_TOTALS = new HashMap<>();
-	private final Map<UUID, Integer> SHOCKWAVE_TOTALS = new HashMap<>();
+	private final Map<UUID, SkillChargePool> QUAKE_POOLS = new HashMap<>();
 	private final Map<UUID, ActiveQuake> QUAKES = new HashMap<>();
 	private static boolean installed;
 	private ConcussedAbilities() {}
@@ -49,11 +48,28 @@ public final class ConcussedAbilities {
 		return INSTANCES.computeIfAbsent(server, key -> new ConcussedAbilities());
 	}
 
-	public static int cooldownRemainingTicks(ServerPlayer player, int nowTick) {
-		var playerId = player.getUUID();
+	private SkillChargePool poolFor(Map<UUID, SkillChargePool> map, UUID id, int maxCharges) {
+		var existing = map.get(id);
+		if (existing == null && maxCharges <= 1) return null;
+		return existing != null ? existing : map.computeIfAbsent(id, k -> new SkillChargePool());
+	}
+
+	public static int charges(ServerPlayer player, int slot, int nowTick) {
 		var state = of(player.level().getServer());
-		Integer start = state == null ? null : state.COOLDOWNS.get(playerId);
-		return start == null ? 0 : Math.max(0, Shockwave.COOLDOWN_TICKS - (nowTick - start));
+		int max = CombatModifiers.maxSkillCharges(player, slot);
+		if (slot == 1) {
+			var pool = state.poolFor(state.SHOCKWAVE_POOLS, player.getUUID(), max);
+			return pool == null ? 1 : pool.charges(nowTick, max, Cooldowns.ticks(player, Shockwave.COOLDOWN_TICKS));
+		}
+		var pool = state.poolFor(state.QUAKE_POOLS, player.getUUID(), max);
+		return pool == null ? 1 : pool.charges(nowTick, max, Cooldowns.ticks(player, ElectricQuake.COOLDOWN_TICKS));
+	}
+
+	public static int cooldownRemainingTicks(ServerPlayer player, int nowTick) {
+		var state = of(player.level().getServer());
+		int max = CombatModifiers.maxSkillCharges(player, 1);
+		var pool = state.poolFor(state.SHOCKWAVE_POOLS, player.getUUID(), max);
+		return pool == null ? 0 : pool.remaining(nowTick, max, Cooldowns.ticks(player, Shockwave.COOLDOWN_TICKS));
 	}
 
 	public static int chargeElapsedTicks(ServerPlayer player, int nowTick) {
@@ -73,10 +89,10 @@ public final class ConcussedAbilities {
 	}
 
 	public static int quakeCooldownRemainingTicks(ServerPlayer player, int nowTick) {
-		var playerId = player.getUUID();
 		var state = of(player.level().getServer());
-		Integer start = state == null ? null : state.QUAKE_COOLDOWNS.get(playerId);
-		return start == null ? 0 : Math.max(0, ElectricQuake.COOLDOWN_TICKS - (nowTick - start));
+		int max = CombatModifiers.maxSkillCharges(player, 2);
+		var pool = state.poolFor(state.QUAKE_POOLS, player.getUUID(), max);
+		return pool == null ? 0 : pool.remaining(nowTick, max, Cooldowns.ticks(player, ElectricQuake.COOLDOWN_TICKS));
 	}
 
 	public static int quakeActiveElapsedTicks(ServerPlayer player, int nowTick) {
@@ -87,15 +103,15 @@ public final class ConcussedAbilities {
 	}
 
 	public static int shockwaveCooldownTotalTicks(ServerPlayer player) {
-		var playerId = player.getUUID();
 		var state = of(player.level().getServer());
-		return state == null ? Shockwave.COOLDOWN_TICKS : state.SHOCKWAVE_TOTALS.getOrDefault(playerId, Shockwave.COOLDOWN_TICKS);
+		var pool = state.SHOCKWAVE_POOLS.get(player.getUUID());
+		return pool != null && pool.total() > 0 ? pool.total() : Shockwave.COOLDOWN_TICKS;
 	}
 
 	public static int quakeCooldownTotalTicks(ServerPlayer player) {
-		var playerId = player.getUUID();
 		var state = of(player.level().getServer());
-		return state == null ? ElectricQuake.COOLDOWN_TICKS : state.QUAKE_TOTALS.getOrDefault(playerId, ElectricQuake.COOLDOWN_TICKS);
+		var pool = state.QUAKE_POOLS.get(player.getUUID());
+		return pool != null && pool.total() > 0 ? pool.total() : ElectricQuake.COOLDOWN_TICKS;
 	}
 
 	public static void install() {
@@ -109,11 +125,9 @@ public final class ConcussedAbilities {
 			if (state == null) return;
 			var id = handler.player.getUUID();
 			if (state.CHARGES.remove(id) != null) dev.flake.render.vfx.CombatVisuals.cancel(handler.player);
-			state.COOLDOWNS.remove(id);
-			state.QUAKE_COOLDOWNS.remove(id);
+			state.SHOCKWAVE_POOLS.remove(id);
+			state.QUAKE_POOLS.remove(id);
 			state.QUAKES.remove(id);
-			state.SHOCKWAVE_TOTALS.remove(id);
-			state.QUAKE_TOTALS.remove(id);
 		});
 	}
 
@@ -122,10 +136,8 @@ public final class ConcussedAbilities {
 		onClassChanged(player);
 		var state = of(player.level().getServer());
 		var id = player.getUUID();
-		state.COOLDOWNS.remove(id);
-		state.QUAKE_COOLDOWNS.remove(id);
-		state.SHOCKWAVE_TOTALS.remove(id);
-		state.QUAKE_TOTALS.remove(id);
+		state.SHOCKWAVE_POOLS.remove(id);
+		state.QUAKE_POOLS.remove(id);
 	}
 
 	private void tick(MinecraftServer server) {
@@ -144,8 +156,7 @@ public final class ConcussedAbilities {
 			stepElectricQuake(player, active, step);
 			return step >= ElectricQuake.PROPAGATION_TICKS;
 		});
-		QUAKE_COOLDOWNS.entrySet().removeIf(entry -> server.getPlayerList().getPlayer(entry.getKey()) == null
-				|| ElectricQuake.COOLDOWN_TICKS - (now - entry.getValue()) <= 0);
+		QUAKE_POOLS.entrySet().removeIf(entry -> server.getPlayerList().getPlayer(entry.getKey()) == null);
 		tickActiveCasts(CHARGES, (id, pending) -> {
 			var player = server.getPlayerList().getPlayer(id);
 			if (player == null) return true;
@@ -161,24 +172,26 @@ public final class ConcussedAbilities {
 			detonate(player);
 			return true;
 		});
-		COOLDOWNS.entrySet().removeIf(entry -> {
+		SHOCKWAVE_POOLS.entrySet().removeIf(entry -> {
 			var player = server.getPlayerList().getPlayer(entry.getKey());
 			if (player == null) return true;
+			var pool = entry.getValue();
+			int max = CombatModifiers.maxSkillCharges(player, 1);
+			int cd = Cooldowns.ticks(player, Shockwave.COOLDOWN_TICKS);
 			boolean hasHud = ServerPlayNetworking.canSend(player, dev.flake.features.hud.HudStatePayload.TYPE);
-			int remaining = Shockwave.COOLDOWN_TICKS - (now - entry.getValue());
-			if (remaining <= 0) {
-				if (!hasHud) player.sendSystemMessage(Component.literal("Гравітаційний дисонанс готовий").withStyle(net.minecraft.ChatFormatting.AQUA), true);
-				return true;
-			}
-			if (!hasHud && now % 4 == 0) {
+			int ch = pool.charges(now, max, cd);
+			int remaining = pool.remaining(now, max, cd);
+			if (!hasHud && ch == 0 && remaining > 0 && now % 4 == 0) {
 				if (CHARGES.containsKey(entry.getKey())) {
-					int elapsed = now - entry.getValue();
+					var pending = CHARGES.get(entry.getKey());
+					int elapsed = Shockwave.CHARGE_TICKS - Math.max(0, pending.releaseTick() - now);
 					int filled = Math.clamp(elapsed * 10 / Shockwave.CHARGE_TICKS, 0, 10);
 					player.sendSystemMessage(Component.literal("Накопичення  " + "▰".repeat(filled) + "▱".repeat(10 - filled))
 							.withStyle(net.minecraft.ChatFormatting.AQUA), true);
 					return false;
 				}
-				int filled = Math.clamp((Shockwave.COOLDOWN_TICKS - remaining) * 10 / Shockwave.COOLDOWN_TICKS, 0, 10);
+				int total = Math.max(1, pool.total());
+				int filled = Math.clamp((total - remaining) * 10 / total, 0, 10);
 				String bar = "▰".repeat(filled) + "▱".repeat(10 - filled);
 				String seconds = String.format(Locale.ROOT, "%.1f", remaining / 20.0);
 				player.sendSystemMessage(Component.literal("Ударна хвиля  " + bar + "  " + seconds + " с").withStyle(net.minecraft.ChatFormatting.AQUA), true);
@@ -217,14 +230,13 @@ public final class ConcussedAbilities {
 			dev.flake.combat.CombatFeedback.alreadyActive(player, ability);
 			return 0;
 		}
-		Integer lastUse = COOLDOWNS.get(id);
-		if (lastUse != null && now - lastUse < Shockwave.COOLDOWN_TICKS) {
-			dev.flake.combat.CombatFeedback.onCooldown(player, ability, Shockwave.COOLDOWN_TICKS - (now - lastUse));
+		int maxCharges = CombatModifiers.maxSkillCharges(player, 1);
+		int cooldown = Cooldowns.ticks(player, Shockwave.COOLDOWN_TICKS);
+		var pool = SHOCKWAVE_POOLS.computeIfAbsent(id, k -> new SkillChargePool());
+		if (!pool.consume(now, maxCharges, cooldown)) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, ability, pool.remaining(now, maxCharges, cooldown));
 			return 0;
 		}
-		int cooldown = Cooldowns.ticks(player, Shockwave.COOLDOWN_TICKS);
-		COOLDOWNS.put(id, now - (Shockwave.COOLDOWN_TICKS - cooldown));
-		SHOCKWAVE_TOTALS.put(id, cooldown);
 		CHARGES.put(id, new PendingShockwave(now + Shockwave.CHARGE_TICKS, player.level(), player.getId(), DuelRuntime.fighting(id)));
 		if (!ServerPlayNetworking.canSend(player, dev.flake.features.hud.HudStatePayload.TYPE)) {
 			player.sendSystemMessage(Component.literal("Накопичення  ▱▱▱▱▱▱▱▱▱▱").withStyle(net.minecraft.ChatFormatting.AQUA), true);
@@ -283,18 +295,17 @@ public final class ConcussedAbilities {
 			dev.flake.combat.CombatFeedback.alreadyActive(player, ability);
 			return 0;
 		}
-		Integer lastUse = QUAKE_COOLDOWNS.get(id);
-		if (lastUse != null && now - lastUse < ElectricQuake.COOLDOWN_TICKS) {
-			dev.flake.combat.CombatFeedback.onCooldown(player, ability, ElectricQuake.COOLDOWN_TICKS - (now - lastUse));
+		int maxCharges = CombatModifiers.maxSkillCharges(player, 2);
+		int cooldown = Cooldowns.ticks(player, ElectricQuake.COOLDOWN_TICKS);
+		var pool = QUAKE_POOLS.computeIfAbsent(id, k -> new SkillChargePool());
+		if (!pool.consume(now, maxCharges, cooldown)) {
+			dev.flake.combat.CombatFeedback.onCooldown(player, ability, pool.remaining(now, maxCharges, cooldown));
 			return 0;
 		}
 		var look = player.getLookAngle();
 		double len = Math.hypot(look.x, look.z);
 		double fx = len < 1.0e-5 ? -Math.sin(Math.toRadians(player.getYRot())) : look.x / len;
 		double fz = len < 1.0e-5 ? Math.cos(Math.toRadians(player.getYRot())) : look.z / len;
-		int cooldown = Cooldowns.ticks(player, ElectricQuake.COOLDOWN_TICKS);
-		QUAKE_COOLDOWNS.put(id, now - (ElectricQuake.COOLDOWN_TICKS - cooldown));
-		QUAKE_TOTALS.put(id, cooldown);
 		var active = new ActiveQuake(now, player.level(), player.position(), fx, fz, DuelRuntime.fighting(id), new HashSet<>());
 		QUAKES.put(id, active);
 		dev.flake.features.concussed.ConcussedVisuals.playQuake(player, fx, fz);

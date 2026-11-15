@@ -29,6 +29,12 @@ public final class ConcussedDefinition implements ClassSpec, Lifecycle {
 	@Override public int activeElapsed(ServerPlayer player, int slot, int now) {
 		return slot == 1 ? ConcussedAbilities.chargeElapsedTicks(player, now) : ConcussedAbilities.quakeActiveElapsedTicks(player, now);
 	}
+	@Override public int skillCharges(ServerPlayer player, int slot, int nowTick) {
+		return ConcussedAbilities.charges(player, slot, nowTick);
+	}
+	@Override public int skillMaxCharges(ServerPlayer player, int slot) {
+		return dev.flake.combat.CombatModifiers.maxSkillCharges(player, slot);
+	}
 	@Override public void register() { ConcussedAbilities.install(); }
 	@Override public void reset(ServerPlayer player) { ConcussedAbilities.reset(player); }
 }

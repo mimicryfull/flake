@@ -85,18 +85,18 @@ public final class EditorCatalog {
 			var armorSlot = slot.armorSlot();
 			for (var item : Loadout.ArmorMaterial.values()) {
 				var candidate = build.withArmorSlot(armorSlot, item);
-				String setSuffix;
-				if (item == Loadout.ArmorMaterial.OBSIDIAN) {
-					setSuffix = FlakeI18n.tr(candidate.hasFullObsidianSet()
-							? "flake.armor.obsidian.desc_set"
-							: "flake.armor.obsidian.desc_piece");
-				} else if (item == Loadout.ArmorMaterial.STORM_BERSERKER) {
-					setSuffix = FlakeI18n.tr(candidate.hasFullStormBerserkerSet()
-							? "flake.armor.storm_berserker.desc_set"
-							: "flake.armor.storm_berserker.desc_piece");
-				} else {
-					setSuffix = FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.armor.desc.full_set" : "flake.armor.desc.single");
-				}
+				String customKey = switch (item) {
+					case OBSIDIAN -> "obsidian";
+					case STORM_BERSERKER -> "storm_berserker";
+					case PHOENIX -> "phoenix";
+					case BARREL -> "barrel";
+					case WIZARD -> "wizard";
+					case HYDRA -> "hydra";
+					default -> null;
+				};
+				String setSuffix = customKey != null
+						? FlakeI18n.tr("flake.armor." + customKey + (candidate.hasFullSet(item) ? ".desc_set" : ".desc_piece"))
+						: FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.armor.desc.full_set" : "flake.armor.desc.single");
 				String description = FlakeI18n.tr("flake.armor.choice_desc", item.armorFor(armorSlot), item.toughness(), setSuffix);
 				result.add(new Choice(item.name(), item.title(), armorSlot.title(), description,
 						List.of(item.title(), FlakeI18n.tr(candidate.hasFullArmorSet() ? "flake.tag.full_set" : "flake.tag.single_armor")),

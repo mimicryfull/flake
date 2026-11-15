@@ -14,13 +14,24 @@ public record RuntimeClassSpec(FighterClass id, String roleTitleKey, String skil
 
 	@Override public int cooldownRemaining(net.minecraft.server.level.ServerPlayer player, int slot, int now) {
 		var state = ClassAbilityRuntimes.find(player.level().getServer());
-		return state == null ? 0 : state.remaining(player.getUUID(), slot, now);
+		Ability ability = slot == 1 ? slot1 : slot2;
+		return state == null ? 0 : state.remaining(player, ability, slot, now);
 	}
 
 	@Override public int cooldownTotal(net.minecraft.server.level.ServerPlayer player, int slot, int now) {
 		var state = ClassAbilityRuntimes.find(player.level().getServer());
 		int stored = state == null ? 0 : state.cooldownTotal(player.getUUID(), slot);
 		return stored > 0 ? stored : (slot == 1 ? slot1 : slot2).cooldownTicks();
+	}
+
+	@Override public int skillCharges(net.minecraft.server.level.ServerPlayer player, int slot, int nowTick) {
+		var state = ClassAbilityRuntimes.find(player.level().getServer());
+		Ability ability = slot == 1 ? slot1 : slot2;
+		return state == null ? 1 : state.charges(player, ability, slot, nowTick);
+	}
+
+	@Override public int skillMaxCharges(net.minecraft.server.level.ServerPlayer player, int slot) {
+		return dev.flake.combat.CombatModifiers.maxSkillCharges(player, slot);
 	}
 
 	@Override public int activeElapsed(net.minecraft.server.level.ServerPlayer player, int slot, int now) {
