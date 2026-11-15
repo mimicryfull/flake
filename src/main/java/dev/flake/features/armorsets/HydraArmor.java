@@ -28,14 +28,14 @@ import net.minecraft.world.item.Item;
 /**
  * Hydra Armor (Iron tier, 4/4 set bonus):
  * Grants +20.0 HP (+10 hearts) max health and +20% health regeneration rate, escalating to +40%
- * when health drops by 10% (<= 90% max HP), accompanied by crimson/dark-red aura effects and
+ * when health is at or below 10% max HP, accompanied by crimson/dark-red aura effects and
  * a 20% opacity burgundy first-person tint.
  */
 public final class HydraArmor implements Lifecycle {
 	public static final double MAX_HEALTH_BONUS = 20.0;
 	public static final float BASE_REGEN_MULTIPLIER = 1.20f;
 	public static final float FRENZY_REGEN_MULTIPLIER = 1.40f;
-	public static final float FRENZY_HEALTH_RATIO = 0.90f;
+	public static final float FRENZY_HEALTH_RATIO = 0.10f;
 	public static final int PASSIVE_REGEN_INTERVAL_TICKS = 20;
 	public static final float BASE_PASSIVE_HEAL = 0.50f;
 
@@ -59,12 +59,12 @@ public final class HydraArmor implements Lifecycle {
 	public static void registerItems() { SET.registerItems(); }
 	public static Item itemFor(ArmorSlot slot) { return SET.itemFor(slot); }
 
-	/** True when health has dropped by at least 10% from max health. */
+	/** True when remaining health is at or below 10% of max health. */
 	public static boolean isFrenzy(float health, float maxHealth) {
-		return maxHealth > 0f && health * 10.0f <= maxHealth * 9.0f;
+		return maxHealth > 0f && health <= maxHealth * FRENZY_HEALTH_RATIO;
 	}
 
-	/** Pure healing rate multiplier: 1.20x at >90% HP, 1.40x when health drops by >=10%. */
+	/** Pure healing rate multiplier: 1.20x above 10% HP, 1.40x at or below 10% max HP. */
 	public static float regenScale(float health, float maxHealth) {
 		return isFrenzy(health, maxHealth) ? FRENZY_REGEN_MULTIPLIER : BASE_REGEN_MULTIPLIER;
 	}

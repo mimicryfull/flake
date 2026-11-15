@@ -577,7 +577,7 @@
   "item.flake.wizard_boots": "Ботинки Мага",
   "flake.armor.hydra.title": "Броня Гидры",
   "flake.armor.hydra.short": "Гидра",
-  "flake.armor.hydra.set_bonus": "Гидра (4/4): +10 сердец HP; +20% регена (+40% при падении HP на 10%)",
+  "flake.armor.hydra.set_bonus": "Гидра (4/4): +10 сердец HP; +20% регена (+40% при <=10% HP)",
   "flake.armor.hydra.desc_set": "4/4 активно: +10 сердец HP и +20%/+40% регенерация с бордовой аурой",
   "flake.armor.hydra.desc_piece": "Статы железной брони (4/4 открывает +10 сердец и регенерацию Гидры)",
   "item.flake.hydra_helmet": "Шлем Гидры",

@@ -39,6 +39,8 @@ public final class ArmorMesh3D {
 		return new BbFace(dir, u0, v0, u1, v1, uvRot);
 	}
 
+	public static final int FULL_BRIGHT = 0x00F000F0;
+
 	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, Identifier texture, int packedLight, List<Quad> quads) {
 		if (quads == null || quads.isEmpty()) return;
 		collector.submitCustomGeometry(poseStack, RenderTypes.armorCutoutNoCull(texture), (pose, consumer) -> {

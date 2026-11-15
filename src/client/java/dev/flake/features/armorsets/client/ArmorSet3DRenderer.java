@@ -18,8 +18,9 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Renders true 3D custom armor geometry (Blockbench Barrel Knight models, sculpted 64x64
- * Phoenix/Hydra armor with crests & horns, and pointed Battle-Mage Wizard armor) directly
- * bound to HumanoidModel bones so all player animations & Loadout Editor mannequins stay synced.
+ * Phoenix/Hydra armor with crests & horns, and custom Royal-Blue + Glowing-Green-Crystal
+ * Battle-Mage Wizard armor) bound to HumanoidModel bones so all player animations and
+ * Loadout Editor mannequins stay synced.
  */
 public final class ArmorSet3DRenderer {
 	private static final Identifier TEX_PHOENIX_1 = tex("phoenix_layer_1.png");
@@ -31,12 +32,11 @@ public final class ArmorSet3DRenderer {
 	private static final Identifier TEX_WIZARD_HAT = tex("wizard_hat.png");
 	private static final Identifier TEX_WIZARD_ROBE = tex("wizard_robe.png");
 
-	// Barrel Knight meshes (exact Blockbench models + oak/iron sleeves, greaves, boots)
+	// Barrel Knight meshes (exact Blockbench models w/o z-fighting + forearm bracers, greaves, boots)
 	private static final List<ArmorMesh3D.Quad> BARREL_BUCKET = BarrelMeshData.buildBucket();
 	private static final List<ArmorMesh3D.Quad> BARREL_TORSO = BarrelMeshData.buildBarrelTorso();
 	private static final List<ArmorMesh3D.Quad> BARREL_ARM_R = buildBarrelArm(true);
 	private static final List<ArmorMesh3D.Quad> BARREL_ARM_L = buildBarrelArm(false);
-	private static final List<ArmorMesh3D.Quad> BARREL_BELT = buildBarrelBelt();
 	private static final List<ArmorMesh3D.Quad> BARREL_LEG = buildBarrelLeg();
 	private static final List<ArmorMesh3D.Quad> BARREL_BOOT = buildBarrelBoot();
 
@@ -52,13 +52,19 @@ public final class ArmorSet3DRenderer {
 	private static final List<ArmorMesh3D.Quad> PLATE_THIGH_L = buildPlateThigh(true);
 	private static final List<ArmorMesh3D.Quad> PLATE_BOOT = buildPlateBoot();
 
-	// Wizard pointed hat + battle-mage mantle/robe
-	private static final List<ArmorMesh3D.Quad> WIZARD_HAT = buildWizardHat();
-	private static final List<ArmorMesh3D.Quad> WIZARD_ROBE_BODY = buildWizardBody();
+	// Custom Original Wizard Armor: Blue cloth + Glowing Emerald Green Crystals
+	private static final List<ArmorMesh3D.Quad> WIZARD_HAT_CLOTH = buildWizardHatCloth();
+	private static final List<ArmorMesh3D.Quad> WIZARD_HAT_CRYSTALS = buildWizardHatCrystals();
+	private static final List<ArmorMesh3D.Quad> WIZARD_ROBE_CLOTH = buildWizardBodyCloth();
+	private static final List<ArmorMesh3D.Quad> WIZARD_ROBE_CRYSTALS = buildWizardBodyCrystals();
 	private static final List<ArmorMesh3D.Quad> WIZARD_SLEEVE_R = buildWizardSleeve(true);
 	private static final List<ArmorMesh3D.Quad> WIZARD_SLEEVE_L = buildWizardSleeve(false);
-	private static final List<ArmorMesh3D.Quad> WIZARD_SKIRT = buildWizardSkirt();
-	private static final List<ArmorMesh3D.Quad> WIZARD_BOOT = buildWizardBoot();
+	private static final List<ArmorMesh3D.Quad> WIZARD_SLEEVE_CRYSTAL_R = buildWizardSleeveCrystals(true);
+	private static final List<ArmorMesh3D.Quad> WIZARD_SLEEVE_CRYSTAL_L = buildWizardSleeveCrystals(false);
+	private static final List<ArmorMesh3D.Quad> WIZARD_SKIRT_CLOTH = buildWizardSkirtCloth();
+	private static final List<ArmorMesh3D.Quad> WIZARD_SKIRT_CRYSTALS = buildWizardSkirtCrystals();
+	private static final List<ArmorMesh3D.Quad> WIZARD_BOOT_CLOTH = buildWizardBootCloth();
+	private static final List<ArmorMesh3D.Quad> WIZARD_BOOT_CRYSTALS = buildWizardBootCrystals();
 
 	private ArmorSet3DRenderer() {}
 
@@ -113,6 +119,15 @@ public final class ArmorSet3DRenderer {
 		poseStack.popPose();
 	}
 
+	private static void submitOnBoneWithCrystals(PoseStack ps, SubmitNodeCollector col, ModelPart bone,
+			Identifier tex, int light, List<ArmorMesh3D.Quad> cloth, List<ArmorMesh3D.Quad> crystals) {
+		ps.pushPose();
+		bone.translateAndRotate(ps);
+		ArmorMesh3D.submit(ps, col, tex, light, cloth);
+		ArmorMesh3D.submit(ps, col, tex, ArmorMesh3D.FULL_BRIGHT, crystals);
+		ps.popPose();
+	}
+
 	private static void renderBarrel(PoseStack ps, SubmitNodeCollector col, HumanoidModel<?> m, EquipmentSlot slot, int light) {
 		switch (slot) {
 			case HEAD -> submitOnBone(ps, col, m.head, TEX_BUCKET, light, BARREL_BUCKET);
@@ -122,7 +137,6 @@ public final class ArmorSet3DRenderer {
 				submitOnBone(ps, col, m.leftArm, TEX_BARREL, light, BARREL_ARM_L);
 			}
 			case LEGS -> {
-				submitOnBone(ps, col, m.body, TEX_BARREL, light, BARREL_BELT);
 				submitOnBone(ps, col, m.rightLeg, TEX_BARREL, light, BARREL_LEG);
 				submitOnBone(ps, col, m.leftLeg, TEX_BARREL, light, BARREL_LEG);
 			}
@@ -161,19 +175,19 @@ public final class ArmorSet3DRenderer {
 
 	private static void renderWizard(PoseStack ps, SubmitNodeCollector col, HumanoidModel<?> m, EquipmentSlot slot, int light) {
 		switch (slot) {
-			case HEAD -> submitOnBone(ps, col, m.head, TEX_WIZARD_HAT, light, WIZARD_HAT);
+			case HEAD -> submitOnBoneWithCrystals(ps, col, m.head, TEX_WIZARD_HAT, light, WIZARD_HAT_CLOTH, WIZARD_HAT_CRYSTALS);
 			case CHEST -> {
-				submitOnBone(ps, col, m.body, TEX_WIZARD_ROBE, light, WIZARD_ROBE_BODY);
-				submitOnBone(ps, col, m.rightArm, TEX_WIZARD_ROBE, light, WIZARD_SLEEVE_R);
-				submitOnBone(ps, col, m.leftArm, TEX_WIZARD_ROBE, light, WIZARD_SLEEVE_L);
+				submitOnBoneWithCrystals(ps, col, m.body, TEX_WIZARD_ROBE, light, WIZARD_ROBE_CLOTH, WIZARD_ROBE_CRYSTALS);
+				submitOnBoneWithCrystals(ps, col, m.rightArm, TEX_WIZARD_ROBE, light, WIZARD_SLEEVE_R, WIZARD_SLEEVE_CRYSTAL_R);
+				submitOnBoneWithCrystals(ps, col, m.leftArm, TEX_WIZARD_ROBE, light, WIZARD_SLEEVE_L, WIZARD_SLEEVE_CRYSTAL_L);
 			}
 			case LEGS -> {
-				submitOnBone(ps, col, m.rightLeg, TEX_WIZARD_ROBE, light, WIZARD_SKIRT);
-				submitOnBone(ps, col, m.leftLeg, TEX_WIZARD_ROBE, light, WIZARD_SKIRT);
+				submitOnBoneWithCrystals(ps, col, m.rightLeg, TEX_WIZARD_ROBE, light, WIZARD_SKIRT_CLOTH, WIZARD_SKIRT_CRYSTALS);
+				submitOnBoneWithCrystals(ps, col, m.leftLeg, TEX_WIZARD_ROBE, light, WIZARD_SKIRT_CLOTH, WIZARD_SKIRT_CRYSTALS);
 			}
 			case FEET -> {
-				submitOnBone(ps, col, m.rightLeg, TEX_WIZARD_HAT, light, WIZARD_BOOT);
-				submitOnBone(ps, col, m.leftLeg, TEX_WIZARD_HAT, light, WIZARD_BOOT);
+				submitOnBoneWithCrystals(ps, col, m.rightLeg, TEX_WIZARD_ROBE, light, WIZARD_BOOT_CLOTH, WIZARD_BOOT_CRYSTALS);
+				submitOnBoneWithCrystals(ps, col, m.leftLeg, TEX_WIZARD_ROBE, light, WIZARD_BOOT_CLOTH, WIZARD_BOOT_CRYSTALS);
 			}
 			default -> {}
 		}
@@ -183,13 +197,10 @@ public final class ArmorSet3DRenderer {
 
 	private static List<ArmorMesh3D.Quad> buildPlateHelmBase() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Base helmet CubeUV [0..32, 0..16]
 		b.cubeUv(0, 0, -4f, -8f, -4f, 8f, 8f, 8f, 0.55f, false);
-		// Sculpted brow visor [32..48, 8..16]
 		float[] brow = {33, 9, 47, 15};
 		b.faceUvRot(-4.7f, -8.3f, -5.0f, 9.4f, 2.2f, 2.5f, 0f, 0f, 0f, 0f, -7f, -4f,
 				brow, null, brow, brow, new float[]{40, 0, 44, 4}, brow);
-		// Crown ridge ornament [40..44, 0..4]
 		float[] gem = {40, 0, 44, 4};
 		b.faceUvRot(-1.1f, -10.0f, -4.2f, 2.2f, 2.0f, 7.6f, 0f, 0f, 0f, 0f, -9f, 0f,
 				gem, gem, gem, gem, gem, gem);
@@ -198,7 +209,6 @@ public final class ArmorSet3DRenderer {
 
 	private static List<ArmorMesh3D.Quad> buildPhoenixPlume() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Swept flame wing-fins on helmet sides + back crest from phoenix_layer_2 [40..54, 42..51]
 		float[] plume = {40, 43, 54, 50};
 		b.faceUvRot(-5.3f, -10.8f, -1.5f, 1.0f, 5.2f, 7.5f, 18f, -14f, -10f, -4.8f, -8f, 1f,
 				plume, plume, plume, plume, plume, plume);
@@ -211,9 +221,7 @@ public final class ArmorSet3DRenderer {
 
 	private static List<ArmorMesh3D.Quad> buildHydraVisorAndHorns() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Sculpted adamantite helm visor CubeUV [32..64, 0..14]
 		b.cubeUv(32, 0, -4f, -8f, -4f, 8f, 8f, 8f, 0.95f, false);
-		// Twin curved crimson Hydra horns angled out & up on both temples
 		float[] horn = {40, 2, 48, 7};
 		b.faceUvRot(-6.2f, -10.0f, -3.2f, 2.0f, 4.2f, 2.0f, -14f, 0f, -24f, -4.8f, -6.5f, -2f,
 				horn, horn, horn, horn, horn, horn);
@@ -228,17 +236,14 @@ public final class ArmorSet3DRenderer {
 
 	private static List<ArmorMesh3D.Quad> buildPlateCuirass() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Main 3D cuirass around torso using exact layer_1 [0..23, 16..29]
 		float[] top = {7, 16, 17, 22};
 		b.faceUvRot(-4.65f, 0.1f, -2.65f, 9.3f, 11.2f, 5.3f, 0f, 0f, 0f, 0f, 6f, 0f,
 				new float[]{6, 23, 17, 29}, new float[]{6, 23, 17, 29},
 				new float[]{0, 23, 7, 29}, new float[]{16, 23, 23, 29}, top, top);
-		// Layered sternum breastplate relief
 		b.faceUvRot(-3.2f, 0.9f, -3.3f, 6.4f, 5.8f, 0.9f, 0f, 0f, 0f, 0f, 3f, -2.8f,
 				new float[]{7, 23, 16, 29}, null,
 				new float[]{1, 23, 6, 29}, new float[]{17, 23, 22, 29},
 				new float[]{8, 17, 15, 21}, new float[]{8, 27, 15, 29});
-		// Gorget collar ring
 		b.faceUvRot(-3.8f, -0.7f, -2.5f, 7.6f, 1.4f, 5.0f, 0f, 0f, 0f, 0f, 0f, 0f,
 				new float[]{7, 17, 17, 21}, new float[]{7, 17, 17, 21},
 				new float[]{1, 24, 6, 28}, new float[]{17, 24, 22, 28}, top, top);
@@ -248,32 +253,27 @@ public final class ArmorSet3DRenderer {
 	private static List<ArmorMesh3D.Quad> buildPlateArm(boolean rightArm) {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
 		float ax = rightArm ? -3.0f : -1.0f;
-		// Layered 3D shoulder pauldron mapped to exact [28..52, 25..35]
 		float pTilt = rightArm ? -8f : 8f;
 		float px = rightArm ? -3.7f : -1.5f;
 		b.faceUvRot(px, -2.8f, -2.6f, 5.2f, 5.4f, 5.2f, 0f, 0f, pTilt, px + 2.6f, 0f, 0f,
 				new float[]{32, 29, 40, 35}, new float[]{44, 29, 52, 35},
 				new float[]{28, 29, 32, 35}, new float[]{40, 29, 44, 35},
 				new float[]{32, 25, 40, 29}, new float[]{32, 25, 40, 29});
-		// Secondary upper pauldron ridge for layered silhouette
 		float rx2 = rightArm ? -4.1f : -0.6f;
 		b.faceUvRot(rx2, -3.3f, -2.3f, 4.7f, 2.0f, 4.6f, 0f, 0f, rightArm ? -16f : 16f, rx2 + 2.3f, -2.2f, 0f,
 				new float[]{33, 29, 39, 32}, new float[]{45, 29, 51, 32},
 				new float[]{28, 29, 32, 32}, new float[]{40, 29, 44, 32},
 				new float[]{32, 25, 40, 29}, new float[]{32, 25, 40, 29});
-		// Forearm gauntlet CubeUV [19..35, 41..49]
 		b.cubeUv(19, 41, ax, 5.2f, -2.0f, 4f, 4f, 4f, 0.45f, !rightArm);
 		return b.build();
 	}
 
 	private static List<ArmorMesh3D.Quad> buildPlateBelt() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Waist belt [0..24, 34..41]
 		b.faceUvRot(-4.4f, 8.8f, -2.4f, 8.8f, 3.6f, 4.8f, 0f, 0f, 0f, 0f, 10f, 0f,
 				new float[]{6, 34, 16, 40}, new float[]{18, 34, 24, 40},
 				new float[]{0, 34, 6, 40}, new float[]{16, 34, 22, 40},
 				new float[]{6, 34, 16, 36}, new float[]{6, 38, 16, 40});
-		// 3D front crotch/fauld buckle crest CubeUV (u=0, v=13, W=2, H=8, D=4)
 		b.faceUvRot(-1.4f, 8.2f, -3.1f, 2.8f, 4.8f, 1.3f, 0f, 0f, 0f, 0f, 10f, -2.5f,
 				new float[]{4, 17, 6, 25}, new float[]{4, 17, 6, 25},
 				new float[]{0, 17, 4, 25}, new float[]{6, 17, 10, 25},
@@ -283,18 +283,15 @@ public final class ArmorSet3DRenderer {
 
 	private static List<ArmorMesh3D.Quad> buildPlateThigh(boolean mirror) {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Thigh cuisses CubeUV [24..40, 29..43]
 		b.cubeUv(24, 29, -2f, -0.2f, -2f, 4f, 9.2f, 4f, 0.52f, mirror);
 		return b.build();
 	}
 
 	private static List<ArmorMesh3D.Quad> buildPlateBoot() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		// Greave ankle cuff [8..18, 43..53]
 		float[] panel = {9, 45, 17, 52};
 		b.faceUvRot(-2.45f, 7.1f, -2.45f, 4.9f, 5.1f, 4.9f, 0f, 0f, 0f, 0f, 9f, 0f,
 				panel, panel, panel, panel, new float[]{10, 46, 16, 49}, new float[]{9, 55, 17, 62});
-		// Armored projecting sabaton toe cap
 		float[] toe = {9, 57, 17, 62};
 		b.faceUvRot(-2.35f, 9.8f, -3.45f, 4.7f, 2.4f, 1.5f, 0f, 0f, 0f, 0f, 11f, -2.5f,
 				toe, toe, new float[]{19, 50, 26, 56}, new float[]{19, 50, 26, 56},
@@ -302,28 +299,16 @@ public final class ArmorSet3DRenderer {
 		return b.build();
 	}
 
-	// ---- Barrel Knight auxiliary pieces (arm bracers, greaves, oak boots) ----
+	// ---- Barrel Knight auxiliary pieces (kept clear of barrel torso to avoid any z-fighting) ----
 
 	private static List<ArmorMesh3D.Quad> buildBarrelArm(boolean rightArm) {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float x = rightArm ? -3.4f : -1.4f;
+		float x = rightArm ? -3.45f : -1.45f;
 		float[] plank = {1, 2, 12, 18};
 		float[] hoop = {39, 32, 49, 44};
-		// Iron-banded oak wrist bracer
-		b.faceUvRot(x, 5.0f, -2.4f, 4.8f, 4.4f, 4.8f, 0f, 0f, 0f, 0f, 7f, 0f,
+		// Forearm oak & iron bracer positioned below barrel torso straps
+		b.faceUvRot(x, 4.9f, -2.45f, 4.9f, 4.4f, 4.9f, 0f, 0f, 0f, 0f, 7f, 0f,
 				plank, plank, hoop, hoop, hoop, hoop);
-		// Small shoulder iron cap
-		b.faceUvRot(x, -2.3f, -2.4f, 4.8f, 2.2f, 4.8f, 0f, 0f, rightArm ? -8f : 8f, x + 2.4f, -1f, 0f,
-				hoop, hoop, hoop, hoop, plank, hoop);
-		return b.build();
-	}
-
-	private static List<ArmorMesh3D.Quad> buildBarrelBelt() {
-		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float[] hoop = {39, 32, 49, 44};
-		float[] leather = {13, 37, 20, 44};
-		b.faceUvRot(-4.4f, 9.2f, -2.4f, 8.8f, 3.0f, 4.8f, 0f, 0f, 0f, 0f, 10f, 0f,
-				leather, leather, hoop, hoop, leather, hoop);
 		return b.build();
 	}
 
@@ -331,7 +316,8 @@ public final class ArmorSet3DRenderer {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
 		float[] plank = {1, 2, 12, 18};
 		float[] leather = {13, 37, 20, 44};
-		b.faceUvRot(-2.45f, 0.2f, -2.45f, 4.9f, 7.6f, 4.9f, 0f, 0f, 0f, 0f, 4f, 0f,
+		// Lower-thigh / knee greaves kept slightly below barrel lower rim
+		b.faceUvRot(-2.4f, 2.2f, -2.4f, 4.8f, 5.2f, 4.8f, 0f, 0f, 0f, 0f, 5f, 0f,
 				plank, plank, leather, leather, plank, leather);
 		return b.build();
 	}
@@ -340,92 +326,177 @@ public final class ArmorSet3DRenderer {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
 		float[] iron = {39, 32, 49, 44};
 		float[] wood = {2, 20, 12, 30};
-		b.faceUvRot(-2.5f, 7.4f, -2.5f, 5.0f, 4.8f, 5.0f, 0f, 0f, 0f, 0f, 9f, 0f,
+		b.faceUvRot(-2.5f, 7.6f, -2.5f, 5.0f, 4.6f, 5.0f, 0f, 0f, 0f, 0f, 9f, 0f,
 				iron, iron, wood, wood, iron, iron);
-		b.faceUvRot(-2.4f, 9.8f, -3.4f, 4.8f, 2.4f, 1.4f, 0f, 0f, 0f, 0f, 11f, -2.5f,
+		b.faceUvRot(-2.4f, 9.9f, -3.5f, 4.8f, 2.3f, 1.3f, 0f, 0f, 0f, 0f, 11f, -2.5f,
 				iron, iron, iron, iron, iron, iron);
 		return b.build();
 	}
 
-	// ---- Wizard Battle-Mage 3D Hat & Robe ----
+	// ---- Custom Royal-Blue & Emerald-Crystal Wizard Armor ----
 
-	private static List<ArmorMesh3D.Quad> buildWizardHat() {
+	private static List<ArmorMesh3D.Quad> buildWizardHatCloth() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float[] brimTop = {13, 1, 25, 13};
-		float[] brimBot = {25, 1, 37, 13};
-		float[] brimEdge = {13, 1, 25, 4};
-		// Wide angled hat brim
-		b.faceUvRot(-7.4f, -6.6f, -7.4f, 14.8f, 1.2f, 14.8f, -4f, 0f, 0f, 0f, -6f, 0f,
-				brimEdge, brimEdge, brimEdge, brimEdge, brimTop, brimBot);
-		// Lower crown tier
-		float[] crown1 = {12, 16, 24, 24};
-		b.faceUvRot(-4.3f, -10.4f, -4.3f, 8.6f, 4.0f, 8.6f, -4f, 0f, 0f, 0f, -6f, 0f,
-				crown1, crown1, crown1, crown1, brimTop, brimBot);
-		// Gold wizard buckle on hat band
-		float[] buckle = {41, 25, 50, 31};
-		b.faceUvRot(-1.6f, -8.3f, -4.9f, 3.2f, 1.8f, 0.9f, -4f, 0f, 0f, 0f, -6f, 0f,
-				buckle, buckle, buckle, buckle, buckle, buckle);
-		// Upper tilted cone spire
-		float[] crown2 = {24, 17, 36, 28};
-		b.faceUvRot(-3.0f, -14.2f, -2.6f, 6.0f, 4.4f, 6.0f, -16f, 0f, 0f, 0f, -10.2f, 0f,
-				crown2, crown2, crown2, crown2, brimTop, brimBot);
-		// Bent pointed hat tip
-		float[] tip = {1, 24, 11, 38};
-		b.faceUvRot(-1.7f, -17.3f, -0.3f, 3.4f, 4.0f, 3.4f, -34f, 0f, 6f, 0f, -13.5f, 1f,
-				tip, tip, tip, tip, new float[]{40, 42, 48, 52}, tip);
+		float[] brimTop = {0, 0, 16, 16};
+		float[] brimBot = {48, 0, 64, 16};
+		float[] hatBand = {16, 0, 32, 16};
+		float[] spire = {32, 0, 48, 16};
+
+		// Wide outer archmage brim (tilted back 5 deg for clear sightline)
+		b.faceUvRot(-7.6f, -6.5f, -7.6f, 15.2f, 1.0f, 15.2f, -5f, 0f, 0f, 0f, -6f, 0f,
+				hatBand, hatBand, hatBand, hatBand, brimTop, brimBot);
+		// Beveled upper brim ring stepping into crown
+		b.faceUvRot(-5.6f, -7.2f, -5.6f, 11.2f, 0.7f, 11.2f, -5f, 0f, 0f, 0f, -6f, 0f,
+				spire, spire, spire, spire, brimTop, brimBot);
+		// Lower crown base with emerald ribbon band
+		b.faceUvRot(-4.3f, -10.8f, -4.3f, 8.6f, 3.8f, 8.6f, -5f, 0f, 0f, 0f, -6f, 0f,
+				hatBand, hatBand, hatBand, hatBand, brimBot, brimBot);
+		// Middle cone tier tilting backward
+		b.faceUvRot(-3.1f, -14.3f, -2.6f, 6.2f, 4.1f, 6.2f, -16f, 0f, 4f, 0f, -10.5f, 0.4f,
+				spire, spire, spire, spire, brimBot, brimBot);
+		// Upper curved spire tier
+		b.faceUvRot(-2.0f, -17.5f, -0.5f, 4.0f, 3.9f, 4.0f, -30f, 0f, 10f, 0f, -13.8f, 1.3f,
+				spire, spire, spire, spire, brimBot, brimBot);
+		// Pointed hat tip
+		b.faceUvRot(-1.1f, -19.8f, 1.3f, 2.2f, 3.0f, 2.2f, -44f, 0f, 14f, 0f, -16.8f, 2.2f,
+				spire, spire, spire, spire, brimBot, brimBot);
 		return b.build();
 	}
 
-	private static List<ArmorMesh3D.Quad> buildWizardBody() {
+	private static List<ArmorMesh3D.Quad> buildWizardHatCrystals() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float[] robeFront = {1, 2, 15, 22};
-		float[] mantle = {18, 2, 34, 18};
-		float[] clasp = {18, 19, 26, 24};
-		// Inner battle-mage tunic
+		float[] cry = {0, 16, 16, 32};
+		// Center diamond emerald crystal mounted on front of hatband
+		b.faceUvRot(-1.35f, -8.95f, -4.95f, 2.7f, 2.7f, 1.0f, -5f, 0f, 45f, 0f, -7.6f, -4.4f,
+				cry, cry, cry, cry, cry, cry);
+		// Left & right hat brim arcane crystal shards
+		b.faceUvRot(-6.3f, -8.3f, -1.0f, 1.3f, 2.4f, 1.3f, -5f, 0f, -26f, -5.6f, -6.8f, -0.3f,
+				cry, cry, cry, cry, cry, cry);
+		b.faceUvRot(5.0f, -8.3f, -1.0f, 1.3f, 2.4f, 1.3f, -5f, 0f, 26f, 5.6f, -6.8f, -0.3f,
+				cry, cry, cry, cry, cry, cry);
+		// Glowing green spire crystal floating/capping the bent tip
+		b.faceUvRot(-0.75f, -21.9f, 2.3f, 1.5f, 2.4f, 1.5f, -44f, 45f, 14f, 0f, -19.5f, 3.0f,
+				cry, cry, cry, cry, cry, cry);
+		return b.build();
+	}
+
+	private static List<ArmorMesh3D.Quad> buildWizardBodyCloth() {
+		var b = new ArmorMesh3D.Builder(64f, 64f);
+		float[] front = {0, 0, 16, 24};
+		float[] back = {16, 0, 32, 24};
+		float[] mantle = {32, 0, 48, 16};
+		// Inner tailored blue mage tunic
 		b.faceUvRot(-4.4f, 0.0f, -2.4f, 8.8f, 12.2f, 4.8f, 0f, 0f, 0f, 0f, 6f, 0f,
-				robeFront, robeFront, robeFront, robeFront, robeFront, robeFront);
-		// Wide draped shoulder mantle + high arcane collar
-		b.faceUvRot(-5.7f, -0.9f, -3.0f, 11.4f, 4.6f, 6.0f, 0f, 0f, 0f, 0f, 1f, 0f,
+				front, back, back, back, mantle, mantle);
+		// Waist belt sash
+		b.faceUvRot(-4.65f, 9.6f, -2.65f, 9.3f, 2.3f, 5.3f, 0f, 0f, 0f, 0f, 10.7f, 0f,
+				new float[]{0, 18, 16, 22}, new float[]{0, 18, 16, 22},
+				new float[]{0, 18, 16, 22}, new float[]{0, 18, 16, 22}, mantle, mantle);
+		// Wide shoulder mantle + arcane breast wrap
+		b.faceUvRot(-5.6f, -0.5f, -2.85f, 11.2f, 3.8f, 5.7f, 0f, 0f, 0f, 0f, 1.4f, 0f,
 				mantle, mantle, mantle, mantle, mantle, mantle);
-		// Gold collar clasp on chest
-		b.faceUvRot(-1.8f, 0.8f, -3.2f, 3.6f, 2.2f, 0.8f, 0f, 0f, 0f, 0f, 2f, -3f,
-				clasp, clasp, clasp, clasp, clasp, clasp);
-		// Flowing rear battle-mage cape panel
-		b.faceUvRot(-5.0f, 0.2f, 2.2f, 10.0f, 14.5f, 1.1f, 7f, 0f, 0f, 0f, 0.2f, 2.4f,
-				mantle, new float[]{24, 26, 40, 44}, robeFront, robeFront, mantle, robeFront);
+		// High standing wizard collar around neck/sides
+		b.faceUvRot(-4.9f, -2.3f, -1.8f, 9.8f, 2.1f, 4.7f, -10f, 0f, 0f, 0f, -0.5f, 1.5f,
+				null, mantle, mantle, mantle, mantle, mantle);
+		// Flowing rear royal-blue archmage cape
+		b.faceUvRot(-5.0f, 0.3f, 2.35f, 10.0f, 14.2f, 0.9f, 9f, 0f, 0f, 0f, 0.3f, 2.5f,
+				back, back, mantle, mantle, mantle, back);
+		return b.build();
+	}
+
+	private static List<ArmorMesh3D.Quad> buildWizardBodyCrystals() {
+		var b = new ArmorMesh3D.Builder(64f, 64f);
+		float[] cry = {48, 16, 64, 32};
+		// Chest sternum diamond arcane crystal focus
+		b.faceUvRot(-1.35f, 2.2f, -3.05f, 2.7f, 2.7f, 0.9f, 0f, 0f, 45f, 0f, 3.55f, -2.6f,
+				cry, cry, cry, cry, cry, cry);
+		// Waist belt buckle crystal
+		b.faceUvRot(-0.95f, 9.75f, -3.15f, 1.9f, 1.9f, 0.8f, 0f, 0f, 45f, 0f, 10.7f, -2.75f,
+				cry, cry, cry, cry, cry, cry);
+		// Collar side rune crystals
+		b.faceUvRot(-4.6f, 0.2f, -3.1f, 1.3f, 1.9f, 0.9f, 0f, 0f, -18f, -4.0f, 1.1f, -2.65f,
+				cry, cry, cry, cry, cry, cry);
+		b.faceUvRot(3.3f, 0.2f, -3.1f, 1.3f, 1.9f, 0.9f, 0f, 0f, 18f, 4.0f, 1.1f, -2.65f,
+				cry, cry, cry, cry, cry, cry);
 		return b.build();
 	}
 
 	private static List<ArmorMesh3D.Quad> buildWizardSleeve(boolean rightArm) {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float x = rightArm ? -3.45f : -1.45f;
-		float[] sleeve = {1, 26, 14, 42};
-		float[] shoulder = {20, 4, 34, 18};
-		// Puffed mantle shoulder pad
-		b.faceUvRot(rightArm ? -3.8f : -1.5f, -2.6f, -2.6f, 5.3f, 4.2f, 5.2f, 0f, 0f, rightArm ? -8f : 8f, x + 2.5f, -1f, 0f,
-				shoulder, shoulder, shoulder, shoulder, shoulder, shoulder);
-		// Flared bell sleeve cuff
-		b.faceUvRot(x, 1.4f, -2.5f, 4.9f, 7.6f, 5.0f, 0f, 0f, 0f, 0f, 5f, 0f,
-				sleeve, sleeve, sleeve, sleeve, shoulder, sleeve);
+		float[] sleeve = {0, 24, 16, 40};
+		float[] mantle = {32, 0, 48, 16};
+		float mx = rightArm ? -3.7f : -1.5f;
+		// Layered shoulder pad
+		b.faceUvRot(mx, -2.6f, -2.6f, 5.2f, 4.2f, 5.2f, 0f, 0f, rightArm ? -8f : 8f, mx + 2.6f, -0.5f, 0f,
+				mantle, mantle, mantle, mantle, mantle, mantle);
+		// Flared bell mage sleeve with emerald cuff trim
+		float sx = rightArm ? -3.55f : -1.55f;
+		b.faceUvRot(sx, 1.8f, -2.55f, 5.1f, 7.2f, 5.1f, 0f, 0f, 0f, sx + 2.55f, 5.4f, 0f,
+				sleeve, sleeve, sleeve, sleeve, mantle, sleeve);
 		return b.build();
 	}
 
-	private static List<ArmorMesh3D.Quad> buildWizardSkirt() {
+	private static List<ArmorMesh3D.Quad> buildWizardSleeveCrystals(boolean rightArm) {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float[] coat = {1, 26, 14, 42};
-		float[] trim = {22, 26, 38, 43};
-		b.faceUvRot(-2.55f, -0.2f, -2.55f, 5.1f, 9.2f, 5.1f, 0f, 0f, 0f, 0f, 4f, 0f,
-				trim, trim, coat, coat, coat, coat);
+		float[] cry = {48, 16, 64, 32};
+		float cx = rightArm ? -3.4f : 1.7f;
+		float sx = rightArm ? -4.3f : 2.9f;
+		// Tall primary shoulder crystal spire
+		b.faceUvRot(cx, -5.6f, -0.85f, 1.7f, 3.6f, 1.7f, 0f, 0f, rightArm ? -22f : 22f, cx + 0.85f, -2.3f, 0f,
+				cry, cry, cry, cry, cry, cry);
+		// Secondary outer shoulder crystal shard
+		b.faceUvRot(sx, -4.3f, -0.65f, 1.3f, 2.5f, 1.3f, 0f, 0f, rightArm ? -42f : 42f, sx + 0.65f, -2.0f, 0f,
+				cry, cry, cry, cry, cry, cry);
+		// Wrist cuff gem
+		float wx = rightArm ? -3.9f : 2.7f;
+		b.faceUvRot(wx, 6.2f, -0.6f, 1.2f, 1.5f, 1.2f, 0f, 0f, 0f, wx + 0.6f, 7f, 0f,
+				cry, cry, cry, cry, cry, cry);
 		return b.build();
 	}
 
-	private static List<ArmorMesh3D.Quad> buildWizardBoot() {
+	private static List<ArmorMesh3D.Quad> buildWizardSkirtCloth() {
 		var b = new ArmorMesh3D.Builder(64f, 64f);
-		float[] leather = {39, 39, 49, 55};
-		b.faceUvRot(-2.45f, 7.2f, -2.45f, 4.9f, 5.0f, 4.9f, 0f, 0f, 0f, 0f, 9f, 0f,
-				leather, leather, leather, leather, leather, leather);
-		b.faceUvRot(-2.3f, 9.8f, -3.4f, 4.6f, 2.4f, 1.5f, 0f, 0f, 0f, 0f, 11f, -2.5f,
-				leather, leather, leather, leather, leather, leather);
+		float[] skirt = {16, 24, 32, 40};
+		// Independent battle-kilt tasset skirt around each leg for clean sprint/jump motion
+		b.faceUvRot(-2.45f, -0.1f, -2.45f, 4.9f, 9.4f, 4.9f, 0f, 0f, 0f, 0f, 4.5f, 0f,
+				skirt, skirt, skirt, skirt, skirt, skirt);
+		return b.build();
+	}
+
+	private static List<ArmorMesh3D.Quad> buildWizardSkirtCrystals() {
+		var b = new ArmorMesh3D.Builder(64f, 64f);
+		float[] cry = {48, 16, 64, 32};
+		// Faceted emerald knee-guard crystal
+		b.faceUvRot(-0.9f, 5.2f, -2.95f, 1.8f, 1.8f, 0.85f, 0f, 0f, 45f, 0f, 6.1f, -2.5f,
+				cry, cry, cry, cry, cry, cry);
+		return b.build();
+	}
+
+	private static List<ArmorMesh3D.Quad> buildWizardBootCloth() {
+		var b = new ArmorMesh3D.Builder(64f, 64f);
+		float[] boot = {32, 24, 48, 40};
+		float[] cuff = {32, 24, 48, 28};
+		// Folded emerald-trimmed boot cuff
+		b.faceUvRot(-2.55f, 6.8f, -2.55f, 5.1f, 2.3f, 5.1f, 0f, 0f, 0f, 0f, 8f, 0f,
+				cuff, cuff, cuff, cuff, cuff, cuff);
+		// Deep blue lower boot shaft & sole
+		b.faceUvRot(-2.4f, 8.9f, -2.4f, 4.8f, 3.3f, 4.8f, 0f, 0f, 0f, 0f, 10.5f, 0f,
+				boot, boot, boot, boot, boot, boot);
+		// Upturned pointed wizard toe cap
+		b.faceUvRot(-1.9f, 9.9f, -4.1f, 3.8f, 2.0f, 2.1f, -10f, 0f, 0f, 0f, 11.2f, -2.2f,
+				boot, boot, boot, boot, boot, boot);
+		return b.build();
+	}
+
+	private static List<ArmorMesh3D.Quad> buildWizardBootCrystals() {
+		var b = new ArmorMesh3D.Builder(64f, 64f);
+		float[] cry = {48, 16, 64, 32};
+		// Glowing emerald toe gem
+		b.faceUvRot(-0.6f, 9.75f, -4.45f, 1.2f, 1.2f, 0.8f, -10f, 0f, 45f, 0f, 10.35f, -4.05f,
+				cry, cry, cry, cry, cry, cry);
+		// Emerald heel crystal spur
+		b.faceUvRot(-0.55f, 9.8f, 2.15f, 1.1f, 1.5f, 0.9f, 18f, 0f, 0f, 0f, 10.5f, 2.4f,
+				cry, cry, cry, cry, cry, cry);
 		return b.build();
 	}
 }

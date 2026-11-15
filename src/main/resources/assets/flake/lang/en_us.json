@@ -577,7 +577,7 @@
   "item.flake.wizard_boots": "Wizard Boots",
   "flake.armor.hydra.title": "Hydra Armor",
   "flake.armor.hydra.short": "Hydra",
-  "flake.armor.hydra.set_bonus": "Hydra (4/4): +10 hearts max HP; +20% regen (+40% when HP drops by 10%)",
+  "flake.armor.hydra.set_bonus": "Hydra (4/4): +10 hearts max HP; +20% regen (+40% at <=10% HP)",
   "flake.armor.hydra.desc_set": "4/4 active: +10 hearts HP and +20%/+40% regeneration with crimson aura",
   "flake.armor.hydra.desc_piece": "Iron tier stats (4/4 unlocks +10 hearts & crimson regen)",
   "item.flake.hydra_helmet": "Hydra Helmet",

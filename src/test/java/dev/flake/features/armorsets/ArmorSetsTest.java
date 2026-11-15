@@ -72,13 +72,13 @@ class ArmorSetsTest {
 		assertEquals(2, pool.charges(300, 2, cd));
 	}
 
-	@Test void hydraAddsTenHeartsAndEscalatesRegenAtNinetyPercentHp() {
+	@Test void hydraAddsTenHeartsAndEscalatesRegenAtOrBelowTenPercentHp() {
 		var stats = loadoutWith(ArmorMaterial.HYDRA).stats();
 		assertEquals(Loadout.BASE_HEALTH + 20.0f, stats.maxHealth(), 1e-4f);
 
 		assertEquals(1.20f, HydraArmor.regenScale(70.0f, 70.0f), 1e-4f);
-		assertEquals(1.20f, HydraArmor.regenScale(63.1f, 70.0f), 1e-4f);
-		assertEquals(1.40f, HydraArmor.regenScale(63.0f, 70.0f), 1e-4f);
-		assertEquals(1.40f, HydraArmor.regenScale(20.0f, 70.0f), 1e-4f);
+		assertEquals(1.20f, HydraArmor.regenScale(7.1f, 70.0f), 1e-4f);
+		assertEquals(1.40f, HydraArmor.regenScale(7.0f, 70.0f), 1e-4f);
+		assertEquals(1.40f, HydraArmor.regenScale(3.0f, 70.0f), 1e-4f);
 	}
 }
