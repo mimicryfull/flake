@@ -65,6 +65,7 @@ public final class Features {
 			new Feature(PortalVortexFeature::install, PortalVortexFeature::registerItems),
 			new Feature(dev.flake.features.shaman.ShamanRuntime::install),
 			new Feature(dev.flake.features.technician.TechnicianRuntime::install),
+			new Feature(dev.flake.features.bloodcontroller.BloodControllerRuntime::install),
 			new Feature(dev.flake.features.stormberserker.StormBerserkerArmor::install),
 			new Feature(dev.flake.features.armorsets.ArmorSets::install, dev.flake.features.armorsets.ArmorSets::registerItems));
 

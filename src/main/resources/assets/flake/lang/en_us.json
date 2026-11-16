@@ -597,5 +597,13 @@
   "flake.weather.status.entry_box": "- %s [box %s -> %s, %s] (%s)",
   "flake.weather.status.off": "No sakura weather regions configured.",
   "flake.screen.weather.sakura_on": "Sakura Petals: Shown",
-  "flake.screen.weather.sakura_off": "Sakura Petals: Hidden"
+  "flake.screen.weather.sakura_off": "Sakura Petals: Hidden",
+  "flake.class.blood_controller.title": "Blood Controller",
+  "flake.class.blood_controller.desc": "Crimson blood-magic controller: Voodoo Doll & Blood Drain",
+  "flake.class.blood_controller.role": "Control / Sustain",
+  "flake.class.blood_controller.summary": "Voodoo Doll · Blood Drain",
+  "flake.class.blood_controller.active1": "Slot 1: Voodoo Doll (4s tethered doll; hits transfer damage to the cursed enemy)",
+  "flake.class.blood_controller.active2": "Slot 2: Blood Drain (5 damage to target and heals you by the same amount)",
+  "flake.ability.voodoo_doll": "Voodoo Doll",
+  "flake.ability.blood_drain": "Blood Drain"
 }

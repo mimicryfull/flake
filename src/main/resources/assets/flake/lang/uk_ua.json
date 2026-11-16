@@ -597,5 +597,13 @@
   "flake.weather.status.entry_box": "- %s [бокс %s -> %s, %s] (%s)",
   "flake.weather.status.off": "Регіони сакури не налаштовані.",
   "flake.screen.weather.sakura_on": "Пелюстки сакури: Показ",
-  "flake.screen.weather.sakura_off": "Пелюстки сакури: Схов."
+  "flake.screen.weather.sakura_off": "Пелюстки сакури: Схов.",
+  "flake.class.blood_controller.title": "Blood Controller",
+  "flake.class.blood_controller.desc": "Магія крові: Лялька Вуду та Висмоктування крові",
+  "flake.class.blood_controller.role": "Контроль і вампіризм",
+  "flake.class.blood_controller.summary": "Лялька Вуду · Висмоктування крові",
+  "flake.class.blood_controller.active1": "Слот 1: Лялька Вуду (4 с, воксельна лялька на нитці — удари по ній переносять шкоду ворогу)",
+  "flake.class.blood_controller.active2": "Слот 2: Висмоктування крові (5 шкоди цілі та стільки ж лікування собі)",
+  "flake.ability.voodoo_doll": "Лялька Вуду",
+  "flake.ability.blood_drain": "Висмоктування крові"
 }

@@ -244,7 +244,8 @@ public record Loadout(
 		VAMPIRE("flake.class.vampire.title", "flake.class.vampire.desc"),
 		DEMOLITIONIST("flake.class.demolitionist.title", "flake.class.demolitionist.desc"),
 		SHAMAN("flake.class.shaman.title", "flake.class.shaman.desc"),
-		TECHNICIAN("flake.class.technician.title", "flake.class.technician.desc");
+		TECHNICIAN("flake.class.technician.title", "flake.class.technician.desc"),
+		BLOOD_CONTROLLER("flake.class.blood_controller.title", "flake.class.blood_controller.desc");
 
 		private final String titleKey;
 		private final String descriptionKey;

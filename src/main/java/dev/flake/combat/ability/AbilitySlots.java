@@ -22,6 +22,8 @@ public final class AbilitySlots {
 		SPIRIT_WARD("flake.ability.spirit_ward", 20, 80, true),
 		HOMING_MISSILE("flake.ability.homing_missile", 20, 45, true),
 		ATTACK_UAV("flake.ability.attack_uav", 20, 75, true),
+		VOODOO_DOLL("flake.ability.voodoo_doll", 20, dev.flake.features.bloodcontroller.BloodControllerRuntime.VOODOO_TICKS, true),
+		BLOOD_DRAIN("flake.ability.blood_drain", 20, 0, true),
 		UNIMPLEMENTED("flake.ability.unassigned", 0, 0, false);
 
 		private final String titleKey;

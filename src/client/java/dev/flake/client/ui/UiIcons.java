@@ -190,6 +190,26 @@ public final class UiIcons {
 				int pulseCol = ((int) (timeSec * 6f) % 2 == 0) ? UiTheme.CYAN : UiTheme.AMBER;
 				g.fill(cx - 1, cy - 1, cx + 1, cy + 1, pulseCol);
 			}
+			case "BLOOD_CONTROLLER" -> {
+				// Stitched voodoo doll silhouette + crimson heart pin
+				g.fill(cx - 3, cy - 6, cx + 3, cy - 1, 0xff8a1020);
+				g.fill(cx - 2, cy - 5, cx - 1, cy - 4, UiTheme.TEXT);
+				g.fill(cx + 1, cy - 5, cx + 2, cy - 4, UiTheme.TEXT);
+				g.fill(cx - 5, cy - 1, cx + 5, cy + 1, 0xff6e0b18);
+				g.fill(cx - 2, cy - 1, cx + 2, cy + 4, 0xffb81428);
+				g.fill(cx - 2, cy + 4, cx, cy + 7, 0xff6e0b18);
+				g.fill(cx, cy + 4, cx + 2, cy + 7, 0xff6e0b18);
+				g.fill(cx, cy + 1, cx + 2, cy + 3, UiTheme.RED);
+				g.fill(cx + 2, cy - 1, cx + 5, cy, UiTheme.TEXT);
+			}
+			case "BLOOD_DRAIN" -> {
+				// Crimson blood droplet + siphon surge
+				g.fill(cx, cy - 6, cx + 1, cy - 4, UiTheme.RED);
+				g.fill(cx - 1, cy - 4, cx + 2, cy - 2, 0xffd61a2c);
+				g.fill(cx - 3, cy - 2, cx + 4, cy + 3, 0xff9e0b1b);
+				g.fill(cx - 2, cy + 3, cx + 3, cy + 5, 0xff6e0610);
+				g.fill(cx - 1, cy - 1, cx + 1, cy + 2, UiTheme.TEXT);
+			}
 			default -> g.fill(cx - 3, cy - 3, cx + 3, cy + 3, accent);
 		}
 	}
@@ -229,6 +249,14 @@ public final class UiIcons {
 				g.fill(x + 1, y + 5, x + 3, y + 8, UiTheme.TEXT);
 				g.fill(x + 7, y + 5, x + 9, y + 8, UiTheme.TEXT);
 				g.fill(x + 4, y + 7, x + 6, y + 9, UiTheme.AMBER);
+			}
+			case "BLOOD_CONTROLLER" -> {
+				g.fill(x + 3, y + 1, x + 7, y + 4, 0xff9e0b1b);
+				g.fill(x + 1, y + 4, x + 9, y + 6, 0xff700712);
+				g.fill(x + 3, y + 4, x + 7, y + 8, 0xffc81428);
+				g.fill(x + 3, y + 8, x + 4, y + 9, 0xff700712);
+				g.fill(x + 6, y + 8, x + 7, y + 9, 0xff700712);
+				g.fill(x + 5, y + 5, x + 6, y + 6, UiTheme.TEXT);
 			}
 			default -> g.fill(x + 2, y + 2, x + 8, y + 8, color);
 		}

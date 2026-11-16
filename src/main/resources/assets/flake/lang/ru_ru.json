@@ -597,5 +597,13 @@
   "flake.weather.status.entry_box": "- %s [бокс %s -> %s, %s] (%s)",
   "flake.weather.status.off": "Регионы сакуры не заданы.",
   "flake.screen.weather.sakura_on": "Лепестки сакуры: Показ",
-  "flake.screen.weather.sakura_off": "Лепестки сакуры: Скрыты"
+  "flake.screen.weather.sakura_off": "Лепестки сакуры: Скрыты",
+  "flake.class.blood_controller.title": "Blood Controller",
+  "flake.class.blood_controller.desc": "Магия крови: Кукла Вуду и Высасывание крови",
+  "flake.class.blood_controller.role": "Контроль и вампиризм",
+  "flake.class.blood_controller.summary": "Кукла Вуду · Высасывание крови",
+  "flake.class.blood_controller.active1": "Слот 1: Кукла Вуду (4 с, воксельная кукла на нити — удары по ней переносят урон цели)",
+  "flake.class.blood_controller.active2": "Слот 2: Высасывание крови (5 урона цели и столько же лечения себе)",
+  "flake.ability.voodoo_doll": "Кукла Вуду",
+  "flake.ability.blood_drain": "Высасывание крови"
 }

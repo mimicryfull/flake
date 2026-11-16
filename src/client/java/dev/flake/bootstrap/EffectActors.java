@@ -50,7 +50,8 @@ public final class EffectActors {
 			case MASK_OFF, CRYSTAL_OFF, BULWARK_OFF, MIRROR_TRAP_OFF, PHASE_CRYSTAL_OFF,
 					COMBAT_DRONE_OFF, TECHNICIAN_MISSILE_OFF, TECHNICIAN_UAV_OFF, KOLOBOK_OFF,
 					PHOENIX_AURA_OFF, HYDRA_AURA_OFF -> Admission.UPDATE_ALL;
-			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF -> Admission.UPDATE_FIRST;
+			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF,
+					VOODOO_DOLL_HIT, VOODOO_DOLL_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
 	}
@@ -94,6 +95,8 @@ public final class EffectActors {
 			case PHOENIX_AURA -> new dev.flake.features.armorsets.client.PhoenixAuraActor(payload);
 			case BARREL_PULSE -> new dev.flake.features.armorsets.client.BarrelPulseActor(payload);
 			case HYDRA_AURA -> new dev.flake.features.armorsets.client.HydraAuraActor(payload);
+			case VOODOO_DOLL_ON -> new dev.flake.features.bloodcontroller.client.VoodooDollActor(payload);
+			case BLOOD_DRAIN -> new dev.flake.features.bloodcontroller.client.BloodDrainActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}
