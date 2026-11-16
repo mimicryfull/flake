@@ -154,13 +154,16 @@ public final class BloodControllerRuntime implements ClassAbilityRuntime {
 		hitbox.setResponse(true);
 		hitbox.setPos(dollPos.x, dollPos.y, dollPos.z);
 		hitbox.addTag(VOODOO_ENTITY_TAG);
-		if (!level.addFreshEntity(hitbox)) return false;
-
 		VoodooSession session = new VoodooSession(
 				level, player.getUUID(), player.getId(), target.getUUID(),
 				hitbox.getUUID(), dollPos, now, now + VOODOO_TICKS);
 		byOwner.put(player.getUUID(), session);
 		byDoll.put(hitbox.getUUID(), session);
+		if (!level.addFreshEntity(hitbox)) {
+			byOwner.remove(player.getUUID(), session);
+			byDoll.remove(hitbox.getUUID(), session);
+			return false;
+		}
 
 		float yawRad = (float) Math.atan2(target.getX() - dollPos.x, target.getZ() - dollPos.z);
 		BloodControllerVisuals.voodooOn(player, target, dollPos, yawRad);
