@@ -583,5 +583,11 @@
   "item.flake.hydra_helmet": "Шолом Гідри",
   "item.flake.hydra_chestplate": "Нагрудник Гідри",
   "item.flake.hydra_leggings": "Поножі Гідри",
-  "item.flake.hydra_boots": "Черевики Гідри"
+  "item.flake.hydra_boots": "Черевики Гідри",
+  "flake.weather.sakura.enabled": "Погоду пелюсток сакури увімкнено (інтенсивність: %s).",
+  "flake.weather.cleared": "Особливу погоду світу вимкнено.",
+  "flake.weather.status.sakura": "Погода: Пелюстки сакури (інтенсивність: %s).",
+  "flake.weather.status.off": "Погода: Вимк.",
+  "flake.screen.weather.sakura_on": "Погода сакури: Увімк.",
+  "flake.screen.weather.sakura_off": "Погода сакури: Вимк."
 }

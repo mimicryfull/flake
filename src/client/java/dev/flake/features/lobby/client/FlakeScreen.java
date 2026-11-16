@@ -212,6 +212,17 @@ public final class FlakeScreen extends Screen {
 		button(right, y + 62 + row++ * 24, bw, 22,
 				FlakeI18n.tr(dev.flake.client.settings.BattleModeSettings.enabled() ? "flake.screen.battle_mode.on" : "flake.screen.battle_mode.off"),
 				() -> { dev.flake.client.settings.BattleModeSettings.toggle(); rebuildWidgets(); });
+		button(right, y + 62 + row++ * 24, bw, 22,
+				FlakeI18n.tr(dev.flake.features.weather.client.SakuraWeatherRenderer.isEnabled()
+						? "flake.screen.weather.sakura_on"
+						: "flake.screen.weather.sakura_off"),
+				() -> command(dev.flake.features.weather.client.SakuraWeatherRenderer.isEnabled()
+						? "flake weather off"
+						: "flake weather sakura"));
+	}
+
+	public void refresh() {
+		rebuildWidgets();
 	}
 
 	private List<String> arenaChoices() {

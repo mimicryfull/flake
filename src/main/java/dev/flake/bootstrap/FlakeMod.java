@@ -20,6 +20,8 @@ public class FlakeMod implements ModInitializer {
 		dev.flake.combat.ability.AbilityInputServer.install();
 		LoadoutCommands.register();
 		ArenaCommands.register();
+		dev.flake.features.weather.SakuraWeather.install();
+		dev.flake.features.weather.SakuraWeatherCommands.register();
 		dev.flake.render.vfx.CombatVisuals.register();
 		dev.flake.bootstrap.Features.registerServerHooks();
 	}

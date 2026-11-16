@@ -37,9 +37,11 @@ public final class FlakeClient implements ClientModInitializer {
 		BattleModeSettings.load();
 		dev.flake.features.hud.client.FlakePlayerHud.register();
 		dev.flake.features.armorsets.client.HydraOverlayRenderer.register();
+		dev.flake.features.weather.client.SakuraWeatherRenderer.register();
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			dev.flake.render.vfx.VfxRenderState.clear();
 			dev.flake.features.armorsets.client.HydraAuraActor.clearLocalOverlay();
+			dev.flake.features.weather.client.SakuraWeatherRenderer.clear();
 			PortalVortexTracker.clear();
 			PortalVortexRenderer.clearMotes();
 		});
@@ -56,6 +58,10 @@ public final class FlakeClient implements ClientModInitializer {
 					context.submitNodeCollector(),
 					camPos);
 			PortalVortexRenderer.submitGeometry(
+					context.poseStack(),
+					context.submitNodeCollector(),
+					camPos);
+			dev.flake.features.weather.client.SakuraWeatherRenderer.submitGeometry(
 					context.poseStack(),
 					context.submitNodeCollector(),
 					camPos);

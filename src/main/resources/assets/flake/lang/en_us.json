@@ -583,5 +583,11 @@
   "item.flake.hydra_helmet": "Hydra Helmet",
   "item.flake.hydra_chestplate": "Hydra Chestplate",
   "item.flake.hydra_leggings": "Hydra Leggings",
-  "item.flake.hydra_boots": "Hydra Boots"
+  "item.flake.hydra_boots": "Hydra Boots",
+  "flake.weather.sakura.enabled": "Sakura petal weather enabled (intensity: %s).",
+  "flake.weather.cleared": "Custom world weather cleared.",
+  "flake.weather.status.sakura": "Weather: Sakura petals (intensity: %s).",
+  "flake.weather.status.off": "Weather: Off.",
+  "flake.screen.weather.sakura_on": "Sakura Weather: On",
+  "flake.screen.weather.sakura_off": "Sakura Weather: Off"
 }

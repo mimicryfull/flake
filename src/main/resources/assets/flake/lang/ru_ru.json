@@ -583,5 +583,11 @@
   "item.flake.hydra_helmet": "Шлем Гидры",
   "item.flake.hydra_chestplate": "Нагрудник Гидры",
   "item.flake.hydra_leggings": "Поножи Гидры",
-  "item.flake.hydra_boots": "Ботинки Гидры"
+  "item.flake.hydra_boots": "Ботинки Гидры",
+  "flake.weather.sakura.enabled": "Погода лепестков сакуры включена (интенсивность: %s).",
+  "flake.weather.cleared": "Особая погода мира отключена.",
+  "flake.weather.status.sakura": "Погода: Лепестки сакуры (интенсивность: %s).",
+  "flake.weather.status.off": "Погода: Выкл.",
+  "flake.screen.weather.sakura_on": "Погода сакуры: Вкл",
+  "flake.screen.weather.sakura_off": "Погода сакуры: Выкл"
 }
