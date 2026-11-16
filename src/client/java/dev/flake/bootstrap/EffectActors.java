@@ -99,6 +99,7 @@ public final class EffectActors {
 			case VOODOO_DOLL_ON -> new dev.flake.features.bloodcontroller.client.VoodooDollActor(payload);
 			case BLOOD_DRAIN -> new dev.flake.features.bloodcontroller.client.BloodDrainActor(payload);
 			case WEREWOLF_CLAWS_ON, WEREWOLF_CALL_ON, SHADOW_BLEED -> new dev.flake.features.werewolf.client.WerewolfActor(payload);
+			case CLOUD_JUMP -> new dev.flake.features.passives.client.CloudJumpActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}

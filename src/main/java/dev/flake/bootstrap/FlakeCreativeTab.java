@@ -72,7 +72,8 @@ public final class FlakeCreativeTab {
 			PassiveItem.BLOODY_SEAL,
 			PassiveItem.STORM_CHARGE,
 			PassiveItem.MIRROR_SCALE,
-			PassiveItem.MELTING_AMETHYST);
+			PassiveItem.MELTING_AMETHYST,
+			PassiveItem.CLOUD_BOTTLE);
 
 	private static boolean registered;
 

@@ -26,6 +26,7 @@ public final class PassivesDefinition implements Lifecycle {
 		MeltingAmethyst.bind(dev.flake.content.ItemRegistration.register(MeltingAmethyst.ID,
 				key -> new net.minecraft.world.item.Item(new net.minecraft.world.item.Item.Properties().setId(key))));
 		NewPassivesRuntime.registerItems();
+		CloudBottleRuntime.registerItems();
 	}
 
 	public static void install() {
@@ -112,13 +113,18 @@ public final class PassivesDefinition implements Lifecycle {
 			@Override public void onApplyKit(ServerPlayer player) { NewPassivesRuntime.initSilentStep(player); }
 			@Override public void onFightTick(ServerPlayer player, int nowTick) { NewPassivesRuntime.tickSilentStep(player, nowTick); }
 		}));
+		ContentCatalog.registerPassive(new PassiveSpec(PassiveItem.CLOUD_BOTTLE, "flake.passive.cloud_bottle.short", "flake.category.mobility",
+				CloudBottleRuntime::stack, new PassiveHandler() {
+			@Override public void onApplyKit(ServerPlayer player) { CloudBottleRuntime.reset(player); }
+		}));
 		ContentCatalog.registerLifecycle(new PassivesDefinition());
 	}
 
-	@Override public void register() { NewPassivesRuntime.register(); }
+	@Override public void register() { NewPassivesRuntime.register(); CloudBottleRuntime.register(); }
 	@Override public void reset(ServerPlayer player) {
 		PvpVitals.remove(player);
 		REGEN.of(player).reset(player.getUUID());
 		NewPassivesRuntime.reset(player);
+		CloudBottleRuntime.reset(player);
 	}
 }

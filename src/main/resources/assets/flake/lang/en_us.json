@@ -621,5 +621,9 @@
   "flake.weapon.shadow_claws.short": "Shadow Claws",
   "flake.weapon.shadow_claws.cat": "Twin Claws",
   "flake.weapon.shadow_claws.info": "3 HP · 2x attack speed (3.2) · 35% chance to inflict Bleed DoT (1 HP/0.75s, 3s)",
-  "item.flake.shadow_claws": "Shadow Claws"
+  "item.flake.shadow_claws": "Shadow Claws",
+  "flake.passive.cloud_bottle.title": "Cloud in a Bottle",
+  "flake.passive.cloud_bottle.short": "Cloud Bottle",
+  "flake.passive.cloud_bottle.desc": "Allows an extra mid-air double jump and negates accumulated fall distance on activation",
+  "item.flake.cloud_bottle": "Cloud in a Bottle"
 }

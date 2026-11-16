@@ -397,7 +397,8 @@ public record Loadout(
 		MIRROR_SCALE("flake.passive.mirror_scale.title", "flake.passive.mirror_scale.desc"),
 		HUNTER_COMPASS("flake.passive.hunter_compass.title", "flake.passive.hunter_compass.desc"),
 		STORM_CHARGE("flake.passive.storm_charge.title", "flake.passive.storm_charge.desc"),
-		SILENT_STEP("flake.passive.silent_step.title", "flake.passive.silent_step.desc");
+		SILENT_STEP("flake.passive.silent_step.title", "flake.passive.silent_step.desc"),
+		CLOUD_BOTTLE("flake.passive.cloud_bottle.title", "flake.passive.cloud_bottle.desc");
 
 		private final String titleKey;
 		private final String descriptionKey;

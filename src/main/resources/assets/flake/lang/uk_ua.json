@@ -621,5 +621,9 @@
   "flake.weapon.shadow_claws.short": "Кігті Тіні",
   "flake.weapon.shadow_claws.cat": "Парні кігті",
   "flake.weapon.shadow_claws.info": "3 HP · швидкість атаки x2 (3.2) · 35% шанс накласти кровотечу (1 HP/0.75с, 3с)",
-  "item.flake.shadow_claws": "Кігті Тіні"
+  "item.flake.shadow_claws": "Кігті Тіні",
+  "flake.passive.cloud_bottle.title": "Облачко в пляшці",
+  "flake.passive.cloud_bottle.short": "Облачко",
+  "flake.passive.cloud_bottle.desc": "Дає подвійний стрибок у повітрі та скидає накопичену висоту падіння",
+  "item.flake.cloud_bottle": "Облачко в пляшці"
 }

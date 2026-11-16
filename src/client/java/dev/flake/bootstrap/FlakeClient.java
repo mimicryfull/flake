@@ -42,6 +42,7 @@ public final class FlakeClient implements ClientModInitializer {
 			dev.flake.render.vfx.VfxRenderState.clear();
 			dev.flake.features.armorsets.client.HydraAuraActor.clearLocalOverlay();
 			dev.flake.features.weather.client.SakuraWeatherRenderer.clear();
+			dev.flake.features.passives.client.CloudBottleClient.clear();
 			PortalVortexTracker.clear();
 			PortalVortexRenderer.clearMotes();
 		});
@@ -76,6 +77,7 @@ public final class FlakeClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			dev.flake.render.vfx.VfxRenderState.checkWorld(client.level);
 			PortalVortexTracker.checkWorld(client.level);
+			dev.flake.features.passives.client.CloudBottleClient.tick(client);
 			while (openKey.consumeClick()) {
 				if (client.player != null && client.canInterruptScreen()) client.setScreenAndShow(new FlakeScreen());
 			}
