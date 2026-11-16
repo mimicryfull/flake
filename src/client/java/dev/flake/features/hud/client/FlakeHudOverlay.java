@@ -266,6 +266,7 @@ public final class FlakeHudOverlay {
 				case ATTACK_UAV -> "TECHNICIAN_UAV";
 				case BLOOD_DRAIN -> "BLOOD_DRAIN";
 				case NATURES_CALL -> "WEREWOLF_CALL";
+				case DESERT_SQUAD -> "DESERT_SQUAD";
 				default -> hud.fighterClass();
 			};
 			skillBars[i] = drawSkillCard(g, client, x, baseY - i * (h + 5), w, h,

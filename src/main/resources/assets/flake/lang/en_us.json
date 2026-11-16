@@ -625,5 +625,13 @@
   "flake.passive.cloud_bottle.title": "Cloud in a Bottle",
   "flake.passive.cloud_bottle.short": "Cloud Bottle",
   "flake.passive.cloud_bottle.desc": "Allows an extra mid-air double jump and negates accumulated fall distance on activation",
-  "item.flake.cloud_bottle": "Cloud in a Bottle"
+  "item.flake.cloud_bottle": "Cloud in a Bottle",
+  "flake.class.dispatcher.title": "Dispatcher",
+  "flake.class.dispatcher.desc": "Tactical slasher & squad commander: Dispatch & Desert Squad",
+  "flake.class.dispatcher.role": "Commander / Burst",
+  "flake.class.dispatcher.summary": "Dispatch · Desert Squad",
+  "flake.class.dispatcher.active1": "Slot 1: Dispatch (8-block ground slash & dash dealing 50% target HP; immune to attacks & knockback)",
+  "flake.class.dispatcher.active2": "Slot 2: Desert Squad (5s: summons 4 wrapped AK-47 soldiers firing bursts)",
+  "flake.ability.dispatch": "Dispatch",
+  "flake.ability.desert_squad": "Desert Squad"
 }

@@ -224,6 +224,23 @@ public final class UiIcons {
 				g.fill(cx - 2, cy - 3, cx + 2, cy + 3, 0xff52f598);
 				g.fill(cx - 1, cy - 1, cx + 1, cy + 1, UiTheme.TEXT);
 			}
+			case "DISPATCHER" -> {
+				// Deep navy-blue diagonal 8-block slash crescent
+				g.fill(cx - 6, cy + 3, cx - 2, cy + 5, 0xff1648b8);
+				g.fill(cx - 3, cy + 1, cx + 1, cy + 3, 0xff2b74ff);
+				g.fill(cx, cy - 2, cx + 4, cy + 1, 0xff62b5ff);
+				g.fill(cx + 3, cy - 5, cx + 6, cy - 2, UiTheme.TEXT);
+			}
+			case "DESERT_SQUAD" -> {
+				// Keffiyeh-wrapped soldier silhouette with visible eyes & rifle
+				g.fill(cx - 3, cy - 6, cx + 3, cy - 1, 0xffc7a87a);
+				g.fill(cx - 2, cy - 4, cx + 2, cy - 3, 0xff18100a);
+				g.fill(cx - 2, cy - 4, cx - 1, cy - 3, UiTheme.TEXT);
+				g.fill(cx + 1, cy - 4, cx + 2, cy - 3, UiTheme.TEXT);
+				g.fill(cx - 4, cy - 1, cx + 4, cy + 4, 0xff6b3f20);
+				g.fill(cx - 2, cy, cx + 2, cy + 1, 0xffd8ad52);
+				g.fill(cx - 6, cy + 1, cx + 6, cy + 3, UiTheme.MUTED);
+			}
 			default -> g.fill(cx - 3, cy - 3, cx + 3, cy + 3, accent);
 		}
 	}
@@ -276,6 +293,12 @@ public final class UiIcons {
 				g.fill(x + 1, y + 2, x + 3, y + 8, UiTheme.TEXT);
 				g.fill(x + 4, y + 1, x + 6, y + 9, color);
 				g.fill(x + 7, y + 2, x + 9, y + 8, UiTheme.TEXT);
+			}
+			case "DISPATCHER" -> {
+				g.fill(x + 1, y + 7, x + 4, y + 9, 0xff1648b8);
+				g.fill(x + 3, y + 5, x + 6, y + 7, 0xff2b74ff);
+				g.fill(x + 5, y + 3, x + 8, y + 5, 0xff62b5ff);
+				g.fill(x + 7, y + 1, x + 9, y + 3, UiTheme.TEXT);
 			}
 			default -> g.fill(x + 2, y + 2, x + 8, y + 8, color);
 		}

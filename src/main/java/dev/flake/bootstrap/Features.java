@@ -67,6 +67,7 @@ public final class Features {
 			new Feature(dev.flake.features.technician.TechnicianRuntime::install),
 			new Feature(dev.flake.features.bloodcontroller.BloodControllerRuntime::install),
 			new Feature(dev.flake.features.werewolf.WerewolfRuntime::install),
+			new Feature(dev.flake.features.dispatcher.DispatcherRuntime::install),
 			new Feature(dev.flake.features.shadowclaws.ShadowClawsDefinition::install, dev.flake.features.shadowclaws.ShadowClawsDefinition::registerItems),
 			new Feature(dev.flake.features.stormberserker.StormBerserkerArmor::install),
 			new Feature(dev.flake.features.armorsets.ArmorSets::install, dev.flake.features.armorsets.ArmorSets::registerItems));

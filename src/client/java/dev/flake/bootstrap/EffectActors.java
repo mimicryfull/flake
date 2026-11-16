@@ -52,7 +52,8 @@ public final class EffectActors {
 					PHOENIX_AURA_OFF, HYDRA_AURA_OFF -> Admission.UPDATE_ALL;
 			case BULWARK_HIT, MINE_DISARM, SHAMAN_TOTEM_OFF,
 					VOODOO_DOLL_HIT, VOODOO_DOLL_OFF,
-					WEREWOLF_CLAWS_OFF, WEREWOLF_CALL_OFF -> Admission.UPDATE_FIRST;
+					WEREWOLF_CLAWS_OFF, WEREWOLF_CALL_OFF,
+					DISPATCHER_SQUAD_SYNC, DISPATCHER_SQUAD_SHOT, DISPATCHER_SQUAD_OFF -> Admission.UPDATE_FIRST;
 			default -> Admission.REPLACE;
 		};
 	}
@@ -100,6 +101,8 @@ public final class EffectActors {
 			case BLOOD_DRAIN -> new dev.flake.features.bloodcontroller.client.BloodDrainActor(payload);
 			case WEREWOLF_CLAWS_ON, WEREWOLF_CALL_ON, SHADOW_BLEED -> new dev.flake.features.werewolf.client.WerewolfActor(payload);
 			case CLOUD_JUMP -> new dev.flake.features.passives.client.CloudJumpActor(payload);
+			case DISPATCH_SLASH -> new dev.flake.features.dispatcher.client.DispatchSlashActor(payload);
+			case DISPATCHER_SQUAD_ON -> new dev.flake.features.dispatcher.client.DesertSquadActor(payload);
 			default -> new ShockwaveActor(payload);
 		};
 	}

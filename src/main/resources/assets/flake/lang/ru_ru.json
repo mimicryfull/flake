@@ -625,5 +625,13 @@
   "flake.passive.cloud_bottle.title": "Облачко в бутылке",
   "flake.passive.cloud_bottle.short": "Облачко",
   "flake.passive.cloud_bottle.desc": "Позволяет сделать двойной прыжок в воздухе и сбрасывает накопленное падение",
-  "item.flake.cloud_bottle": "Облачко в бутылке"
+  "item.flake.cloud_bottle": "Облачко в бутылке",
+  "flake.class.dispatcher.title": "Dispatcher",
+  "flake.class.dispatcher.desc": "Тактический клинок и командир отряда: Dispatch и Отряд пустыни",
+  "flake.class.dispatcher.role": "Командир / Прорыв",
+  "flake.class.dispatcher.summary": "Dispatch · Отряд пустыни",
+  "flake.class.dispatcher.active1": "Слот 1: Dispatch (рывок и разрез на 8 блоков по земле на 50% HP врага; иммунитет к атакам и откидыванию)",
+  "flake.class.dispatcher.active2": "Слот 2: Отряд пустыни (5 с: призывает 4 солдат в обмотках с калашами)",
+  "flake.ability.dispatch": "Dispatch",
+  "flake.ability.desert_squad": "Отряд пустыни"
 }

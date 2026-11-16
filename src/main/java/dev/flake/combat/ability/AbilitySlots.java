@@ -26,6 +26,8 @@ public final class AbilitySlots {
 		BLOOD_DRAIN("flake.ability.blood_drain", 20, 0, true),
 		CLAWS_AND_PAWS("flake.ability.claws_and_paws", 20, dev.flake.features.werewolf.WerewolfRuntime.CLAWS_TICKS, true),
 		NATURES_CALL("flake.ability.natures_call", 20, dev.flake.features.werewolf.WerewolfRuntime.NATURES_CALL_TICKS, true),
+		DISPATCH("flake.ability.dispatch", 20, dev.flake.features.dispatcher.DispatcherRuntime.DISPATCH_TICKS, true),
+		DESERT_SQUAD("flake.ability.desert_squad", 20, dev.flake.features.dispatcher.DispatcherRuntime.SQUAD_TICKS, true),
 		UNIMPLEMENTED("flake.ability.unassigned", 0, 0, false);
 
 		private final String titleKey;

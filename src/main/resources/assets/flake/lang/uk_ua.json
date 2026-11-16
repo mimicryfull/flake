@@ -625,5 +625,13 @@
   "flake.passive.cloud_bottle.title": "Облачко в пляшці",
   "flake.passive.cloud_bottle.short": "Облачко",
   "flake.passive.cloud_bottle.desc": "Дає подвійний стрибок у повітрі та скидає накопичену висоту падіння",
-  "item.flake.cloud_bottle": "Облачко в пляшці"
+  "item.flake.cloud_bottle": "Облачко в пляшці",
+  "flake.class.dispatcher.title": "Dispatcher",
+  "flake.class.dispatcher.desc": "Тактичний прорив і командир загону: Dispatch та Загін пустелі",
+  "flake.class.dispatcher.role": "Командир / Прорив",
+  "flake.class.dispatcher.summary": "Dispatch · Загін пустелі",
+  "flake.class.dispatcher.active1": "Слот 1: Dispatch (ривок і розріз на 8 блоків по землі на 50% HP ворога; імунітет до атак і відкидання)",
+  "flake.class.dispatcher.active2": "Слот 2: Загін пустелі (5 с: прикликає 4 солдатів в обмотках із калашами)",
+  "flake.ability.dispatch": "Dispatch",
+  "flake.ability.desert_squad": "Загін пустелі"
 }
