@@ -245,7 +245,8 @@ public record Loadout(
 		DEMOLITIONIST("flake.class.demolitionist.title", "flake.class.demolitionist.desc"),
 		SHAMAN("flake.class.shaman.title", "flake.class.shaman.desc"),
 		TECHNICIAN("flake.class.technician.title", "flake.class.technician.desc"),
-		BLOOD_CONTROLLER("flake.class.blood_controller.title", "flake.class.blood_controller.desc");
+		BLOOD_CONTROLLER("flake.class.blood_controller.title", "flake.class.blood_controller.desc"),
+		WEREWOLF("flake.class.werewolf.title", "flake.class.werewolf.desc");
 
 		private final String titleKey;
 		private final String descriptionKey;
@@ -330,7 +331,8 @@ public record Loadout(
 		CHAOS_BROADSWORD("flake.weapon.chaos_broadsword.title", "flake.weapon.chaos_broadsword.cat", 9.0f, "flake.weapon.chaos_broadsword.info"),
 		CHAIN_BLADE("flake.weapon.chain_blade.title", "flake.weapon.chain_blade.cat", 6.5f, "flake.weapon.chain_blade.info"),
 		STORM_STAFF("flake.weapon.storm_staff.title", "flake.weapon.storm_staff.cat", 5.0f, "flake.weapon.storm_staff.info"),
-		MIRROR_DAGGER("flake.weapon.mirror_dagger.title", "flake.weapon.mirror_dagger.cat", 5.5f, "flake.weapon.mirror_dagger.info");
+		MIRROR_DAGGER("flake.weapon.mirror_dagger.title", "flake.weapon.mirror_dagger.cat", 5.5f, "flake.weapon.mirror_dagger.info"),
+		SHADOW_CLAWS("flake.weapon.shadow_claws.title", "flake.weapon.shadow_claws.cat", 3.0f, "flake.weapon.shadow_claws.info");
 
 		private final String titleKey;
 		private final String categoryKey;

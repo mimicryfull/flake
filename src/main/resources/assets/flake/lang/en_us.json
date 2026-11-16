@@ -605,5 +605,21 @@
   "flake.class.blood_controller.active1": "Slot 1: Voodoo Doll (4s tethered doll; hits transfer damage to the cursed enemy)",
   "flake.class.blood_controller.active2": "Slot 2: Blood Drain (5 damage to target and heals you by the same amount)",
   "flake.ability.voodoo_doll": "Voodoo Doll",
-  "flake.ability.blood_drain": "Blood Drain"
+  "flake.ability.blood_drain": "Blood Drain",
+  "flake.class.werewolf.title": "Werewolf",
+  "flake.class.werewolf.desc": "Primal beast bruiser: Claws and Paws & Nature's Call",
+  "flake.class.werewolf.role": "Beast Bruiser",
+  "flake.class.werewolf.summary": "Claws and Paws · Nature's Call",
+  "flake.class.werewolf.active1": "Slot 1: Claws and Paws (5s: +8% damage & +8% speed)",
+  "flake.class.werewolf.active2": "Slot 2: Nature's Call (5s: 1.5x scale, status resist + Resistance III, +5 HP)",
+  "flake.ability.claws_and_paws": "Claws and Paws",
+  "flake.ability.natures_call": "Nature's Call",
+  "flake.status.claws_and_paws": "Claws and Paws",
+  "flake.status.natures_call": "Nature's Call",
+  "flake.status.shadow_bleed": "Bleed",
+  "flake.weapon.shadow_claws.title": "Shadow Claws",
+  "flake.weapon.shadow_claws.short": "Shadow Claws",
+  "flake.weapon.shadow_claws.cat": "Twin Claws",
+  "flake.weapon.shadow_claws.info": "3 HP · 2x attack speed (3.2) · 35% chance to inflict Bleed DoT (1 HP/0.75s, 3s)",
+  "item.flake.shadow_claws": "Shadow Claws"
 }

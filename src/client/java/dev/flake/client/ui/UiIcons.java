@@ -210,6 +210,20 @@ public final class UiIcons {
 				g.fill(cx - 2, cy + 3, cx + 3, cy + 5, 0xff6e0610);
 				g.fill(cx - 1, cy - 1, cx + 1, cy + 2, UiTheme.TEXT);
 			}
+			case "WEREWOLF" -> {
+				// Triple silver-crimson slash claws
+				for (int i = -1; i <= 1; i++) {
+					int ox = i * 4;
+					g.fill(cx + ox - 2, cy - 5, cx + ox, cy + 2, UiTheme.TEXT);
+					g.fill(cx + ox - 1, cy + 2, cx + ox + 1, cy + 5, UiTheme.RED);
+				}
+			}
+			case "WEREWOLF_CALL" -> {
+				// Emerald primal shell + glowing moon core
+				g.outline(cx - 5, cy - 5, 10, 10, 0xff38e080);
+				g.fill(cx - 2, cy - 3, cx + 2, cy + 3, 0xff52f598);
+				g.fill(cx - 1, cy - 1, cx + 1, cy + 1, UiTheme.TEXT);
+			}
 			default -> g.fill(cx - 3, cy - 3, cx + 3, cy + 3, accent);
 		}
 	}
@@ -257,6 +271,11 @@ public final class UiIcons {
 				g.fill(x + 3, y + 8, x + 4, y + 9, 0xff700712);
 				g.fill(x + 6, y + 8, x + 7, y + 9, 0xff700712);
 				g.fill(x + 5, y + 5, x + 6, y + 6, UiTheme.TEXT);
+			}
+			case "WEREWOLF" -> {
+				g.fill(x + 1, y + 2, x + 3, y + 8, UiTheme.TEXT);
+				g.fill(x + 4, y + 1, x + 6, y + 9, color);
+				g.fill(x + 7, y + 2, x + 9, y + 8, UiTheme.TEXT);
 			}
 			default -> g.fill(x + 2, y + 2, x + 8, y + 8, color);
 		}

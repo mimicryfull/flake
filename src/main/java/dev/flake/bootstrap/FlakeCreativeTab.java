@@ -32,7 +32,8 @@ public final class FlakeCreativeTab {
 			Weapon.DEADLY_BLEED,
 			Weapon.VOID_PALADIN,
 			Weapon.CHAOS_BROADSWORD,
-			Weapon.STORM_STAFF);
+			Weapon.STORM_STAFF,
+			Weapon.SHADOW_CLAWS);
 
 	public static final List<ArmorMaterial> ARMOR_SETS = List.of(
 			ArmorMaterial.OBSIDIAN,

@@ -605,5 +605,21 @@
   "flake.class.blood_controller.active1": "Слот 1: Кукла Вуду (4 с, воксельная кукла на нити — удары по ней переносят урон цели)",
   "flake.class.blood_controller.active2": "Слот 2: Высасывание крови (5 урона цели и столько же лечения себе)",
   "flake.ability.voodoo_doll": "Кукла Вуду",
-  "flake.ability.blood_drain": "Высасывание крови"
+  "flake.ability.blood_drain": "Высасывание крови",
+  "flake.class.werewolf.title": "Оборотень",
+  "flake.class.werewolf.desc": "Звериный боец: Claws and Paws и Nature's Call",
+  "flake.class.werewolf.role": "Зверь / Брузер",
+  "flake.class.werewolf.summary": "Claws and Paws · Nature's Call",
+  "flake.class.werewolf.active1": "Слот 1: Claws and Paws (5 с: +8% урона и +8% скорости)",
+  "flake.class.werewolf.active2": "Слот 2: Nature's Call (5 с: размер 1.5x, резист к статусам + Сопротивление III, +5 HP)",
+  "flake.ability.claws_and_paws": "Claws and Paws",
+  "flake.ability.natures_call": "Nature's Call",
+  "flake.status.claws_and_paws": "Claws and Paws",
+  "flake.status.natures_call": "Nature's Call",
+  "flake.status.shadow_bleed": "Кровотечение",
+  "flake.weapon.shadow_claws.title": "Когти Тени",
+  "flake.weapon.shadow_claws.short": "Когти Тени",
+  "flake.weapon.shadow_claws.cat": "Парные когти",
+  "flake.weapon.shadow_claws.info": "3 HP · скорость атаки x2 (3.2) · 35% шанс наложить кровотечение (1 HP/0.75с, 3с)",
+  "item.flake.shadow_claws": "Когти Тени"
 }

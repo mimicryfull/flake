@@ -605,5 +605,21 @@
   "flake.class.blood_controller.active1": "Слот 1: Лялька Вуду (4 с, воксельна лялька на нитці — удари по ній переносять шкоду ворогу)",
   "flake.class.blood_controller.active2": "Слот 2: Висмоктування крові (5 шкоди цілі та стільки ж лікування собі)",
   "flake.ability.voodoo_doll": "Лялька Вуду",
-  "flake.ability.blood_drain": "Висмоктування крові"
+  "flake.ability.blood_drain": "Висмоктування крові",
+  "flake.class.werewolf.title": "Перевертень",
+  "flake.class.werewolf.desc": "Звірячий боєць: Claws and Paws і Nature's Call",
+  "flake.class.werewolf.role": "Звір / Брузер",
+  "flake.class.werewolf.summary": "Claws and Paws · Nature's Call",
+  "flake.class.werewolf.active1": "Слот 1: Claws and Paws (5 с: +8% шкоди та +8% швидкості)",
+  "flake.class.werewolf.active2": "Слот 2: Nature's Call (5 с: розмір 1.5x, статус-резіст + Опір III, +5 HP)",
+  "flake.ability.claws_and_paws": "Claws and Paws",
+  "flake.ability.natures_call": "Nature's Call",
+  "flake.status.claws_and_paws": "Claws and Paws",
+  "flake.status.natures_call": "Nature's Call",
+  "flake.status.shadow_bleed": "Кровотеча",
+  "flake.weapon.shadow_claws.title": "Кігті Тіні",
+  "flake.weapon.shadow_claws.short": "Кігті Тіні",
+  "flake.weapon.shadow_claws.cat": "Парні кігті",
+  "flake.weapon.shadow_claws.info": "3 HP · швидкість атаки x2 (3.2) · 35% шанс накласти кровотечу (1 HP/0.75с, 3с)",
+  "item.flake.shadow_claws": "Кігті Тіні"
 }

@@ -24,6 +24,8 @@ public final class AbilitySlots {
 		ATTACK_UAV("flake.ability.attack_uav", 20, 75, true),
 		VOODOO_DOLL("flake.ability.voodoo_doll", 20, dev.flake.features.bloodcontroller.BloodControllerRuntime.VOODOO_TICKS, true),
 		BLOOD_DRAIN("flake.ability.blood_drain", 20, 0, true),
+		CLAWS_AND_PAWS("flake.ability.claws_and_paws", 20, dev.flake.features.werewolf.WerewolfRuntime.CLAWS_TICKS, true),
+		NATURES_CALL("flake.ability.natures_call", 20, dev.flake.features.werewolf.WerewolfRuntime.NATURES_CALL_TICKS, true),
 		UNIMPLEMENTED("flake.ability.unassigned", 0, 0, false);
 
 		private final String titleKey;
