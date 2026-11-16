@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.flake.Flake;
 import dev.flake.features.weather.SakuraWeather;
 import dev.flake.features.weather.SakuraWeatherPayload;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -20,8 +22,8 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3f;
 
 /**
- * Lightweight, zero-allocation ambient weather renderer for falling sakura cherry-blossom petals.
- * Petals tumble in 3D inside a rolling camera volume with wind gusts, leaf flutter, and smooth alpha fades.
+ * Lightweight, zero-allocation ambient weather renderer for falling sakura cherry-blossom petals
+ * strictly scoped to server-configured regions (spheres or boxes).
  */
 public final class SakuraWeatherRenderer {
 	private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(Flake.MOD_ID, "textures/vfx/sakura_petals.png");
@@ -32,6 +34,7 @@ public final class SakuraWeatherRenderer {
 	private static final float Y_MIN = -6.0f;
 	private static final float Y_MAX = 18.0f;
 	private static final float Y_SPAN = Y_MAX - Y_MIN;
+	private static final float FULL_REF_VOLUME = H_SPAN * Y_SPAN * H_SPAN;
 
 	private static final class Petal {
 		double x, y, z;
@@ -47,11 +50,12 @@ public final class SakuraWeatherRenderer {
 	}
 
 	private static final Petal[] POOL = new Petal[MAX_PETALS];
+	private static final List<SakuraWeather.Region> NEARBY_REGIONS = new ArrayList<>();
 	private static boolean poolReady;
-	private static boolean enabled;
-	private static float intensity = SakuraWeather.DEFAULT_INTENSITY;
+	private static volatile List<SakuraWeather.Region> regions = List.of();
+	private static boolean localVisible = true;
+	private static boolean hadNearby;
 	private static ClientLevel lastLevel;
-	private static double lastCamX, lastCamY, lastCamZ;
 	private static float lastTimeSec = -1.0f;
 
 	private SakuraWeatherRenderer() {}
@@ -61,40 +65,40 @@ public final class SakuraWeatherRenderer {
 				context.client().execute(() -> applyPayload(payload)));
 	}
 
-	public static boolean isEnabled() {
-		return enabled;
+	public static boolean hasRegions() {
+		return !regions.isEmpty();
 	}
 
-	public static float intensity() {
-		return intensity;
+	public static boolean isLocalVisible() {
+		return localVisible;
+	}
+
+	public static void toggleLocalVisible() {
+		localVisible = !localVisible;
 	}
 
 	public static void clear() {
-		enabled = false;
-		intensity = SakuraWeather.DEFAULT_INTENSITY;
+		regions = List.of();
+		hadNearby = false;
 		lastLevel = null;
 		lastTimeSec = -1.0f;
 	}
 
 	private static void applyPayload(SakuraWeatherPayload payload) {
-		var mode = SakuraWeather.Mode.parse(payload.mode());
-		enabled = mode == SakuraWeather.Mode.SAKURA && payload.intensity() > 0.0f;
-		intensity = enabled ? SakuraWeather.clampIntensity(payload.intensity()) : SakuraWeather.DEFAULT_INTENSITY;
+		regions = payload.regions();
+		hadNearby = false;
 		var mc = Minecraft.getInstance();
 		if (mc != null && mc.gui != null && mc.gui.screen() instanceof dev.flake.features.lobby.client.FlakeScreen screen) {
 			screen.refresh();
 		}
 	}
 
-	private static void ensurePool(Vec3 cam) {
+	private static void ensurePool() {
 		if (poolReady) return;
 		poolReady = true;
 		var rng = new Random(0x53414B555241L);
 		for (int i = 0; i < MAX_PETALS; i++) {
 			Petal p = new Petal();
-			p.x = cam.x + (rng.nextDouble() * 2.0 - 1.0) * H_RADIUS;
-			p.y = cam.y + Y_MIN + rng.nextDouble() * Y_SPAN;
-			p.z = cam.z + (rng.nextDouble() * 2.0 - 1.0) * H_RADIUS;
 			p.fallSpeed = 1.05f + rng.nextFloat() * 0.90f;
 			p.size = 0.095f + rng.nextFloat() * 0.085f;
 			p.phase = rng.nextFloat() * Mth.TWO_PI;
@@ -112,27 +116,70 @@ public final class SakuraWeatherRenderer {
 	}
 
 	public static void submitGeometry(PoseStack poseStack, SubmitNodeCollector collector, Vec3 cam) {
-		if (!enabled) return;
+		if (!localVisible) return;
+		List<SakuraWeather.Region> all = regions;
+		if (all.isEmpty()) return;
+
 		Minecraft mc = Minecraft.getInstance();
 		ClientLevel level = mc.level;
 		if (level == null) return;
 
-		ensurePool(cam);
+		String dim = level.dimension().identifier().toString();
+		double maxDistSq = (double) H_RADIUS * H_RADIUS;
+		NEARBY_REGIONS.clear();
+		double uMinX = Double.POSITIVE_INFINITY, uMinY = Double.POSITIVE_INFINITY, uMinZ = Double.POSITIVE_INFINITY;
+		double uMaxX = Double.NEGATIVE_INFINITY, uMaxY = Double.NEGATIVE_INFINITY, uMaxZ = Double.NEGATIVE_INFINITY;
+		float maxIntensity = SakuraWeather.MIN_INTENSITY;
+
+		for (int i = 0, n = all.size(); i < n; i++) {
+			SakuraWeather.Region r = all.get(i);
+			if (!r.dimension().equals(dim)) continue;
+			if (r.distanceSqToPoint(cam.x, cam.y, cam.z) > maxDistSq) continue;
+			NEARBY_REGIONS.add(r);
+			if (r.minX() < uMinX) uMinX = r.minX();
+			if (r.minY() < uMinY) uMinY = r.minY();
+			if (r.minZ() < uMinZ) uMinZ = r.minZ();
+			if (r.maxX() > uMaxX) uMaxX = r.maxX();
+			if (r.maxY() > uMaxY) uMaxY = r.maxY();
+			if (r.maxZ() > uMaxZ) uMaxZ = r.maxZ();
+			if (r.intensity() > maxIntensity) maxIntensity = r.intensity();
+		}
+
+		if (NEARBY_REGIONS.isEmpty()) {
+			hadNearby = false;
+			return;
+		}
+
+		double volMinX = Math.max(cam.x - H_RADIUS, uMinX);
+		double volMaxX = Math.min(cam.x + H_RADIUS, uMaxX);
+		double volMinY = Math.max(cam.y + Y_MIN, uMinY);
+		double volMaxY = Math.min(cam.y + Y_MAX, uMaxY);
+		double volMinZ = Math.max(cam.z - H_RADIUS, uMinZ);
+		double volMaxZ = Math.min(cam.z + H_RADIUS, uMaxZ);
+		double spanX = volMaxX - volMinX;
+		double spanY = volMaxY - volMinY;
+		double spanZ = volMaxZ - volMinZ;
+		if (spanX <= 0.25 || spanY <= 0.25 || spanZ <= 0.25) {
+			hadNearby = false;
+			return;
+		}
+
+		ensurePool();
 
 		float nowSec = (System.nanoTime() & 0x3FFFFFFFFFL) * 1e-9f;
-		if (level != lastLevel) {
+		if (level != lastLevel || !hadNearby) {
 			lastLevel = level;
-			recenterPool(cam);
+			hadNearby = true;
+			populatePool(volMinX, spanX, volMinY, spanY, volMinZ, spanZ);
 			lastTimeSec = nowSec;
 		}
 		float dt = lastTimeSec < 0f ? 0.016f : Math.min(0.10f, Math.max(0.0f, nowSec - lastTimeSec));
 		lastTimeSec = nowSec;
-		lastCamX = cam.x;
-		lastCamY = cam.y;
-		lastCamZ = cam.z;
 
-		int activeCount = Mth.clamp(Math.round(135.0f * intensity), 24, MAX_PETALS);
-		stepPetals(cam, nowSec, dt, activeCount);
+		double volRatio = (spanX * spanY * spanZ) / FULL_REF_VOLUME;
+		float countScale = Mth.clamp(Mth.sqrt((float) volRatio), 0.30f, 1.0f);
+		int activeCount = Mth.clamp(Math.round(150.0f * maxIntensity * countScale), 20, MAX_PETALS);
+		stepPetals(nowSec, dt, activeCount, volMinX, spanX, volMinY, spanY, volMinZ, spanZ);
 
 		final int renderCount = activeCount;
 		final float time = nowSec;
@@ -141,17 +188,20 @@ public final class SakuraWeatherRenderer {
 			Matrix3f rot = new Matrix3f();
 			for (int i = 0; i < renderCount; i++) {
 				Petal p = POOL[i];
+				float regionWeight = maxRegionWeight(p.x, p.y, p.z);
+				if (regionWeight <= 0.02f) continue;
+
 				float dx = (float) (p.x - cam.x);
 				float dy = (float) (p.y - cam.y);
 				float dz = (float) (p.z - cam.z);
 
-				// Soft cylindrical distance & vertical top/bottom envelope fade
+				// Soft camera cylindrical & vertical envelope fade combined with region boundary weight
 				float horizDistSq = dx * dx + dz * dz;
 				if (horizDistSq >= H_RADIUS * H_RADIUS) continue;
 				float distFade = 1.0f - Mth.clamp((Mth.sqrt(horizDistSq) - (H_RADIUS - 6.0f)) / 6.0f, 0.0f, 1.0f);
 				float topFade = Mth.clamp((Y_MAX - dy) / 3.5f, 0.0f, 1.0f);
 				float botFade = Mth.clamp((dy - Y_MIN) / 2.5f, 0.0f, 1.0f);
-				float alpha = distFade * topFade * botFade * 0.92f;
+				float alpha = distFade * topFade * botFade * regionWeight * 0.92f;
 				if (alpha <= 0.02f) continue;
 
 				mpos.set(Mth.floor(p.x), Mth.floor(p.y), Mth.floor(p.z));
@@ -167,19 +217,33 @@ public final class SakuraWeatherRenderer {
 		});
 	}
 
-	private static void recenterPool(Vec3 cam) {
-		for (Petal p : POOL) {
-			p.x = wrapCoord(p.x, cam.x, H_RADIUS, H_SPAN);
-			p.y = wrapCoord(p.y, cam.y + (Y_MIN + Y_MAX) * 0.5, Y_SPAN * 0.5, Y_SPAN);
-			p.z = wrapCoord(p.z, cam.z, H_RADIUS, H_SPAN);
+	private static float maxRegionWeight(double px, double py, double pz) {
+		float maxW = 0.0f;
+		for (int i = 0, n = NEARBY_REGIONS.size(); i < n; i++) {
+			float w = NEARBY_REGIONS.get(i).weightAt(px, py, pz);
+			if (w > maxW) maxW = w;
+			if (maxW >= 0.999f) return 1.0f;
+		}
+		return maxW;
+	}
+
+	private static void populatePool(double minX, double spanX, double minY, double spanY, double minZ, double spanZ) {
+		for (int i = 0; i < MAX_PETALS; i++) {
+			Petal p = POOL[i];
+			float u1 = ((i * 0.61803398875f) % 1.0f);
+			float u2 = (((i + 37) * 0.38196601125f) % 1.0f);
+			float u3 = (((i + 73) * 0.75487766625f) % 1.0f);
+			p.x = minX + u1 * spanX;
+			p.y = minY + u2 * spanY;
+			p.z = minZ + u3 * spanZ;
 		}
 	}
 
-	private static void stepPetals(Vec3 cam, float nowSec, float dt, int count) {
+	private static void stepPetals(float nowSec, float dt, int count,
+			double minX, double spanX, double minY, double spanY, double minZ, double spanZ) {
 		if (dt <= 0.0f) return;
 		float breezeX = 1.15f + 0.55f * Mth.sin(nowSec * 0.27f) + 0.25f * Mth.cos(nowSec * 0.63f);
 		float breezeZ = 0.55f + 0.45f * Mth.cos(nowSec * 0.21f);
-		double midY = cam.y + (Y_MIN + Y_MAX) * 0.5;
 
 		for (int i = 0; i < count; i++) {
 			Petal p = POOL[i];
@@ -189,18 +253,13 @@ public final class SakuraWeatherRenderer {
 			float swayZ = Mth.cos(fArg * 0.85f) * 0.55f + gust * 0.25f;
 			float updraft = 1.0f - 0.35f * Mth.sin(fArg * 1.3f);
 
-			p.x += (breezeX + swayX) * dt;
-			p.z += (breezeZ + swayZ) * dt;
-			p.y -= p.fallSpeed * updraft * dt;
-
-			p.x = wrapCoord(p.x, cam.x, H_RADIUS, H_SPAN);
-			p.z = wrapCoord(p.z, cam.z, H_RADIUS, H_SPAN);
-			p.y = wrapCoord(p.y, midY, Y_SPAN * 0.5, Y_SPAN);
+			p.x = wrapMin(p.x + (breezeX + swayX) * dt, minX, spanX);
+			p.z = wrapMin(p.z + (breezeZ + swayZ) * dt, minZ, spanZ);
+			p.y = wrapMin(p.y - p.fallSpeed * updraft * dt, minY, spanY);
 		}
 	}
 
-	private static double wrapCoord(double value, double center, double halfSpan, double span) {
-		double min = center - halfSpan;
+	private static double wrapMin(double value, double min, double span) {
 		double rel = (value - min) % span;
 		if (rel < 0.0) rel += span;
 		return min + rel;
